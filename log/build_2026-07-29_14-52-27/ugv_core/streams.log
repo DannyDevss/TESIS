@@ -1,0 +1,19 @@
+[2.299s] Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_core': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_core build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_core/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log --install-scripts $base/lib/ugv_core --single-version-externally-managed install_data
+[2.966s] running egg_info
+[3.005s] writing ../../build/ugv_core/ugv_core.egg-info/PKG-INFO
+[3.006s] writing dependency_links to ../../build/ugv_core/ugv_core.egg-info/dependency_links.txt
+[3.006s] writing requirements to ../../build/ugv_core/ugv_core.egg-info/requires.txt
+[3.007s] writing top-level names to ../../build/ugv_core/ugv_core.egg-info/top_level.txt
+[3.064s] reading manifest file '../../build/ugv_core/ugv_core.egg-info/SOURCES.txt'
+[3.065s] writing manifest file '../../build/ugv_core/ugv_core.egg-info/SOURCES.txt'
+[3.066s] running build
+[3.066s] running build_py
+[3.067s] running install
+[3.077s] running install_lib
+[3.106s] running install_data
+[3.106s] running install_egg_info
+[3.139s] removing '/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages/ugv_core-0.0.0-py3.12.egg-info' (and everything under it)
+[3.140s] Copying ../../build/ugv_core/ugv_core.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages/ugv_core-0.0.0-py3.12.egg-info
+[3.141s] running install_scripts
+[3.359s] writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log'
+[3.431s] Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_core' returned '0': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_core build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_core/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log --install-scripts $base/lib/ugv_core --single-version-externally-managed install_data

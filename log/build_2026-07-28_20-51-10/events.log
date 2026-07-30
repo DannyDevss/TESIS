@@ -1,0 +1,207 @@
+[0.000000] (-) TimerEvent: {}
+[0.001491] (ugv_bridge) JobQueued: {'identifier': 'ugv_bridge', 'dependencies': OrderedDict()}
+[0.001599] (ugv_core) JobQueued: {'identifier': 'ugv_core', 'dependencies': OrderedDict()}
+[0.001659] (ugv_gcs) JobQueued: {'identifier': 'ugv_gcs', 'dependencies': OrderedDict()}
+[0.001700] (ugv_policy) JobQueued: {'identifier': 'ugv_policy', 'dependencies': OrderedDict({'ugv_core': '/home/dannydevss/Escritorio/TESIS/install/ugv_core'})}
+[0.001748] (ugv_sim) JobQueued: {'identifier': 'ugv_sim', 'dependencies': OrderedDict({'ugv_core': '/home/dannydevss/Escritorio/TESIS/install/ugv_core'})}
+[0.002203] (ugv_core) JobStarted: {'identifier': 'ugv_core'}
+[0.026011] (ugv_bridge) JobStarted: {'identifier': 'ugv_bridge'}
+[0.039953] (ugv_gcs) JobStarted: {'identifier': 'ugv_gcs'}
+[0.099897] (-) TimerEvent: {}
+[0.200264] (-) TimerEvent: {}
+[0.300667] (-) TimerEvent: {}
+[0.401058] (-) TimerEvent: {}
+[0.501369] (-) TimerEvent: {}
+[0.602059] (-) TimerEvent: {}
+[0.702521] (-) TimerEvent: {}
+[0.803093] (-) TimerEvent: {}
+[0.903502] (-) TimerEvent: {}
+[1.003976] (-) TimerEvent: {}
+[1.104385] (-) TimerEvent: {}
+[1.204699] (-) TimerEvent: {}
+[1.306472] (-) TimerEvent: {}
+[1.408288] (-) TimerEvent: {}
+[1.508601] (-) TimerEvent: {}
+[1.609088] (-) TimerEvent: {}
+[1.709507] (-) TimerEvent: {}
+[1.809925] (-) TimerEvent: {}
+[1.910449] (-) TimerEvent: {}
+[2.010807] (-) TimerEvent: {}
+[2.111701] (-) TimerEvent: {}
+[2.213709] (-) TimerEvent: {}
+[2.314149] (-) TimerEvent: {}
+[2.414586] (-) TimerEvent: {}
+[2.515045] (-) TimerEvent: {}
+[2.616245] (-) TimerEvent: {}
+[2.717431] (-) TimerEvent: {}
+[2.819677] (-) TimerEvent: {}
+[2.922769] (-) TimerEvent: {}
+[3.023130] (-) TimerEvent: {}
+[3.123492] (-) TimerEvent: {}
+[3.224433] (-) TimerEvent: {}
+[3.325486] (-) TimerEvent: {}
+[3.387674] (ugv_bridge) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/ugv_bridge', 'build', '--build-base', '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build', 'install', '--record', '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log', '--install-scripts', '$base/lib/ugv_bridge', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge', 'env': {'PROFILEHOME': '', 'KDE_FULL_SESSION': 'true', 'RUSTICL_ENABLE': 'iris', 'MAIL': 'thunderbird', 'LANGUAGE': '', 'USER': 'dannydevss', 'PAM_KWALLET5_LOGIN': '/run/user/1000/kwallet5.socket', 'LC_TIME': 'es_CL.UTF-8', 'HOSTNAME': 'SkullCachy', 'XDG_SESSION_TYPE': 'wayland', 'KONSOLE_VERSION': '260403', 'XDG_CACHE_HOME': '/home/dannydevss/.cache', 'QT_WAYLAND_RECONNECT': '1', 'SHLVL': '4', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'BROWSER': 'cachy-browser', 'MOTD_SHOWN': 'pam', 'HOME': '/home/dannydevss', 'KDE_APPLICATIONS_AS_SCOPE': '1', 'OLDPWD': '/home/dannydevss', 'DESKTOP_SESSION': 'plasma', 'MANROFFOPT': '-c', 'ROS_PYTHON_VERSION': '3', 'GTK_RC_FILES': '/etc/gtk/gtkrc:/home/dannydevss/.gtkrc:/home/dannydevss/.config/gtkrc', 'KDE_SESSION_VERSION': '6', 'LC_MONETARY': 'es_CL.UTF-8', 'KONSOLE_DBUS_SESSION': '/Sessions/1', 'MANAGERPID': '709', 'DISTROBOX_ENTER_PATH': '/usr/bin/distrobox-enter', 'SYSTEMD_EXEC_PID': '791', 'XDG_STATE_HOME': '/home/dannydevss/.local/state', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'container': 'podman', 'KONSOLE_DBUS_ACTIVATION_COOKIE': 'q3vlA4FWccbAaeFUrUq35eIfc6olPHsGzXNUNOZhp5E=', 'KONSOLE_DBUS_WINDOW': '/Windows/1', 'DEBUGINFOD_URLS': 'https://debuginfod.archlinux.org https://debuginfod.cachyos.org', 'QT_QPA_PLATFORMTHEME': 'qt5ct', 'WAYLAND_DISPLAY': 'wayland-0', 'XKB_DEFAULT_LAYOUT': 'latam', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'dannydevss', 'WINDOWID': '94475992997808', 'MANAGERPIDFDID': '12452', 'JOURNAL_STREAM': '10:14090', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-kwin_wayland.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'COLORFGBG': '15;0', 'TERMINFO_DIRS': '/usr/share/terminfo:/run/host/usr/share/terminfo', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '2', 'KGLOBALACCELD_PLATFORM': 'org.kde.kwin', 'GTK2_RC_FILES': '/home/dannydevss/.gtkrc-2.0', 'FLATPAK_TTY_PROGRESS': '1', 'PATH': '/opt/ros/jazzy/bin:/home/dannydevss/.local/bin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin', 'SESSION_MANAGER': 'local/SkullCachy:@/tmp/.ICE-unix/928,unix/SkullCachy:/tmp/.ICE-unix/928', 'INVOCATION_ID': 'f05e3904e98e4ce1a29cd5484c239b83', 'XDG_SESSION_PATH': '/org/freedesktop/DisplayManager/Session2', 'XDG_MENU_PREFIX': 'plasma-', 'LC_ADDRESS': 'es_CL.UTF-8', 'XKB_DEFAULT_MODEL': 'pc105', 'XDG_RUNTIME_DIR': '/run/user/1000', 'ICEAUTHORITY': '/run/user/1000/iceauth_jzWSUH', 'DISPLAY': ':1', 'LANG': 'es_MX.UTF-8', 'XDG_CURRENT_DESKTOP': 'KDE', 'LC_TELEPHONE': 'es_CL.UTF-8', 'XDG_DATA_HOME': '/home/dannydevss/.local/share', 'XDG_CONFIG_HOME': '/home/dannydevss/.config', 'XDG_SESSION_DESKTOP': 'KDE', 'XAUTHORITY': '/run/user/1000/xauth_LGjmMt', 'MANPAGER': "sh -c 'col -bx | bat -l man -p'", 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': 'fish', 'LC_NAME': 'es_CL.UTF-8', 'KONSOLE_DBUS_SERVICE': ':1.456', 'LC_MEASUREMENT': 'es_CL.UTF-8', 'XKB_DEFAULT_VARIANT': 'deadtilde', 'VSSCRIPT_PATH': '/usr/lib/python3.14/site-packages/vapoursynth/libvsscript.so', 'LC_IDENTIFICATION': 'es_CL.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'PWD': '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge', 'CONTAINER_ID': 'ros2-jazzy', 'XDG_CONFIG_DIRS': '/home/dannydevss/.config/kdedefaults:/etc/xdg', 'VIRTUAL_ENV_DISABLE_PROMPT': '1', 'XDG_DATA_DIRS': '/home/dannydevss/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share', 'PYTHONPATH': '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'es_CL.UTF-8', 'LC_PAPER': 'es_CL.UTF-8', 'KDE_SESSION_UID': '1000', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'EDITOR': '/usr/bin/vim', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}, 'shell': False}
+[3.415859] (ugv_core) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/ugv_core', 'build', '--build-base', '/home/dannydevss/Escritorio/TESIS/build/ugv_core/build', 'install', '--record', '/home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log', '--install-scripts', '$base/lib/ugv_core', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/dannydevss/Escritorio/TESIS/src/ugv_core', 'env': {'PROFILEHOME': '', 'KDE_FULL_SESSION': 'true', 'RUSTICL_ENABLE': 'iris', 'MAIL': 'thunderbird', 'LANGUAGE': '', 'USER': 'dannydevss', 'PAM_KWALLET5_LOGIN': '/run/user/1000/kwallet5.socket', 'LC_TIME': 'es_CL.UTF-8', 'HOSTNAME': 'SkullCachy', 'XDG_SESSION_TYPE': 'wayland', 'KONSOLE_VERSION': '260403', 'XDG_CACHE_HOME': '/home/dannydevss/.cache', 'QT_WAYLAND_RECONNECT': '1', 'SHLVL': '4', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'BROWSER': 'cachy-browser', 'MOTD_SHOWN': 'pam', 'HOME': '/home/dannydevss', 'KDE_APPLICATIONS_AS_SCOPE': '1', 'OLDPWD': '/home/dannydevss', 'DESKTOP_SESSION': 'plasma', 'MANROFFOPT': '-c', 'ROS_PYTHON_VERSION': '3', 'GTK_RC_FILES': '/etc/gtk/gtkrc:/home/dannydevss/.gtkrc:/home/dannydevss/.config/gtkrc', 'KDE_SESSION_VERSION': '6', 'LC_MONETARY': 'es_CL.UTF-8', 'KONSOLE_DBUS_SESSION': '/Sessions/1', 'MANAGERPID': '709', 'DISTROBOX_ENTER_PATH': '/usr/bin/distrobox-enter', 'SYSTEMD_EXEC_PID': '791', 'XDG_STATE_HOME': '/home/dannydevss/.local/state', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'container': 'podman', 'KONSOLE_DBUS_ACTIVATION_COOKIE': 'q3vlA4FWccbAaeFUrUq35eIfc6olPHsGzXNUNOZhp5E=', 'KONSOLE_DBUS_WINDOW': '/Windows/1', 'DEBUGINFOD_URLS': 'https://debuginfod.archlinux.org https://debuginfod.cachyos.org', 'QT_QPA_PLATFORMTHEME': 'qt5ct', 'WAYLAND_DISPLAY': 'wayland-0', 'XKB_DEFAULT_LAYOUT': 'latam', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'dannydevss', 'WINDOWID': '94475992997808', 'MANAGERPIDFDID': '12452', 'JOURNAL_STREAM': '10:14090', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-kwin_wayland.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'COLORFGBG': '15;0', 'TERMINFO_DIRS': '/usr/share/terminfo:/run/host/usr/share/terminfo', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '2', 'KGLOBALACCELD_PLATFORM': 'org.kde.kwin', 'GTK2_RC_FILES': '/home/dannydevss/.gtkrc-2.0', 'FLATPAK_TTY_PROGRESS': '1', 'PATH': '/opt/ros/jazzy/bin:/home/dannydevss/.local/bin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin', 'SESSION_MANAGER': 'local/SkullCachy:@/tmp/.ICE-unix/928,unix/SkullCachy:/tmp/.ICE-unix/928', 'INVOCATION_ID': 'f05e3904e98e4ce1a29cd5484c239b83', 'XDG_SESSION_PATH': '/org/freedesktop/DisplayManager/Session2', 'XDG_MENU_PREFIX': 'plasma-', 'LC_ADDRESS': 'es_CL.UTF-8', 'XKB_DEFAULT_MODEL': 'pc105', 'XDG_RUNTIME_DIR': '/run/user/1000', 'ICEAUTHORITY': '/run/user/1000/iceauth_jzWSUH', 'DISPLAY': ':1', 'LANG': 'es_MX.UTF-8', 'XDG_CURRENT_DESKTOP': 'KDE', 'LC_TELEPHONE': 'es_CL.UTF-8', 'XDG_DATA_HOME': '/home/dannydevss/.local/share', 'XDG_CONFIG_HOME': '/home/dannydevss/.config', 'XDG_SESSION_DESKTOP': 'KDE', 'XAUTHORITY': '/run/user/1000/xauth_LGjmMt', 'MANPAGER': "sh -c 'col -bx | bat -l man -p'", 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': 'fish', 'LC_NAME': 'es_CL.UTF-8', 'KONSOLE_DBUS_SERVICE': ':1.456', 'LC_MEASUREMENT': 'es_CL.UTF-8', 'XKB_DEFAULT_VARIANT': 'deadtilde', 'VSSCRIPT_PATH': '/usr/lib/python3.14/site-packages/vapoursynth/libvsscript.so', 'LC_IDENTIFICATION': 'es_CL.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'PWD': '/home/dannydevss/Escritorio/TESIS/build/ugv_core', 'CONTAINER_ID': 'ros2-jazzy', 'XDG_CONFIG_DIRS': '/home/dannydevss/.config/kdedefaults:/etc/xdg', 'VIRTUAL_ENV_DISABLE_PROMPT': '1', 'XDG_DATA_DIRS': '/home/dannydevss/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share', 'PYTHONPATH': '/home/dannydevss/Escritorio/TESIS/build/ugv_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'es_CL.UTF-8', 'LC_PAPER': 'es_CL.UTF-8', 'KDE_SESSION_UID': '1000', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'EDITOR': '/usr/bin/vim', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}, 'shell': False}
+[3.425601] (-) TimerEvent: {}
+[3.447360] (ugv_gcs) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/ugv_gcs', 'build', '--build-base', '/home/dannydevss/Escritorio/TESIS/build/ugv_gcs/build', 'install', '--record', '/home/dannydevss/Escritorio/TESIS/build/ugv_gcs/install.log', '--install-scripts', '$base/lib/ugv_gcs', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/dannydevss/Escritorio/TESIS/src/ugv_gcs', 'env': {'PROFILEHOME': '', 'KDE_FULL_SESSION': 'true', 'RUSTICL_ENABLE': 'iris', 'MAIL': 'thunderbird', 'LANGUAGE': '', 'USER': 'dannydevss', 'PAM_KWALLET5_LOGIN': '/run/user/1000/kwallet5.socket', 'LC_TIME': 'es_CL.UTF-8', 'HOSTNAME': 'SkullCachy', 'XDG_SESSION_TYPE': 'wayland', 'KONSOLE_VERSION': '260403', 'XDG_CACHE_HOME': '/home/dannydevss/.cache', 'QT_WAYLAND_RECONNECT': '1', 'SHLVL': '4', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'BROWSER': 'cachy-browser', 'MOTD_SHOWN': 'pam', 'HOME': '/home/dannydevss', 'KDE_APPLICATIONS_AS_SCOPE': '1', 'OLDPWD': '/home/dannydevss', 'DESKTOP_SESSION': 'plasma', 'MANROFFOPT': '-c', 'ROS_PYTHON_VERSION': '3', 'GTK_RC_FILES': '/etc/gtk/gtkrc:/home/dannydevss/.gtkrc:/home/dannydevss/.config/gtkrc', 'KDE_SESSION_VERSION': '6', 'LC_MONETARY': 'es_CL.UTF-8', 'KONSOLE_DBUS_SESSION': '/Sessions/1', 'MANAGERPID': '709', 'DISTROBOX_ENTER_PATH': '/usr/bin/distrobox-enter', 'SYSTEMD_EXEC_PID': '791', 'XDG_STATE_HOME': '/home/dannydevss/.local/state', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'container': 'podman', 'KONSOLE_DBUS_ACTIVATION_COOKIE': 'q3vlA4FWccbAaeFUrUq35eIfc6olPHsGzXNUNOZhp5E=', 'KONSOLE_DBUS_WINDOW': '/Windows/1', 'DEBUGINFOD_URLS': 'https://debuginfod.archlinux.org https://debuginfod.cachyos.org', 'QT_QPA_PLATFORMTHEME': 'qt5ct', 'WAYLAND_DISPLAY': 'wayland-0', 'XKB_DEFAULT_LAYOUT': 'latam', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'dannydevss', 'WINDOWID': '94475992997808', 'MANAGERPIDFDID': '12452', 'JOURNAL_STREAM': '10:14090', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-kwin_wayland.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'COLORFGBG': '15;0', 'TERMINFO_DIRS': '/usr/share/terminfo:/run/host/usr/share/terminfo', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '2', 'KGLOBALACCELD_PLATFORM': 'org.kde.kwin', 'GTK2_RC_FILES': '/home/dannydevss/.gtkrc-2.0', 'FLATPAK_TTY_PROGRESS': '1', 'PATH': '/opt/ros/jazzy/bin:/home/dannydevss/.local/bin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin', 'SESSION_MANAGER': 'local/SkullCachy:@/tmp/.ICE-unix/928,unix/SkullCachy:/tmp/.ICE-unix/928', 'INVOCATION_ID': 'f05e3904e98e4ce1a29cd5484c239b83', 'XDG_SESSION_PATH': '/org/freedesktop/DisplayManager/Session2', 'XDG_MENU_PREFIX': 'plasma-', 'LC_ADDRESS': 'es_CL.UTF-8', 'XKB_DEFAULT_MODEL': 'pc105', 'XDG_RUNTIME_DIR': '/run/user/1000', 'ICEAUTHORITY': '/run/user/1000/iceauth_jzWSUH', 'DISPLAY': ':1', 'LANG': 'es_MX.UTF-8', 'XDG_CURRENT_DESKTOP': 'KDE', 'LC_TELEPHONE': 'es_CL.UTF-8', 'XDG_DATA_HOME': '/home/dannydevss/.local/share', 'XDG_CONFIG_HOME': '/home/dannydevss/.config', 'XDG_SESSION_DESKTOP': 'KDE', 'XAUTHORITY': '/run/user/1000/xauth_LGjmMt', 'MANPAGER': "sh -c 'col -bx | bat -l man -p'", 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': 'fish', 'LC_NAME': 'es_CL.UTF-8', 'KONSOLE_DBUS_SERVICE': ':1.456', 'LC_MEASUREMENT': 'es_CL.UTF-8', 'XKB_DEFAULT_VARIANT': 'deadtilde', 'VSSCRIPT_PATH': '/usr/lib/python3.14/site-packages/vapoursynth/libvsscript.so', 'LC_IDENTIFICATION': 'es_CL.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'PWD': '/home/dannydevss/Escritorio/TESIS/build/ugv_gcs', 'CONTAINER_ID': 'ros2-jazzy', 'XDG_CONFIG_DIRS': '/home/dannydevss/.config/kdedefaults:/etc/xdg', 'VIRTUAL_ENV_DISABLE_PROMPT': '1', 'XDG_DATA_DIRS': '/home/dannydevss/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share', 'PYTHONPATH': '/home/dannydevss/Escritorio/TESIS/build/ugv_gcs/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'es_CL.UTF-8', 'LC_PAPER': 'es_CL.UTF-8', 'KDE_SESSION_UID': '1000', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'EDITOR': '/usr/bin/vim', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}, 'shell': False}
+[3.525831] (-) TimerEvent: {}
+[3.626365] (-) TimerEvent: {}
+[3.726934] (-) TimerEvent: {}
+[3.827312] (-) TimerEvent: {}
+[3.927668] (-) TimerEvent: {}
+[4.028254] (-) TimerEvent: {}
+[4.105212] (ugv_bridge) StdoutLine: {'line': b'running egg_info\n'}
+[4.105759] (ugv_gcs) StdoutLine: {'line': b'running egg_info\n'}
+[4.128370] (-) TimerEvent: {}
+[4.140750] (ugv_gcs) StdoutLine: {'line': b'writing ../../build/ugv_gcs/ugv_gcs.egg-info/PKG-INFO\n'}
+[4.142278] (ugv_gcs) StdoutLine: {'line': b'writing dependency_links to ../../build/ugv_gcs/ugv_gcs.egg-info/dependency_links.txt\n'}
+[4.142603] (ugv_gcs) StdoutLine: {'line': b'writing entry points to ../../build/ugv_gcs/ugv_gcs.egg-info/entry_points.txt\n'}
+[4.144145] (ugv_gcs) StdoutLine: {'line': b'writing requirements to ../../build/ugv_gcs/ugv_gcs.egg-info/requires.txt\n'}
+[4.144462] (ugv_gcs) StdoutLine: {'line': b'writing top-level names to ../../build/ugv_gcs/ugv_gcs.egg-info/top_level.txt\n'}
+[4.156584] (ugv_bridge) StdoutLine: {'line': b'writing ../../build/ugv_bridge/ugv_bridge.egg-info/PKG-INFO\n'}
+[4.157275] (ugv_bridge) StdoutLine: {'line': b'writing dependency_links to ../../build/ugv_bridge/ugv_bridge.egg-info/dependency_links.txt\n'}
+[4.157952] (ugv_bridge) StdoutLine: {'line': b'writing entry points to ../../build/ugv_bridge/ugv_bridge.egg-info/entry_points.txt\n'}
+[4.158312] (ugv_bridge) StdoutLine: {'line': b'writing requirements to ../../build/ugv_bridge/ugv_bridge.egg-info/requires.txt\n'}
+[4.158774] (ugv_bridge) StdoutLine: {'line': b'writing top-level names to ../../build/ugv_bridge/ugv_bridge.egg-info/top_level.txt\n'}
+[4.198850] (ugv_core) StdoutLine: {'line': b'running egg_info\n'}
+[4.214284] (ugv_gcs) StdoutLine: {'line': b"reading manifest file '../../build/ugv_gcs/ugv_gcs.egg-info/SOURCES.txt'\n"}
+[4.215911] (ugv_gcs) StdoutLine: {'line': b"writing manifest file '../../build/ugv_gcs/ugv_gcs.egg-info/SOURCES.txt'\n"}
+[4.216381] (ugv_gcs) StdoutLine: {'line': b'running build\n'}
+[4.216675] (ugv_gcs) StdoutLine: {'line': b'running build_py\n'}
+[4.217833] (ugv_gcs) StdoutLine: {'line': b'running install\n'}
+[4.228473] (-) TimerEvent: {}
+[4.231005] (ugv_gcs) StdoutLine: {'line': b'running install_lib\n'}
+[4.254603] (ugv_core) StdoutLine: {'line': b'writing ../../build/ugv_core/ugv_core.egg-info/PKG-INFO\n'}
+[4.254949] (ugv_core) StdoutLine: {'line': b'writing dependency_links to ../../build/ugv_core/ugv_core.egg-info/dependency_links.txt\n'}
+[4.255198] (ugv_core) StdoutLine: {'line': b'writing requirements to ../../build/ugv_core/ugv_core.egg-info/requires.txt\n'}
+[4.256144] (ugv_core) StdoutLine: {'line': b'writing top-level names to ../../build/ugv_core/ugv_core.egg-info/top_level.txt\n'}
+[4.261857] (ugv_bridge) StdoutLine: {'line': b"reading manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'\n"}
+[4.263701] (ugv_bridge) StdoutLine: {'line': b"writing manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'\n"}
+[4.264235] (ugv_bridge) StdoutLine: {'line': b'running build\n'}
+[4.264503] (ugv_bridge) StdoutLine: {'line': b'running build_py\n'}
+[4.265569] (ugv_bridge) StdoutLine: {'line': b'running install\n'}
+[4.285427] (ugv_bridge) StdoutLine: {'line': b'running install_lib\n'}
+[4.288801] (ugv_gcs) StdoutLine: {'line': b'running install_data\n'}
+[4.289271] (ugv_gcs) StdoutLine: {'line': b'running install_egg_info\n'}
+[4.328904] (-) TimerEvent: {}
+[4.337516] (ugv_core) StdoutLine: {'line': b"reading manifest file '../../build/ugv_core/ugv_core.egg-info/SOURCES.txt'\n"}
+[4.337866] (ugv_bridge) StdoutLine: {'line': b'running install_data\n'}
+[4.339684] (ugv_bridge) StdoutLine: {'line': b'copying urdf/ugv.urdf -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/urdf\n'}
+[4.340010] (ugv_core) StdoutLine: {'line': b"writing manifest file '../../build/ugv_core/ugv_core.egg-info/SOURCES.txt'\n"}
+[4.340288] (ugv_bridge) StdoutLine: {'line': b'running install_egg_info\n'}
+[4.340509] (ugv_core) StdoutLine: {'line': b'running build\n'}
+[4.343417] (ugv_core) StdoutLine: {'line': b'running build_py\n'}
+[4.343664] (ugv_core) StdoutLine: {'line': b'running install\n'}
+[4.351749] (ugv_gcs) StdoutLine: {'line': b"removing '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/python3.12/site-packages/ugv_gcs-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[4.353210] (ugv_gcs) StdoutLine: {'line': b'Copying ../../build/ugv_gcs/ugv_gcs.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/python3.12/site-packages/ugv_gcs-0.0.0-py3.12.egg-info\n'}
+[4.356318] (ugv_gcs) StdoutLine: {'line': b'running install_scripts\n'}
+[4.358579] (ugv_core) StdoutLine: {'line': b'running install_lib\n'}
+[4.403058] (ugv_bridge) StdoutLine: {'line': b"removing '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[4.405469] (ugv_bridge) StdoutLine: {'line': b'Copying ../../build/ugv_bridge/ugv_bridge.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info\n'}
+[4.408110] (ugv_bridge) StdoutLine: {'line': b'running install_scripts\n'}
+[4.417646] (ugv_core) StdoutLine: {'line': b'running install_data\n'}
+[4.418591] (ugv_core) StdoutLine: {'line': b'running install_egg_info\n'}
+[4.429078] (-) TimerEvent: {}
+[4.474004] (ugv_core) StdoutLine: {'line': b"removing '/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages/ugv_core-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[4.476125] (ugv_core) StdoutLine: {'line': b'Copying ../../build/ugv_core/ugv_core.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages/ugv_core-0.0.0-py3.12.egg-info\n'}
+[4.476989] (ugv_core) StdoutLine: {'line': b'running install_scripts\n'}
+[4.529682] (-) TimerEvent: {}
+[4.630295] (-) TimerEvent: {}
+[4.730946] (-) TimerEvent: {}
+[4.831395] (-) TimerEvent: {}
+[4.916132] (ugv_core) StdoutLine: {'line': b"writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log'\n"}
+[4.918531] (ugv_bridge) StdoutLine: {'line': b'Installing dummy_rl_controller script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[4.920509] (ugv_bridge) StdoutLine: {'line': b'Installing flipper_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[4.921073] (ugv_bridge) StdoutLine: {'line': b'Installing gui_a_vcan script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[4.921320] (ugv_bridge) StdoutLine: {'line': b'Installing motor_emulator script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[4.921809] (ugv_bridge) StdoutLine: {'line': b'Installing track_odometry_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[4.922386] (ugv_bridge) StdoutLine: {'line': b"writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log'\n"}
+[4.932665] (-) TimerEvent: {}
+[4.957371] (ugv_gcs) StdoutLine: {'line': b'Installing gcs_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/ugv_gcs\n'}
+[4.958189] (ugv_gcs) StdoutLine: {'line': b"writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_gcs/install.log'\n"}
+[5.027933] (ugv_core) CommandEnded: {'returncode': 0}
+[5.032797] (-) TimerEvent: {}
+[5.055065] (ugv_core) JobEnded: {'identifier': 'ugv_core', 'rc': 0}
+[5.057255] (ugv_policy) JobStarted: {'identifier': 'ugv_policy'}
+[5.072150] (ugv_sim) JobStarted: {'identifier': 'ugv_sim'}
+[5.087255] (ugv_bridge) CommandEnded: {'returncode': 0}
+[5.107657] (ugv_bridge) JobEnded: {'identifier': 'ugv_bridge', 'rc': 0}
+[5.108933] (ugv_gcs) CommandEnded: {'returncode': 0}
+[5.123128] (ugv_gcs) JobEnded: {'identifier': 'ugv_gcs', 'rc': 0}
+[5.132941] (-) TimerEvent: {}
+[5.233383] (-) TimerEvent: {}
+[5.333800] (-) TimerEvent: {}
+[5.434187] (-) TimerEvent: {}
+[5.534545] (-) TimerEvent: {}
+[5.634860] (-) TimerEvent: {}
+[5.735163] (-) TimerEvent: {}
+[5.835518] (-) TimerEvent: {}
+[5.935826] (-) TimerEvent: {}
+[6.036195] (-) TimerEvent: {}
+[6.136610] (-) TimerEvent: {}
+[6.237067] (-) TimerEvent: {}
+[6.337407] (-) TimerEvent: {}
+[6.437766] (-) TimerEvent: {}
+[6.538155] (-) TimerEvent: {}
+[6.638500] (-) TimerEvent: {}
+[6.738896] (-) TimerEvent: {}
+[6.839257] (-) TimerEvent: {}
+[6.939736] (-) TimerEvent: {}
+[6.980860] (ugv_sim) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/ugv_sim', 'build', '--build-base', '/home/dannydevss/Escritorio/TESIS/build/ugv_sim/build', 'install', '--record', '/home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log', '--install-scripts', '$base/lib/ugv_sim', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/dannydevss/Escritorio/TESIS/src/ugv_sim', 'env': {'PROFILEHOME': '', 'KDE_FULL_SESSION': 'true', 'RUSTICL_ENABLE': 'iris', 'MAIL': 'thunderbird', 'LANGUAGE': '', 'USER': 'dannydevss', 'PAM_KWALLET5_LOGIN': '/run/user/1000/kwallet5.socket', 'LC_TIME': 'es_CL.UTF-8', 'HOSTNAME': 'SkullCachy', 'XDG_SESSION_TYPE': 'wayland', 'KONSOLE_VERSION': '260403', 'XDG_CACHE_HOME': '/home/dannydevss/.cache', 'QT_WAYLAND_RECONNECT': '1', 'SHLVL': '4', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'BROWSER': 'cachy-browser', 'MOTD_SHOWN': 'pam', 'HOME': '/home/dannydevss', 'KDE_APPLICATIONS_AS_SCOPE': '1', 'OLDPWD': '/home/dannydevss', 'DESKTOP_SESSION': 'plasma', 'MANROFFOPT': '-c', 'ROS_PYTHON_VERSION': '3', 'GTK_RC_FILES': '/etc/gtk/gtkrc:/home/dannydevss/.gtkrc:/home/dannydevss/.config/gtkrc', 'KDE_SESSION_VERSION': '6', 'LC_MONETARY': 'es_CL.UTF-8', 'KONSOLE_DBUS_SESSION': '/Sessions/1', 'MANAGERPID': '709', 'DISTROBOX_ENTER_PATH': '/usr/bin/distrobox-enter', 'SYSTEMD_EXEC_PID': '791', 'XDG_STATE_HOME': '/home/dannydevss/.local/state', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'container': 'podman', 'KONSOLE_DBUS_ACTIVATION_COOKIE': 'q3vlA4FWccbAaeFUrUq35eIfc6olPHsGzXNUNOZhp5E=', 'KONSOLE_DBUS_WINDOW': '/Windows/1', 'DEBUGINFOD_URLS': 'https://debuginfod.archlinux.org https://debuginfod.cachyos.org', 'QT_QPA_PLATFORMTHEME': 'qt5ct', 'WAYLAND_DISPLAY': 'wayland-0', 'XKB_DEFAULT_LAYOUT': 'latam', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'dannydevss', 'WINDOWID': '94475992997808', 'MANAGERPIDFDID': '12452', 'JOURNAL_STREAM': '10:14090', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-kwin_wayland.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'COLORFGBG': '15;0', 'TERMINFO_DIRS': '/usr/share/terminfo:/run/host/usr/share/terminfo', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '2', 'KGLOBALACCELD_PLATFORM': 'org.kde.kwin', 'GTK2_RC_FILES': '/home/dannydevss/.gtkrc-2.0', 'FLATPAK_TTY_PROGRESS': '1', 'PATH': '/opt/ros/jazzy/bin:/home/dannydevss/.local/bin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin', 'SESSION_MANAGER': 'local/SkullCachy:@/tmp/.ICE-unix/928,unix/SkullCachy:/tmp/.ICE-unix/928', 'INVOCATION_ID': 'f05e3904e98e4ce1a29cd5484c239b83', 'XDG_SESSION_PATH': '/org/freedesktop/DisplayManager/Session2', 'XDG_MENU_PREFIX': 'plasma-', 'LC_ADDRESS': 'es_CL.UTF-8', 'XKB_DEFAULT_MODEL': 'pc105', 'XDG_RUNTIME_DIR': '/run/user/1000', 'ICEAUTHORITY': '/run/user/1000/iceauth_jzWSUH', 'DISPLAY': ':1', 'LANG': 'es_MX.UTF-8', 'XDG_CURRENT_DESKTOP': 'KDE', 'LC_TELEPHONE': 'es_CL.UTF-8', 'XDG_DATA_HOME': '/home/dannydevss/.local/share', 'XDG_CONFIG_HOME': '/home/dannydevss/.config', 'XDG_SESSION_DESKTOP': 'KDE', 'XAUTHORITY': '/run/user/1000/xauth_LGjmMt', 'MANPAGER': "sh -c 'col -bx | bat -l man -p'", 'AMENT_PREFIX_PATH': '/home/dannydevss/Escritorio/TESIS/install/ugv_core:/opt/ros/jazzy', 'SHELL': 'fish', 'LC_NAME': 'es_CL.UTF-8', 'KONSOLE_DBUS_SERVICE': ':1.456', 'LC_MEASUREMENT': 'es_CL.UTF-8', 'XKB_DEFAULT_VARIANT': 'deadtilde', 'VSSCRIPT_PATH': '/usr/lib/python3.14/site-packages/vapoursynth/libvsscript.so', 'LC_IDENTIFICATION': 'es_CL.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'PWD': '/home/dannydevss/Escritorio/TESIS/build/ugv_sim', 'CONTAINER_ID': 'ros2-jazzy', 'XDG_CONFIG_DIRS': '/home/dannydevss/.config/kdedefaults:/etc/xdg', 'VIRTUAL_ENV_DISABLE_PROMPT': '1', 'XDG_DATA_DIRS': '/home/dannydevss/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share', 'PYTHONPATH': '/home/dannydevss/Escritorio/TESIS/build/ugv_sim/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'es_CL.UTF-8', 'LC_PAPER': 'es_CL.UTF-8', 'KDE_SESSION_UID': '1000', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'EDITOR': '/usr/bin/vim', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}, 'shell': False}
+[6.985737] (ugv_policy) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/ugv_policy', 'build', '--build-base', '/home/dannydevss/Escritorio/TESIS/build/ugv_policy/build', 'install', '--record', '/home/dannydevss/Escritorio/TESIS/build/ugv_policy/install.log', '--install-scripts', '$base/lib/ugv_policy', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/dannydevss/Escritorio/TESIS/src/ugv_policy', 'env': {'PROFILEHOME': '', 'KDE_FULL_SESSION': 'true', 'RUSTICL_ENABLE': 'iris', 'MAIL': 'thunderbird', 'LANGUAGE': '', 'USER': 'dannydevss', 'PAM_KWALLET5_LOGIN': '/run/user/1000/kwallet5.socket', 'LC_TIME': 'es_CL.UTF-8', 'HOSTNAME': 'SkullCachy', 'XDG_SESSION_TYPE': 'wayland', 'KONSOLE_VERSION': '260403', 'XDG_CACHE_HOME': '/home/dannydevss/.cache', 'QT_WAYLAND_RECONNECT': '1', 'SHLVL': '4', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'BROWSER': 'cachy-browser', 'MOTD_SHOWN': 'pam', 'HOME': '/home/dannydevss', 'KDE_APPLICATIONS_AS_SCOPE': '1', 'OLDPWD': '/home/dannydevss', 'DESKTOP_SESSION': 'plasma', 'MANROFFOPT': '-c', 'ROS_PYTHON_VERSION': '3', 'GTK_RC_FILES': '/etc/gtk/gtkrc:/home/dannydevss/.gtkrc:/home/dannydevss/.config/gtkrc', 'KDE_SESSION_VERSION': '6', 'LC_MONETARY': 'es_CL.UTF-8', 'KONSOLE_DBUS_SESSION': '/Sessions/1', 'MANAGERPID': '709', 'DISTROBOX_ENTER_PATH': '/usr/bin/distrobox-enter', 'SYSTEMD_EXEC_PID': '791', 'XDG_STATE_HOME': '/home/dannydevss/.local/state', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'container': 'podman', 'KONSOLE_DBUS_ACTIVATION_COOKIE': 'q3vlA4FWccbAaeFUrUq35eIfc6olPHsGzXNUNOZhp5E=', 'KONSOLE_DBUS_WINDOW': '/Windows/1', 'DEBUGINFOD_URLS': 'https://debuginfod.archlinux.org https://debuginfod.cachyos.org', 'QT_QPA_PLATFORMTHEME': 'qt5ct', 'WAYLAND_DISPLAY': 'wayland-0', 'XKB_DEFAULT_LAYOUT': 'latam', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'dannydevss', 'WINDOWID': '94475992997808', 'MANAGERPIDFDID': '12452', 'JOURNAL_STREAM': '10:14090', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-kwin_wayland.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'COLORFGBG': '15;0', 'TERMINFO_DIRS': '/usr/share/terminfo:/run/host/usr/share/terminfo', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '2', 'KGLOBALACCELD_PLATFORM': 'org.kde.kwin', 'GTK2_RC_FILES': '/home/dannydevss/.gtkrc-2.0', 'FLATPAK_TTY_PROGRESS': '1', 'PATH': '/opt/ros/jazzy/bin:/home/dannydevss/.local/bin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin', 'SESSION_MANAGER': 'local/SkullCachy:@/tmp/.ICE-unix/928,unix/SkullCachy:/tmp/.ICE-unix/928', 'INVOCATION_ID': 'f05e3904e98e4ce1a29cd5484c239b83', 'XDG_SESSION_PATH': '/org/freedesktop/DisplayManager/Session2', 'XDG_MENU_PREFIX': 'plasma-', 'LC_ADDRESS': 'es_CL.UTF-8', 'XKB_DEFAULT_MODEL': 'pc105', 'XDG_RUNTIME_DIR': '/run/user/1000', 'ICEAUTHORITY': '/run/user/1000/iceauth_jzWSUH', 'DISPLAY': ':1', 'LANG': 'es_MX.UTF-8', 'XDG_CURRENT_DESKTOP': 'KDE', 'LC_TELEPHONE': 'es_CL.UTF-8', 'XDG_DATA_HOME': '/home/dannydevss/.local/share', 'XDG_CONFIG_HOME': '/home/dannydevss/.config', 'XDG_SESSION_DESKTOP': 'KDE', 'XAUTHORITY': '/run/user/1000/xauth_LGjmMt', 'MANPAGER': "sh -c 'col -bx | bat -l man -p'", 'AMENT_PREFIX_PATH': '/home/dannydevss/Escritorio/TESIS/install/ugv_core:/opt/ros/jazzy', 'SHELL': 'fish', 'LC_NAME': 'es_CL.UTF-8', 'KONSOLE_DBUS_SERVICE': ':1.456', 'LC_MEASUREMENT': 'es_CL.UTF-8', 'XKB_DEFAULT_VARIANT': 'deadtilde', 'VSSCRIPT_PATH': '/usr/lib/python3.14/site-packages/vapoursynth/libvsscript.so', 'LC_IDENTIFICATION': 'es_CL.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'PWD': '/home/dannydevss/Escritorio/TESIS/build/ugv_policy', 'CONTAINER_ID': 'ros2-jazzy', 'XDG_CONFIG_DIRS': '/home/dannydevss/.config/kdedefaults:/etc/xdg', 'VIRTUAL_ENV_DISABLE_PROMPT': '1', 'XDG_DATA_DIRS': '/home/dannydevss/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share', 'PYTHONPATH': '/home/dannydevss/Escritorio/TESIS/build/ugv_policy/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'es_CL.UTF-8', 'LC_PAPER': 'es_CL.UTF-8', 'KDE_SESSION_UID': '1000', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'EDITOR': '/usr/bin/vim', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}, 'shell': False}
+[7.040210] (-) TimerEvent: {}
+[7.143023] (-) TimerEvent: {}
+[7.243355] (-) TimerEvent: {}
+[7.343685] (-) TimerEvent: {}
+[7.444052] (-) TimerEvent: {}
+[7.534545] (ugv_sim) StdoutLine: {'line': b'running egg_info\n'}
+[7.544170] (-) TimerEvent: {}
+[7.571485] (ugv_policy) StdoutLine: {'line': b'running egg_info\n'}
+[7.580333] (ugv_sim) StdoutLine: {'line': b'writing ../../build/ugv_sim/ugv_sim.egg-info/PKG-INFO\n'}
+[7.581427] (ugv_sim) StdoutLine: {'line': b'writing dependency_links to ../../build/ugv_sim/ugv_sim.egg-info/dependency_links.txt\n'}
+[7.581852] (ugv_sim) StdoutLine: {'line': b'writing entry points to ../../build/ugv_sim/ugv_sim.egg-info/entry_points.txt\n'}
+[7.582317] (ugv_sim) StdoutLine: {'line': b'writing requirements to ../../build/ugv_sim/ugv_sim.egg-info/requires.txt\n'}
+[7.582711] (ugv_sim) StdoutLine: {'line': b'writing top-level names to ../../build/ugv_sim/ugv_sim.egg-info/top_level.txt\n'}
+[7.617485] (ugv_policy) StdoutLine: {'line': b'writing ../../build/ugv_policy/ugv_policy.egg-info/PKG-INFO\n'}
+[7.618108] (ugv_policy) StdoutLine: {'line': b'writing dependency_links to ../../build/ugv_policy/ugv_policy.egg-info/dependency_links.txt\n'}
+[7.618503] (ugv_policy) StdoutLine: {'line': b'writing entry points to ../../build/ugv_policy/ugv_policy.egg-info/entry_points.txt\n'}
+[7.618924] (ugv_policy) StdoutLine: {'line': b'writing requirements to ../../build/ugv_policy/ugv_policy.egg-info/requires.txt\n'}
+[7.619219] (ugv_policy) StdoutLine: {'line': b'writing top-level names to ../../build/ugv_policy/ugv_policy.egg-info/top_level.txt\n'}
+[7.644502] (-) TimerEvent: {}
+[7.680436] (ugv_sim) StdoutLine: {'line': b"reading manifest file '../../build/ugv_sim/ugv_sim.egg-info/SOURCES.txt'\n"}
+[7.681900] (ugv_sim) StdoutLine: {'line': b"writing manifest file '../../build/ugv_sim/ugv_sim.egg-info/SOURCES.txt'\n"}
+[7.682476] (ugv_sim) StdoutLine: {'line': b'running build\n'}
+[7.682775] (ugv_sim) StdoutLine: {'line': b'running build_py\n'}
+[7.683130] (ugv_sim) StdoutLine: {'line': b'running install\n'}
+[7.702698] (ugv_sim) StdoutLine: {'line': b'running install_lib\n'}
+[7.721389] (ugv_policy) StdoutLine: {'line': b"reading manifest file '../../build/ugv_policy/ugv_policy.egg-info/SOURCES.txt'\n"}
+[7.723247] (ugv_policy) StdoutLine: {'line': b"writing manifest file '../../build/ugv_policy/ugv_policy.egg-info/SOURCES.txt'\n"}
+[7.724170] (ugv_policy) StdoutLine: {'line': b'running build\n'}
+[7.724518] (ugv_policy) StdoutLine: {'line': b'running build_py\n'}
+[7.725591] (ugv_policy) StdoutLine: {'line': b'running install\n'}
+[7.744654] (-) TimerEvent: {}
+[7.752176] (ugv_policy) StdoutLine: {'line': b'running install_lib\n'}
+[7.755583] (ugv_sim) StdoutLine: {'line': b'running install_data\n'}
+[7.756584] (ugv_sim) StdoutLine: {'line': b'running install_egg_info\n'}
+[7.822374] (ugv_policy) StdoutLine: {'line': b'running install_data\n'}
+[7.823590] (ugv_policy) StdoutLine: {'line': b'running install_egg_info\n'}
+[7.845692] (-) TimerEvent: {}
+[7.847298] (ugv_sim) StdoutLine: {'line': b"removing '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[7.848902] (ugv_sim) StdoutLine: {'line': b'Copying ../../build/ugv_sim/ugv_sim.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim-0.0.0-py3.12.egg-info\n'}
+[7.853994] (ugv_sim) StdoutLine: {'line': b'running install_scripts\n'}
+[7.887313] (ugv_policy) StdoutLine: {'line': b"removing '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[7.888091] (ugv_policy) StdoutLine: {'line': b'Copying ../../build/ugv_policy/ugv_policy.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy-0.0.0-py3.12.egg-info\n'}
+[7.889671] (ugv_policy) StdoutLine: {'line': b'running install_scripts\n'}
+[7.945803] (-) TimerEvent: {}
+[8.046134] (-) TimerEvent: {}
+[8.146474] (-) TimerEvent: {}
+[8.154685] (ugv_sim) StdoutLine: {'line': b'Installing sim_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/ugv_sim\n'}
+[8.155774] (ugv_sim) StdoutLine: {'line': b"writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log'\n"}
+[8.167599] (ugv_policy) StdoutLine: {'line': b'Installing policy_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/ugv_policy\n'}
+[8.168434] (ugv_policy) StdoutLine: {'line': b"writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_policy/install.log'\n"}
+[8.239573] (ugv_sim) CommandEnded: {'returncode': 0}
+[8.247772] (-) TimerEvent: {}
+[8.253411] (ugv_sim) JobEnded: {'identifier': 'ugv_sim', 'rc': 0}
+[8.255520] (ugv_policy) CommandEnded: {'returncode': 0}
+[8.265994] (ugv_policy) JobEnded: {'identifier': 'ugv_policy', 'rc': 0}
+[8.268717] (-) EventReactorShutdown: {}

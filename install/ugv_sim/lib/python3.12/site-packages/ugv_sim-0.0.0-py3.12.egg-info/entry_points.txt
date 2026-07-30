@@ -1,0 +1,2 @@
+[console_scripts]
+sim_node = ugv_sim.sim_node:main

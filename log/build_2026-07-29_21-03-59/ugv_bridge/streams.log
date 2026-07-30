@@ -1,0 +1,26 @@
+[2.051s] Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_bridge build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log --install-scripts $base/lib/ugv_bridge --single-version-externally-managed install_data
+[2.521s] running egg_info
+[2.549s] writing ../../build/ugv_bridge/ugv_bridge.egg-info/PKG-INFO
+[2.550s] writing dependency_links to ../../build/ugv_bridge/ugv_bridge.egg-info/dependency_links.txt
+[2.550s] writing entry points to ../../build/ugv_bridge/ugv_bridge.egg-info/entry_points.txt
+[2.551s] writing requirements to ../../build/ugv_bridge/ugv_bridge.egg-info/requires.txt
+[2.551s] writing top-level names to ../../build/ugv_bridge/ugv_bridge.egg-info/top_level.txt
+[2.607s] reading manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+[2.608s] writing manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+[2.609s] running build
+[2.609s] running build_py
+[2.610s] running install
+[2.622s] running install_lib
+[2.658s] running install_data
+[2.659s] copying urdf/ugv.urdf -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/urdf
+[2.660s] running install_egg_info
+[2.704s] removing '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info' (and everything under it)
+[2.705s] Copying ../../build/ugv_bridge/ugv_bridge.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info
+[2.708s] running install_scripts
+[2.978s] Installing dummy_rl_controller script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+[2.979s] Installing flipper_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+[2.979s] Installing gui_a_vcan script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+[2.980s] Installing motor_emulator script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+[2.981s] Installing track_odometry_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+[2.981s] writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log'
+[3.039s] Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge' returned '0': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_bridge build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log --install-scripts $base/lib/ugv_bridge --single-version-externally-managed install_data

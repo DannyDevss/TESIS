@@ -1,0 +1,335 @@
+[0.268s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build']
+[0.269s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=4, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, verb_parser=<colcon_defaults.argument_parser.defaults.DefaultArgumentsDecorator object at 0x7fb5785ed250>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7fb578736150>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7fb578736150>>)
+[0.418s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.418s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.418s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.418s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.419s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.419s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.419s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/dannydevss/Escritorio/TESIS'
+[0.419s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.419s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.419s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.421s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.421s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.421s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extensions ['ignore', 'ignore_ament_install']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extension 'ignore'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extension 'ignore_ament_install'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extensions ['colcon_pkg']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extension 'colcon_pkg'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extensions ['colcon_meta']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extension 'colcon_meta'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extensions ['ros']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_bridge) by extension 'ros'
+[0.493s] DEBUG:colcon.colcon_core.package_identification:Package 'src/ugv_bridge' with type 'ros.ament_python' and name 'ugv_bridge'
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extensions ['ignore', 'ignore_ament_install']
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extension 'ignore'
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extension 'ignore_ament_install'
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extensions ['colcon_pkg']
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extension 'colcon_pkg'
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extensions ['colcon_meta']
+[0.494s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extension 'colcon_meta'
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extensions ['ros']
+[0.495s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_core) by extension 'ros'
+[0.496s] DEBUG:colcon.colcon_core.package_identification:Package 'src/ugv_core' with type 'ros.ament_python' and name 'ugv_core'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extensions ['ignore', 'ignore_ament_install']
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extension 'ignore'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extension 'ignore_ament_install'
+[0.496s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extensions ['colcon_pkg']
+[0.497s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extension 'colcon_pkg'
+[0.497s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extensions ['colcon_meta']
+[0.497s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extension 'colcon_meta'
+[0.497s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extensions ['ros']
+[0.497s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_gcs) by extension 'ros'
+[0.498s] DEBUG:colcon.colcon_core.package_identification:Package 'src/ugv_gcs' with type 'ros.ament_python' and name 'ugv_gcs'
+[0.498s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.498s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_msgs) by extension 'ignore'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_msgs) ignored
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extensions ['ignore', 'ignore_ament_install']
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extension 'ignore'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extension 'ignore_ament_install'
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extensions ['colcon_pkg']
+[0.499s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extension 'colcon_pkg'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extensions ['colcon_meta']
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extension 'colcon_meta'
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extensions ['ros']
+[0.500s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_policy) by extension 'ros'
+[0.501s] DEBUG:colcon.colcon_core.package_identification:Package 'src/ugv_policy' with type 'ros.ament_python' and name 'ugv_policy'
+[0.501s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extensions ['ignore', 'ignore_ament_install']
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extension 'ignore'
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extension 'ignore_ament_install'
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extensions ['colcon_pkg']
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extension 'colcon_pkg'
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extensions ['colcon_meta']
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extension 'colcon_meta'
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extensions ['ros']
+[0.502s] Level 1:colcon.colcon_core.package_identification:_identify(src/ugv_sim) by extension 'ros'
+[0.504s] DEBUG:colcon.colcon_core.package_identification:Package 'src/ugv_sim' with type 'ros.ament_python' and name 'ugv_sim'
+[0.504s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.504s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.504s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.504s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.504s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.557s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.557s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.562s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 291 installed packages in /opt/ros/jazzy
+[0.563s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.656s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'cmake_args' from command line to 'None'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'cmake_target' from command line to 'None'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'cmake_clean_cache' from command line to 'False'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'cmake_clean_first' from command line to 'False'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'cmake_force_configure' from command line to 'False'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'ament_cmake_args' from command line to 'None'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'catkin_cmake_args' from command line to 'None'
+[0.657s] Level 5:colcon.colcon_core.verb:set package 'ugv_bridge' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.657s] DEBUG:colcon.colcon_core.verb:Building package 'ugv_bridge' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge', 'merge_install': False, 'path': '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge', 'symlink_install': False, 'test_result_base': None}
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'cmake_args' from command line to 'None'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'cmake_target' from command line to 'None'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'cmake_clean_cache' from command line to 'False'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'cmake_clean_first' from command line to 'False'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'cmake_force_configure' from command line to 'False'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'ament_cmake_args' from command line to 'None'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'catkin_cmake_args' from command line to 'None'
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_core' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.658s] DEBUG:colcon.colcon_core.verb:Building package 'ugv_core' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/dannydevss/Escritorio/TESIS/build/ugv_core', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/dannydevss/Escritorio/TESIS/install/ugv_core', 'merge_install': False, 'path': '/home/dannydevss/Escritorio/TESIS/src/ugv_core', 'symlink_install': False, 'test_result_base': None}
+[0.658s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'cmake_args' from command line to 'None'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'cmake_target' from command line to 'None'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'cmake_clean_cache' from command line to 'False'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'cmake_clean_first' from command line to 'False'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'cmake_force_configure' from command line to 'False'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'ament_cmake_args' from command line to 'None'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'catkin_cmake_args' from command line to 'None'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_gcs' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.659s] DEBUG:colcon.colcon_core.verb:Building package 'ugv_gcs' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/dannydevss/Escritorio/TESIS/build/ugv_gcs', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs', 'merge_install': False, 'path': '/home/dannydevss/Escritorio/TESIS/src/ugv_gcs', 'symlink_install': False, 'test_result_base': None}
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'cmake_args' from command line to 'None'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'cmake_target' from command line to 'None'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'cmake_clean_cache' from command line to 'False'
+[0.659s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'cmake_clean_first' from command line to 'False'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'cmake_force_configure' from command line to 'False'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'ament_cmake_args' from command line to 'None'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'catkin_cmake_args' from command line to 'None'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_policy' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.660s] DEBUG:colcon.colcon_core.verb:Building package 'ugv_policy' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/dannydevss/Escritorio/TESIS/build/ugv_policy', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/dannydevss/Escritorio/TESIS/install/ugv_policy', 'merge_install': False, 'path': '/home/dannydevss/Escritorio/TESIS/src/ugv_policy', 'symlink_install': False, 'test_result_base': None}
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'cmake_args' from command line to 'None'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'cmake_target' from command line to 'None'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'cmake_clean_cache' from command line to 'False'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'cmake_clean_first' from command line to 'False'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'cmake_force_configure' from command line to 'False'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'ament_cmake_args' from command line to 'None'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'catkin_cmake_args' from command line to 'None'
+[0.660s] Level 5:colcon.colcon_core.verb:set package 'ugv_sim' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.661s] DEBUG:colcon.colcon_core.verb:Building package 'ugv_sim' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/dannydevss/Escritorio/TESIS/build/ugv_sim', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/dannydevss/Escritorio/TESIS/install/ugv_sim', 'merge_install': False, 'path': '/home/dannydevss/Escritorio/TESIS/src/ugv_sim', 'symlink_install': False, 'test_result_base': None}
+[0.661s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.662s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.663s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/dannydevss/Escritorio/TESIS/src/ugv_core' with build type 'ament_python'
+[0.663s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_core', 'ament_prefix_path')
+[0.667s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.667s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/hook/ament_prefix_path.ps1'
+[0.668s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/hook/ament_prefix_path.dsv'
+[0.669s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/hook/ament_prefix_path.sh'
+[0.670s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.670s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.675s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge' with build type 'ament_python'
+[0.676s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_bridge', 'ament_prefix_path')
+[0.676s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/hook/ament_prefix_path.ps1'
+[0.677s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/hook/ament_prefix_path.dsv'
+[0.678s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/hook/ament_prefix_path.sh'
+[0.679s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.679s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.683s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/dannydevss/Escritorio/TESIS/src/ugv_gcs' with build type 'ament_python'
+[0.683s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_gcs', 'ament_prefix_path')
+[0.684s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/hook/ament_prefix_path.ps1'
+[0.684s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/hook/ament_prefix_path.dsv'
+[0.685s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/hook/ament_prefix_path.sh'
+[0.686s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.687s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.013s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/dannydevss/Escritorio/TESIS/src/ugv_core'
+[1.013s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.013s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.358s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge'
+[1.358s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.358s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.669s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/dannydevss/Escritorio/TESIS/src/ugv_gcs'
+[1.670s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.670s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.801s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools commands: editable_wheel, install, register, bdist_rpm, install_egg_info, bdist_dumb, build_py, install_scripts, rotate, build_clib, check, build_ext, bdist_egg, alias, test, easy_install, symlink_data, install_headers, upload, build_scripts, egg_info, saveopts, setopt, install_data, sdist, bdist, dist_info, build, install_lib, upload_docs, clean, develop
+[2.808s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_bridge build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log --install-scripts $base/lib/ugv_bridge --single-version-externally-managed install_data
+[3.034s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools commands: editable_wheel, install, register, bdist_rpm, install_egg_info, bdist_dumb, build_py, install_scripts, rotate, build_clib, check, build_ext, bdist_egg, alias, test, easy_install, symlink_data, install_headers, upload, build_scripts, egg_info, saveopts, setopt, install_data, sdist, bdist, dist_info, build, install_lib, upload_docs, clean, develop
+[3.041s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_gcs': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_gcs/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_gcs build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_gcs/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_gcs/install.log --install-scripts $base/lib/ugv_gcs --single-version-externally-managed install_data
+[3.062s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools commands: editable_wheel, install, register, bdist_rpm, install_egg_info, bdist_dumb, build_py, install_scripts, rotate, build_clib, check, build_ext, bdist_egg, alias, test, easy_install, symlink_data, install_headers, upload, build_scripts, egg_info, saveopts, setopt, install_data, sdist, bdist, dist_info, build, install_lib, upload_docs, clean, develop
+[3.066s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_core': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_core build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_core/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log --install-scripts $base/lib/ugv_core --single-version-externally-managed install_data
+[4.000s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge' returned '0': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_bridge build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log --install-scripts $base/lib/ugv_bridge --single-version-externally-managed install_data
+[4.006s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge' for CMake module files
+[4.007s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge' for CMake config files
+[4.011s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib'
+[4.012s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/bin'
+[4.012s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/pkgconfig/ugv_bridge.pc'
+[4.012s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages'
+[4.013s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_bridge', 'pythonpath')
+[4.013s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/hook/pythonpath.ps1'
+[4.014s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/hook/pythonpath.dsv'
+[4.015s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/hook/pythonpath.sh'
+[4.017s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/bin'
+[4.017s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ugv_bridge)
+[4.017s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/package.ps1'
+[4.019s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/package.dsv'
+[4.020s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/package.sh'
+[4.023s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/package.bash'
+[4.025s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/package.zsh'
+[4.026s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/colcon-core/packages/ugv_bridge)
+[4.249s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core' for CMake module files
+[4.250s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_core' returned '0': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_core build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_core/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_core/install.log --install-scripts $base/lib/ugv_core --single-version-externally-managed install_data
+[4.251s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core' for CMake config files
+[4.252s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib'
+[4.252s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core/bin'
+[4.252s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/pkgconfig/ugv_core.pc'
+[4.253s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages'
+[4.253s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_core', 'pythonpath')
+[4.254s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/hook/pythonpath.ps1'
+[4.255s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/hook/pythonpath.dsv'
+[4.256s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/hook/pythonpath.sh'
+[4.257s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_core/bin'
+[4.258s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ugv_core)
+[4.258s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/package.ps1'
+[4.259s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/package.dsv'
+[4.260s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/package.sh'
+[4.261s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/package.bash'
+[4.262s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/ugv_core/package.zsh'
+[4.262s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/dannydevss/Escritorio/TESIS/install/ugv_core/share/colcon-core/packages/ugv_core)
+[4.263s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/dannydevss/Escritorio/TESIS/src/ugv_policy' with build type 'ament_python'
+[4.263s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_policy', 'ament_prefix_path')
+[4.264s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/hook/ament_prefix_path.ps1'
+[4.266s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/hook/ament_prefix_path.dsv'
+[4.266s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/hook/ament_prefix_path.sh'
+[4.267s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[4.267s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[4.271s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/dannydevss/Escritorio/TESIS/src/ugv_sim' with build type 'ament_python'
+[4.273s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_sim', 'ament_prefix_path')
+[4.273s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/hook/ament_prefix_path.ps1'
+[4.275s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/hook/ament_prefix_path.dsv'
+[4.275s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/hook/ament_prefix_path.sh'
+[4.276s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[4.277s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[4.603s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/dannydevss/Escritorio/TESIS/src/ugv_policy'
+[4.604s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[4.604s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[4.956s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/dannydevss/Escritorio/TESIS/src/ugv_sim'
+[4.957s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[4.957s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[4.961s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs' for CMake module files
+[4.962s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_gcs' returned '0': DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_gcs/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_gcs build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_gcs/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_gcs/install.log --install-scripts $base/lib/ugv_gcs --single-version-externally-managed install_data
+[4.963s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs' for CMake config files
+[4.963s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib'
+[4.963s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/bin'
+[4.964s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/pkgconfig/ugv_gcs.pc'
+[4.964s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/lib/python3.12/site-packages'
+[4.964s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_gcs', 'pythonpath')
+[4.964s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/hook/pythonpath.ps1'
+[4.965s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/hook/pythonpath.dsv'
+[4.965s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/hook/pythonpath.sh'
+[4.967s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/bin'
+[4.967s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ugv_gcs)
+[4.967s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/package.ps1'
+[4.968s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/package.dsv'
+[4.969s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/package.sh'
+[4.969s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/package.bash'
+[4.970s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/ugv_gcs/package.zsh'
+[4.971s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/dannydevss/Escritorio/TESIS/install/ugv_gcs/share/colcon-core/packages/ugv_gcs)
+[5.878s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools commands: editable_wheel, install, register, bdist_rpm, install_egg_info, bdist_dumb, build_py, install_scripts, rotate, build_clib, check, build_ext, bdist_egg, alias, test, easy_install, symlink_data, install_headers, upload, build_scripts, egg_info, saveopts, setopt, install_data, sdist, bdist, dist_info, build, install_lib, upload_docs, clean, develop
+[5.881s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_sim': AMENT_PREFIX_PATH=/home/dannydevss/Escritorio/TESIS/install/ugv_core:${AMENT_PREFIX_PATH} DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_sim/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_sim build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log --install-scripts $base/lib/ugv_sim --single-version-externally-managed install_data
+[5.898s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools commands: editable_wheel, install, register, bdist_rpm, install_egg_info, bdist_dumb, build_py, install_scripts, rotate, build_clib, check, build_ext, bdist_egg, alias, test, easy_install, symlink_data, install_headers, upload, build_scripts, egg_info, saveopts, setopt, install_data, sdist, bdist, dist_info, build, install_lib, upload_docs, clean, develop
+[5.901s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_policy': AMENT_PREFIX_PATH=/home/dannydevss/Escritorio/TESIS/install/ugv_core:${AMENT_PREFIX_PATH} DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_policy/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_policy build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_policy/install.log --install-scripts $base/lib/ugv_policy --single-version-externally-managed install_data
+[6.832s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy' for CMake module files
+[6.833s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_policy' returned '0': AMENT_PREFIX_PATH=/home/dannydevss/Escritorio/TESIS/install/ugv_core:${AMENT_PREFIX_PATH} DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_policy/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_policy build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_policy/install.log --install-scripts $base/lib/ugv_policy --single-version-externally-managed install_data
+[6.833s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy' for CMake config files
+[6.834s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib'
+[6.835s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/bin'
+[6.835s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/pkgconfig/ugv_policy.pc'
+[6.835s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages'
+[6.835s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_policy', 'pythonpath')
+[6.835s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/hook/pythonpath.ps1'
+[6.836s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/hook/pythonpath.dsv'
+[6.837s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/hook/pythonpath.sh'
+[6.838s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/bin'
+[6.838s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ugv_policy)
+[6.838s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/package.ps1'
+[6.839s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/package.dsv'
+[6.840s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/package.sh'
+[6.841s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/package.bash'
+[6.841s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy/package.zsh'
+[6.842s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/colcon-core/packages/ugv_policy)
+[6.844s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim' for CMake module files
+[6.845s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_sim' returned '0': AMENT_PREFIX_PATH=/home/dannydevss/Escritorio/TESIS/install/ugv_core:${AMENT_PREFIX_PATH} DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_sim/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_sim build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log --install-scripts $base/lib/ugv_sim --single-version-externally-managed install_data
+[6.846s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim' for CMake config files
+[6.846s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib'
+[6.846s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/bin'
+[6.846s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/pkgconfig/ugv_sim.pc'
+[6.847s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages'
+[6.847s] Level 1:colcon.colcon_core.shell:create_environment_hook('ugv_sim', 'pythonpath')
+[6.847s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/hook/pythonpath.ps1'
+[6.848s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/hook/pythonpath.dsv'
+[6.848s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/hook/pythonpath.sh'
+[6.849s] Level 1:colcon.colcon_core.environment:checking '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/bin'
+[6.849s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ugv_sim)
+[6.850s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/package.ps1'
+[6.851s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/package.dsv'
+[6.851s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/package.sh'
+[6.852s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/package.bash'
+[6.853s] INFO:colcon.colcon_core.shell:Creating package script '/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim/package.zsh'
+[6.853s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/colcon-core/packages/ugv_sim)
+[6.854s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[6.854s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[6.855s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[6.855s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[6.879s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.notify_send': Could not find 'notify-send'
+[6.880s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[6.880s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[6.880s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[6.909s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[6.910s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/dannydevss/Escritorio/TESIS/install/local_setup.ps1'
+[6.915s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/dannydevss/Escritorio/TESIS/install/_local_setup_util_ps1.py'
+[6.917s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/dannydevss/Escritorio/TESIS/install/setup.ps1'
+[6.919s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/dannydevss/Escritorio/TESIS/install/local_setup.sh'
+[6.920s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/dannydevss/Escritorio/TESIS/install/_local_setup_util_sh.py'
+[6.922s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/dannydevss/Escritorio/TESIS/install/setup.sh'
+[6.925s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/dannydevss/Escritorio/TESIS/install/local_setup.bash'
+[6.926s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/dannydevss/Escritorio/TESIS/install/setup.bash'
+[6.929s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/dannydevss/Escritorio/TESIS/install/local_setup.zsh'
+[6.930s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/dannydevss/Escritorio/TESIS/install/setup.zsh'

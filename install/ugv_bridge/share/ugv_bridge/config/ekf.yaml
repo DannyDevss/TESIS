@@ -1,0 +1,64 @@
+# ekf.yaml — Esqueleto de configuración del Filtro de Kalman Extendido (EKF)
+# del paquete robot_localization, para el UGV con orugas + flippers.
+#
+# Objetivo: fusionar la odometría de las orugas (que PATINAN) con la IMU del
+# pi3hat (que sufre DRIFT) y entregar a la política de RL una pose/orientación
+# limpia. Publica /odometry/filtered y el TF world_frame -> base_link_frame.
+#
+# Ejecutar (dentro del launch, o suelto):
+#   ros2 run robot_localization ekf_node --ros-args --params-file config/ekf.yaml
+#
+# ¡ESQUELETO! Ajustar frames, matrices *_config y covarianzas al hardware real.
+ekf_filter_node:
+  ros__parameters:
+    frequency: 30.0             # Hz; tasa de publicación del EKF. 100 Hz satura
+                                # robot_localization ("Failed to meet update rate"); 30 Hz
+                                # es lo estándar. El bucle de control de RL (100-200 Hz) es
+                                # el de flipper_node, independiente de esta tasa del filtro.
+    sensor_timeout: 0.1
+    two_d_mode: false           # false: estima pitch/roll (terreno irregular).
+    publish_tf: true
+    publish_acceleration: false
+
+    # --- Marcos de referencia (deben existir en el TF tree / URDF) ---
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom           # sin GPS, el mundo es 'odom'.
+
+    # ------------------------------------------------------------------ #
+    # Fuente 0: ODOMETRÍA DE ORUGAS  (nav_msgs/Odometry)
+    # ------------------------------------------------------------------ #
+    # TODO: aún NO existe un nodo que publique /odom a partir de las velocidades
+    # de las orugas (JointState de flipper_node -> cinemática diferencial ->
+    # nav_msgs/Odometry). Hay que crearlo; aquí se deja el enganche.
+    odom0: /odom
+    # Orden: [x, y, z, roll, pitch, yaw,
+    #         vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    # De las orugas confiamos SOLO en las velocidades planares (vx, vyaw).
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  false, false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    # ------------------------------------------------------------------ #
+    # Fuente 1: IMU del pi3hat  (sensor_msgs/Imu)  -> ya la publica flipper_node
+    # ------------------------------------------------------------------ #
+    imu0: /imu/data_raw
+    # De la IMU confiamos en la ORIENTACIÓN (roll, pitch, yaw) y aceleración lineal.
+    imu0_config: [false, false, false,
+                  true,  true,  true,
+                  false, false, false,
+                  false, false, false,
+                  true,  true,  false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
+
+    # Covarianza inicial / de proceso: usar las de robot_localization por defecto
+    # hasta caracterizar el ruido real de encoders e IMU. TODO: medir y afinar.

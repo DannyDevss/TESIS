@@ -1,0 +1,35 @@
+running egg_info
+creating ../../build/ugv_policy/ugv_policy.egg-info
+writing ../../build/ugv_policy/ugv_policy.egg-info/PKG-INFO
+writing dependency_links to ../../build/ugv_policy/ugv_policy.egg-info/dependency_links.txt
+writing entry points to ../../build/ugv_policy/ugv_policy.egg-info/entry_points.txt
+writing requirements to ../../build/ugv_policy/ugv_policy.egg-info/requires.txt
+writing top-level names to ../../build/ugv_policy/ugv_policy.egg-info/top_level.txt
+writing manifest file '../../build/ugv_policy/ugv_policy.egg-info/SOURCES.txt'
+reading manifest file '../../build/ugv_policy/ugv_policy.egg-info/SOURCES.txt'
+writing manifest file '../../build/ugv_policy/ugv_policy.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build
+creating /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build/lib
+creating /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build/lib/ugv_policy
+copying ugv_policy/__init__.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build/lib/ugv_policy
+copying ugv_policy/policy_node.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build/lib/ugv_policy
+running install
+running install_lib
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build/lib/ugv_policy/__init__.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_policy/build/lib/ugv_policy/policy_node.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy/policy_node.py to policy_node.cpython-312.pyc
+running install_data
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ament_index
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ament_index/resource_index
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ament_index/resource_index/packages
+copying resource/ugv_policy -> /home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ament_index/resource_index/packages
+copying package.xml -> /home/dannydevss/Escritorio/TESIS/install/ugv_policy/share/ugv_policy
+running install_egg_info
+Copying ../../build/ugv_policy/ugv_policy.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/python3.12/site-packages/ugv_policy-0.0.0-py3.12.egg-info
+running install_scripts
+Installing policy_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_policy/lib/ugv_policy
+writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_policy/install.log'

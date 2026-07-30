@@ -1,0 +1,29 @@
+running egg_info
+writing ../../build/ugv_bridge/ugv_bridge.egg-info/PKG-INFO
+writing dependency_links to ../../build/ugv_bridge/ugv_bridge.egg-info/dependency_links.txt
+writing entry points to ../../build/ugv_bridge/ugv_bridge.egg-info/entry_points.txt
+writing requirements to ../../build/ugv_bridge/ugv_bridge.egg-info/requires.txt
+writing top-level names to ../../build/ugv_bridge/ugv_bridge.egg-info/top_level.txt
+reading manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+writing manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+running build
+running build_py
+copying ugv_bridge/kinematic_guardian.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+running install
+running install_lib
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/kinematic_guardian.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/kinematic_guardian.py to kinematic_guardian.cpython-312.pyc
+running install_data
+copying launch/view.launch.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+copying urdf/ugv.urdf -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/urdf
+running install_egg_info
+removing '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info' (and everything under it)
+Copying ../../build/ugv_bridge/ugv_bridge.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info
+running install_scripts
+Installing dummy_rl_controller script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing flipper_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing gui_a_vcan script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing kinematic_guardian script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing motor_emulator script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing track_odometry_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log'

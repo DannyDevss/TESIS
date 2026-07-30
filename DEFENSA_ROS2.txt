@@ -1,0 +1,353 @@
+================================================================================
+ GUIA DE DEFENSA - CONCEPTOS DE ROS 2
+ Proyecto: UGV de rescate (orugas + flippers) - ROS 2 Jazzy - paquete ugv_bridge
+ Objetivo: responder con seguridad si te preguntan sobre ROS 2 y tu implementacion
+================================================================================
+
+COMO USAR ESTE DOCUMENTO
+------------------------
+Cada punto tiene: (P) la pregunta tipica, (R) la respuesta corta y segura, y a
+veces "EN MI PROYECTO" para conectar el concepto con lo que TU hiciste. Si te
+preguntan algo que no sabes, la mejor respuesta es honesta y acotada: "eso no lo
+implementé todavía, quedó como TODO; el enganche está hecho en X".
+
+
+================================================================================
+ BLOQUE 0 - LA FRASE DE 30 SEGUNDOS (tu resumen)
+================================================================================
+"Construí un puente ROS 2 para un UGV de orugas con flippers. Un nodo
+(flipper_node) corre un bucle de control a 100 Hz: recibe comandos por tópicos,
+los manda a los 8 motores a través de una capa de hardware (RMD_Hardware) que
+puede ser el robot real o un gemelo digital, y publica el estado de las juntas
+(/joint_states) y la IMU (/imu/data_raw). Otro nodo calcula la odometría de las
+orugas, un EKF fusiona odometría + IMU, y el URDF + robot_state_publisher me dan
+el árbol de transformadas (TF) que visualizo en RViz. Todo funciona en
+simulación; el hardware real quedó como siguiente paso."
+
+
+================================================================================
+ BLOQUE 1 - FUNDAMENTOS DE ROS 2
+================================================================================
+
+P: ¿Qué es ROS 2?
+R: Es un framework (middleware + herramientas) para programar robots. No es un
+   sistema operativo real: da comunicación entre procesos, gestión de paquetes,
+   drivers y utilidades. Su unidad básica es el NODO, y los nodos se comunican
+   por TOPICOS, SERVICIOS y ACCIONES.
+
+P: ¿Qué es un nodo?
+R: Un proceso que hace una tarea concreta y se comunica con otros. La idea es
+   modularidad: un nodo para el driver, otro para la odometría, otro para el
+   filtro, etc. Si uno falla, no se cae todo.
+   EN MI PROYECTO: flipper_node (puente motores+IMU) y track_odometry_node
+   (odometría) son mis nodos; robot_state_publisher y el EKF son nodos estándar.
+
+P: ¿Diferencia entre ROS 1 y ROS 2?
+R: ROS 2 no tiene un "master" central (roscore); usa DDS como middleware, lo que
+   lo hace descentralizado, con QoS configurable, mejor para tiempo real y
+   sistemas multi-robot. Yo uso ROS 2 Jazzy.
+
+P: ¿Qué es DDS?
+R: Data Distribution Service, el middleware de comunicación por debajo de ROS 2.
+   Maneja el descubrimiento de nodos y el envío de mensajes publish/subscribe sin
+   un servidor central. Por eso ROS 2 no necesita roscore.
+
+
+================================================================================
+ BLOQUE 2 - TOPICOS, MENSAJES, PUB/SUB
+================================================================================
+
+P: ¿Qué es un tópico?
+R: Un "canal" con nombre por el que viajan mensajes de un tipo fijo. Un nodo
+   PUBLICA en el tópico y otro se SUSCRIBE. Es comunicación asíncrona, muchos a
+   muchos, anónima (el que publica no sabe quién escucha).
+
+P: ¿Publish/Subscribe vs Servicios vs Acciones?
+R: - Tópicos (pub/sub): flujo continuo de datos, sin respuesta (ej. sensores).
+   - Servicios: petición/respuesta puntual y síncrona (ej. "resetea la pose").
+   - Acciones: tareas largas con feedback y posibilidad de cancelar (ej. "navega
+     al punto X"). Yo usé solo tópicos porque mi control es un flujo continuo.
+
+P: ¿Qué tópicos y tipos usas?
+R: Suscribo:
+     /cmd_tracks    std_msgs/Float64MultiArray  (4 velocidades de orugas, rad/s)
+     /cmd_flippers  std_msgs/Float64MultiArray  (4 posiciones de flippers, rad)
+   Publico:
+     /joint_states  sensor_msgs/JointState  (estado de los 8 motores)
+     /imu/data_raw  sensor_msgs/Imu         (orientación + aceleración)
+     /odom          nav_msgs/Odometry       (odometría de orugas)
+     /odometry/filtered  nav_msgs/Odometry  (salida del EKF)
+
+P: ¿Por qué Float64MultiArray para los comandos?
+R: Porque mando 4 valores homogéneos (uno por motor) y es un tipo simple y
+   directo. El orden es fijo: fl, fr, rl, rr. Para algo más robusto se podría
+   definir un mensaje propio, pero para el bucle de control esto es suficiente.
+
+P: ¿Qué es JointState?
+R: Un mensaje estándar (sensor_msgs) que lleva, por cada junta, su nombre,
+   posición, velocidad y esfuerzo (torque). robot_state_publisher lo lee para
+   calcular el TF de cada eslabón. Yo publico las 8 juntas (4 orugas + 4
+   flippers).
+
+P: ¿Qué es QoS?
+R: Quality of Service: políticas de la comunicación DDS (fiabilidad
+   RELIABLE/BEST_EFFORT, historial, profundidad de cola, durabilidad). Permite,
+   por ejemplo, que un sensor use best-effort (rápido, tolera pérdidas) y un
+   comando use reliable. Yo uso la profundidad de cola por defecto (10).
+
+
+================================================================================
+ BLOQUE 3 - MI ARQUITECTURA (lo que más te van a preguntar)
+================================================================================
+
+P: Explica el flujo de datos de tu sistema.
+R: La política o teleop publica comandos en /cmd_tracks y /cmd_flippers ->
+   flipper_node los recibe y en su bucle a 100 Hz los envía a RMD_Hardware ->
+   ese hardware (real o simulado) devuelve el estado -> flipper_node publica
+   /joint_states y /imu/data_raw -> track_odometry_node convierte /joint_states
+   en /odom -> el EKF fusiona /odom + /imu/data_raw y publica /odometry/filtered
+   y el TF odom->base_link -> robot_state_publisher usa /joint_states + el URDF
+   para el resto de TFs -> RViz lo visualiza.
+
+P: ¿Por qué separar el driver (RMD_Hardware) del nodo (flipper_node)?
+R: Separación de responsabilidades y patrón "sim-to-real". El nodo solo habla
+   ROS (tópicos, mensajes); el driver solo habla hardware. El nodo no sabe si
+   detrás hay un robot real o un gemelo digital: solo cambio el parámetro
+   modo_simulacion. Así puedo desarrollar y probar toda la lógica ROS sin tener
+   el robot físico delante.
+
+P: ¿Qué es el "gemelo digital" / modo simulación?
+R: Un modelo cinemático simple dentro de RMD_Hardware que, en vez de leer
+   motores reales, integra las velocidades comandadas (orugas) y persigue la
+   posición objetivo (flippers) con un poco de ruido, y devuelve una IMU
+   sintética. Me permite probar todo el pipeline ROS sin hardware.
+
+P: ¿Por qué un bucle a 100 Hz y no reaccionar solo a los mensajes?
+R: Porque el control necesita una frecuencia estable y predecible. Uso un timer
+   que dispara el bucle 100 veces por segundo; en cada ciclo aplico el ÚLTIMO
+   comando recibido. Así el ritmo del control no depende de cada cuánto llegan
+   los mensajes. Es configurable (frecuencia_hz), pensado en subir a 200 Hz para
+   RL.
+
+P: ¿Qué pasa si dejan de llegar comandos?
+R: El nodo retiene el último comando recibido y lo sigue aplicando. Esto es útil
+   (un solo mensaje --once basta) pero también un cuidado: la velocidad de las
+   orugas NO se resetea sola, hay que mandar explícitamente ceros para frenar.
+
+P: Arranque seguro?
+R: Sí, los comandos iniciales son 0 (robot quieto) hasta que llegue el primero.
+
+
+================================================================================
+ BLOQUE 4 - ODOMETRIA Y CINEMATICA
+================================================================================
+
+P: ¿Qué es la odometría?
+R: Estimar la posición del robot (x, y, orientación) integrando el movimiento de
+   sus ruedas/orugas en el tiempo. Es relativa (parte de cero) y acumula error.
+
+P: ¿Cómo calculas la odometría de las orugas?
+R: Con un modelo de tracción diferencial (skid-steer). Agrupo las orugas por
+   lado: velocidad del lado izquierdo y derecho a partir de sus velocidades
+   angulares por el radio. De ahí saco la velocidad lineal v = (v_izq+v_der)/2 y
+   la angular w = (v_der - v_izq)/ancho_de_vía, e integro x, y, yaw.
+
+P: ¿Qué es skid-steer?
+R: Dirección por deslizamiento: no hay ruedas que giran para doblar; el robot
+   gira haciendo que un lado vaya más rápido (o al revés) que el otro, como un
+   tanque. Por eso las orugas patinan al girar.
+
+P: ¿Por qué dices que tu odometría "patina" y no la corriges directamente?
+R: Porque en skid-steer el deslizamiento es inevitable: la odometría de orugas
+   sola deriva. En vez de fingir que es exacta, la trato como una fuente ruidosa
+   y dejo que el EKF la fusione con la IMU. De la odometría el filtro confía solo
+   en las velocidades planares (avance y giro), no en la posición absoluta.
+
+P: Parámetros de la odometría?
+R: wheel_radius (0.05 m, radio efectivo de la oruga) y track_width (0.30 m,
+   separación entre lados). Son ajustables; hay que medirlos en el robot real.
+
+
+================================================================================
+ BLOQUE 5 - FUSION SENSORIAL / EKF
+================================================================================
+
+P: ¿Qué es un EKF y por qué lo usas?
+R: Filtro de Kalman Extendido: fusiona varias fuentes ruidosas para estimar el
+   estado (pose y velocidades) mejor que cualquiera por separado. Uso el paquete
+   robot_localization. Combino la odometría de orugas (que patina) con la IMU
+   (que tiene drift): cada una compensa la debilidad de la otra.
+
+P: ¿Qué toma de cada sensor?
+R: De la odometría (/odom): solo velocidad lineal (vx) y velocidad angular
+   (vyaw), porque su posición absoluta es poco fiable.
+   De la IMU (/imu/data_raw): la orientación (roll, pitch, yaw) y la aceleración
+   lineal. Publica /odometry/filtered y el TF odom->base_link.
+
+P: ¿Por qué el EKF a 30 Hz si tu control es a 100?
+R: Son cosas distintas. robot_localization a 100 Hz se satura ("failed to meet
+   update rate"); 30 Hz es lo estándar para el filtro. El bucle de control de
+   alta frecuencia es el de flipper_node y es independiente de la tasa del filtro.
+
+P: ¿Qué es el drift de la IMU?
+R: El error que se acumula al integrar sus medidas (sobre todo el giróscopo):
+   con el tiempo la orientación se va desviando. Por eso se fusiona con otras
+   fuentes en el EKF.
+
+P: two_d_mode?
+R: Lo dejé en false para que el filtro estime también pitch y roll: el robot es
+   de rescate y trabaja en terreno irregular, no plano.
+
+
+================================================================================
+ BLOQUE 6 - URDF, TF, RViz
+================================================================================
+
+P: ¿Qué es un URDF?
+R: Unified Robot Description Format: un XML que describe el robot como links
+   (eslabones) y joints (articulaciones), con su geometría, ejes y límites. Mi
+   URDF tiene el chasis (base_link), los 4 flippers como juntas continuous
+   (giran 360° completos, sin topes), y el imu_link.
+
+P: ¿Qué es una junta "continuous" y por qué la usas en los flippers?
+R: Una articulación de rotación SIN límites de ángulo: gira 360° indefinidamente
+   (a diferencia de "revolute", que tiene topes lower/upper). Mis flippers son
+   continuous porque el requisito es que den la vuelta completa. El paper de
+   referencia los limitaba a ±60°, pero en mi diseño giran 360°.
+
+P: ¿Qué es TF / el árbol de transformadas?
+R: TF (tf2) mantiene las relaciones espaciales entre todos los marcos de
+   referencia del robot en el tiempo (dónde está cada pieza respecto a otra). Así
+   puedo preguntar "¿dónde está el flipper delantero respecto a base_link?" en
+   cualquier instante.
+
+P: ¿Quién publica cada TF?
+R: - robot_state_publisher: lee el URDF + /joint_states y publica el TF de cada
+     eslabón (dónde está cada flipper según su ángulo).
+   - El EKF: publica odom->base_link (dónde está el robot en el mundo).
+   - track_odometry_node podría publicar odom->base_link con publish_tf=true,
+     pero SOLO si no hay EKF (si no, habría dos nodos publicando el mismo TF y
+     entran en conflicto).
+
+P: ¿Qué es robot_state_publisher?
+R: Un nodo estándar que, dado el URDF y las posiciones de las juntas
+   (/joint_states), calcula y publica el TF de todos los eslabones. No mueve nada,
+   solo traduce ángulos a transformadas.
+
+P: ¿Qué es joint_state_publisher_gui y cuándo lo usas?
+R: Una GUI con un slider por junta que publica /joint_states manualmente. La uso
+   en view.launch.py para POSAR el robot y mirarlo, sin locomoción. Ahí NO corro
+   flipper_node, porque ambos publicarían /joint_states y chocarían.
+
+P: ¿Qué es RViz?
+R: El visualizador 3D de ROS. Muestra el modelo del robot (display RobotModel),
+   los TF, sensores, etc. Tengo dos configs guardadas: una para el sistema
+   completo y otra para posar. El "fixed frame" es base_link (sin EKF, robot
+   fijo) u odom (con EKF, el robot se desplaza en el mundo).
+
+P: ¿Diferencia entre RViz y un simulador como Gazebo?
+R: RViz solo VISUALIZA datos que ya existen; no simula física. Gazebo sí simula
+   física, colisiones y sensores. Yo no uso Gazebo: mi "simulación" es el gemelo
+   digital cinemático dentro del driver, y RViz solo lo muestra.
+
+
+================================================================================
+ BLOQUE 7 - PAQUETES, WORKSPACE, LAUNCH
+================================================================================
+
+P: ¿Qué es un workspace de colcon?
+R: La carpeta donde viven y se compilan mis paquetes (ugv_ws). Con "colcon build"
+   se construyen y luego "source install/setup.bash" los deja disponibles.
+
+P: ¿Qué es colcon?
+R: La herramienta de build de ROS 2 (equivale al catkin de ROS 1). Compila los
+   paquetes del workspace y genera install/.
+
+P: ¿Qué es un paquete?
+R: La unidad mínima que se compila y distribuye. Mi paquete ugv_bridge tiene los
+   nodos, launch/, config/, urdf/, y los archivos setup.py y package.xml.
+
+P: ¿Para qué sirven setup.py y package.xml?
+R: - package.xml: metadatos y dependencias del paquete.
+   - setup.py (paquete Python): declara los entry_points (los ejecutables
+     flipper_node y track_odometry_node) e instala los data_files (launch,
+     config, urdf) para que ros2 launch/run los encuentre.
+
+P: ¿Qué es un launch file y por qué usarlo?
+R: Un archivo (en Python) que arranca varios nodos con sus parámetros de una vez,
+   en vez de abrir una terminal por nodo. Tengo dos:
+   - flipper.launch.py: sistema completo (flipper_node + odometría +
+     robot_state_publisher, y opcionalmente EKF y RViz con argumentos).
+   - view.launch.py: solo posar el robot con sliders.
+
+P: ¿Qué son los argumentos del launch?
+R: Parámetros que paso al lanzar, con valor por defecto. Ej:
+   frecuencia_hz, modo_simulacion, use_ekf, use_rviz. Ej:
+   ros2 launch ugv_bridge flipper.launch.py use_ekf:=true use_rviz:=true
+
+P: ¿ros2 run vs ros2 launch?
+R: run arranca UN ejecutable de un paquete; launch arranca un conjunto de nodos
+   descritos en un launch file (con parámetros y condiciones).
+
+P: ¿Qué son los parámetros de un nodo?
+R: Valores de configuración que el nodo declara y lee al iniciar (ej.
+   frecuencia_hz=100, modo_simulacion=true, wheel_radius=0.05). Se fijan por
+   línea de comandos, por launch o por archivo YAML, sin recompilar.
+
+
+================================================================================
+ BLOQUE 8 - PREGUNTAS "TRAMPA" / DE CIERRE
+================================================================================
+
+P: ¿Tu robot funciona en hardware real?
+R: Todavía no. Todo el pipeline ROS funciona en simulación (gemelo digital). La
+   integración con el hardware real (placa pi3hat, bus CAN y la IMU física) está
+   diseñada como una segunda implementación de la MISMA interfaz RMD_Hardware;
+   quedó marcada como TODO. La arquitectura ya está preparada para ese cambio sin
+   tocar la lógica ROS.
+
+P: ¿Cómo pasarías de simulación a real?
+R: Cambiar modo_simulacion a false. Eso hace que RMD_Hardware, en vez de integrar
+   el modelo, abra la pi3hat, mapee los IDs de motor a los buses CAN, empaquete
+   los comandos en tramas CAN de los motores SteadyWin y lea la IMU real. El
+   nodo, los tópicos y el resto del sistema no cambian.
+
+P: ¿Cuál es la limitación principal de tu odometría?
+R: Que patina (skid-steer) y acumula error. Por eso no confío en su posición
+   absoluta y la fusiono con la IMU en el EKF. La solución completa sería añadir
+   más sensores (ej. LiDAR/cámara) para corregir la deriva a largo plazo.
+
+P: ¿Por qué no usaste un mensaje personalizado en vez de Float64MultiArray?
+R: Por simplicidad: mando 4 valores homogéneos con un orden fijo conocido. Un
+   mensaje propio daría nombres y validación, y es una mejora razonable; para el
+   bucle de control no era necesario.
+
+P: Si te preguntan algo que no sabes:
+R: "Eso no lo profundicé / no lo implementé todavía; lo dejé como TODO. Lo que sí
+   tengo resuelto es X, y el enganche para eso está en Y." Nunca inventes.
+
+
+================================================================================
+ GLOSARIO RAPIDO (por si te quedas en blanco)
+================================================================================
+Nodo .............. proceso que hace una tarea y se comunica por ROS
+Tópico ............ canal con nombre para publicar/suscribir mensajes
+Mensaje ........... estructura de datos con tipo fijo (JointState, Imu, ...)
+Pub/Sub ........... publicar / suscribirse (comunicación asíncrona)
+Servicio .......... petición-respuesta puntual
+Acción ............ tarea larga con feedback y cancelación
+QoS ............... políticas de fiabilidad/cola de la comunicación (DDS)
+DDS ............... middleware de ROS 2 (descubrimiento + transporte)
+URDF .............. descripción XML del robot (links + joints)
+Link / Joint ...... eslabón / articulación del robot
+TF (tf2) .......... árbol de transformadas entre marcos de referencia
+Odometría ......... estimar pose integrando el movimiento de las ruedas
+Skid-steer ........ dirección por deslizamiento (como un tanque)
+EKF ............... Filtro de Kalman Extendido (fusión de sensores)
+Drift ............. error acumulado (típico de la IMU)
+robot_state_publisher .. publica TF de eslabones desde URDF + /joint_states
+RViz .............. visualizador 3D (no simula física)
+colcon / workspace  herramienta de build / carpeta de paquetes
+Launch file ....... arranca varios nodos con parámetros de una vez
+Parámetro ......... config del nodo fijada sin recompilar
+================================================================================

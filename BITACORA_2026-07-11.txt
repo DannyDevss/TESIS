@@ -1,0 +1,200 @@
+================================================================================
+ BITACORA DE TRABAJO - UGV DE RESCATE (orugas + flippers)
+ Fecha: 2026-07-11 (jueves)
+ Workspace: ~/Proyectos/ugv_ws   Paquete: ugv_bridge   ROS 2 Jazzy
+================================================================================
+
+RESUMEN
+-------
+Se construyó, desde cero, todo el "track de flippers" del paquete ugv_bridge:
+un puente ROS 2 entre la política/teleoperación y el hardware de los 8 motores
+(4 orugas + 4 flippers), su gemelo digital para simular sin hardware, la
+odometría de las orugas, el enganche del EKF (fusión IMU+odometría), el modelo
+URDF del robot, dos launch files (posar vs. sistema completo) y las configs de
+RViz. También se escribió el runbook COMO_EJECUTAR.md.
+
+Todo quedó funcionando en MODO SIMULACION (gemelo digital); la integración con
+el hardware real (pi3hat + CAN + IMU) quedó marcada como TODO.
+
+
+ORDEN CRONOLOGICO (segun horas de creacion de cada archivo)
+-----------------------------------------------------------
+15:47  driver_movimiento.py  y  flipper_node.py   (nucleo del puente)
+16:00  track_odometry_node.py                      (odometria de orugas)
+16:15  flipper.launch.py  +  setup.py              (launch sistema completo)
+16:40  config/ekf.yaml                             (fusion sensorial EKF)
+16:44  config/flippers.rviz                        (vista RViz del sistema)
+17:06  urdf/ugv.urdf                               (modelo del robot)
+17:11  view.launch.py + config/view.rviz + package.xml   (posar con sliders)
+17:13  COMO_EJECUTAR.md                            (runbook del proyecto)
+
+
+QUE SE HIZO Y COMO, PASO A PASO
+================================================================================
+
+1) driver_movimiento.py  -- Gemelo digital del hardware (capa de abstraccion)
+--------------------------------------------------------------------------------
+   Se creó la clase RMD_Hardware como interfaz UNICA al hardware de movimiento,
+   igual sirva simulación o hardware real (patrón "sim-to-real": el nodo de ROS
+   no sabe qué hay detrás).
+
+   - Se fijaron los IDs de motor acordados con hardware:
+       IDs 1-4 -> ORUGAS   (se comandan por VELOCIDAD, rad/s)
+       IDs 5-8 -> FLIPPERS (se comandan por POSICION, radianes)
+     y su mapeo a nombres de junta (track_fl/fr/rl/rr, flipper_fl/fr/rl/rr).
+
+   - modo_simulacion=True: integra un modelo cinemático simple con ruido:
+       * Orugas: se integra posición a partir de la velocidad comandada +
+         ruido de encoder.
+       * Flippers: control de 1er orden que se acerca al ángulo objetivo
+         (constante de tiempo ~0.12 s).
+       * Se respeta el dt real entre llamadas (con cap de 0.1 s para no saltar
+         tras una pausa).
+       * IMU simulada: roll/pitch con ruido pequeño, gravedad en accel_z=9.81.
+
+   - modo_simulacion=False: aún NO implementado -> lanza NotImplementedError.
+     Queda como TODO abrir moteus_pi3hat, mapear IDs a buses CAN y la IMU.
+
+   - La clase devuelve DICCIONARIOS Python planos (no mensajes ROS); el mapeo a
+     mensajes ROS vive en el nodo (separación de responsabilidades).
+
+
+2) flipper_node.py  -- Puente ROS 2 <-> motores + IMU (bucle de control)
+--------------------------------------------------------------------------------
+   Nodo con un bucle de control de alta frecuencia (por defecto 100 Hz) que:
+     1. lee los últimos comandos recibidos,
+     2. los envía a los 8 motores vía RMD_Hardware,
+     3. publica el estado como JointState y la IMU como Imu.
+
+   - Suscribe:
+       /cmd_tracks    (Float64MultiArray, 4 velocidades rad/s) -> orugas
+       /cmd_flippers  (Float64MultiArray, 4 posiciones rad)    -> flippers
+   - Publica:
+       /joint_states  (sensor_msgs/JointState) estado de los 8 motores
+       /imu/data_raw  (sensor_msgs/Imu) actitud + aceleración
+   - Parámetros: frecuencia_hz (100.0) y modo_simulacion (True).
+   - Se retiene el ULTIMO comando recibido y se re-aplica en cada ciclo: por eso
+     basta publicar un mensaje --once y el robot mantiene el estado.
+   - Arranque seguro: comandos a 0 (robot quieto).
+   - Incluye conversión Euler->cuaternión (ROS no usa ángulos de Euler).
+   - Cierre limpio del hardware con Ctrl+C.
+
+
+3) track_odometry_node.py  -- Odometria de las orugas
+--------------------------------------------------------------------------------
+   Deriva la pose planar del chasis integrando las velocidades de las 4 orugas
+   con un modelo de tracción diferencial (skid-steer):
+       v_izq = r * media(track_fl, track_rl)
+       v_der = r * media(track_fr, track_rr)
+       v = (v_izq+v_der)/2 ;  w = (v_der-v_izq)/track_width
+
+   - Suscribe /joint_states, publica /odom (nav_msgs/Odometry).
+   - Parámetros: wheel_radius (0.05 m), track_width (0.30 m), publish_tf (false).
+   - Esta odometría PATINA a propósito: se deja que el EKF la corrija con la IMU.
+     Por eso, con EKF activo, este nodo NO publica el TF odom->base_link (lo
+     emite el EKF). Con publish_tf=true puede emitirlo el mismo (solo sin EKF).
+   - Descarta saltos de tiempo (dt<=0 o dt>0.5 s).
+
+
+4) config/ekf.yaml  -- Fusion sensorial (EKF de robot_localization)
+--------------------------------------------------------------------------------
+   Configuración (esqueleto) del Filtro de Kalman Extendido que fusiona:
+     - odom0 = /odom   -> de las orugas se confía SOLO en velocidades planares
+       (vx, vyaw), porque patinan.
+     - imu0  = /imu/data_raw -> se confía en la ORIENTACIÓN (roll/pitch/yaw) y
+       aceleración lineal.
+   Publica /odometry/filtered y el TF odom->base_link.
+   - frequency: 30 Hz (100 Hz satura robot_localization). El bucle de control de
+     RL a 100-200 Hz es el de flipper_node, independiente de esta tasa.
+   - two_d_mode:false para estimar pitch/roll en terreno irregular.
+   - Covarianzas por defecto por ahora; TODO afinarlas con el ruido real.
+
+
+5) urdf/ugv.urdf  -- Modelo del robot
+--------------------------------------------------------------------------------
+   Descripción del robot: chasis base_link + 4 flippers como juntas continuous
+   (fl/fr/rl/rr) con giro completo de 360 grados, más imu_link. Lo consume
+   (NOTA: el 2026-07-12 se cambiaron de revolute +-60 grados a continuous 360.)
+   robot_state_publisher para publicar el TF de cada flipper a partir de
+   /joint_states, y RViz lo muestra con el display RobotModel.
+
+
+6) launch/flipper.launch.py  -- Sistema completo
+--------------------------------------------------------------------------------
+   Levanta el sistema de locomoción:
+     - flipper_node (puente motores + IMU)
+     - track_odometry_node (odometría, publish_tf=false)
+     - robot_state_publisher (TF del modelo)
+     - [opcional] ekf_filter_node  (use_ekf:=true)
+     - [opcional] rviz2            (use_rviz:=true)
+   Argumentos: frecuencia_hz (100), modo_simulacion (true), use_ekf (false),
+   use_rviz (false).
+
+
+7) launch/view.launch.py  -- Posar el robot con sliders
+--------------------------------------------------------------------------------
+   Solo para MIRAR/POSAR el robot (sin locomoción): robot fijo y centrado.
+     - robot_state_publisher
+     - joint_state_publisher_gui (un slider por flipper, giro de 360 grados)
+     - rviz2 con config/view.rviz (fixed frame base_link)
+   Aquí /joint_states lo publica la GUI, por eso NO se corre flipper_node a la
+   vez (entrarían en conflicto en el mismo tópico).
+
+
+8) config/flippers.rviz  y  config/view.rviz  -- Vistas de RViz
+--------------------------------------------------------------------------------
+   Dos configuraciones de RViz guardadas: una para el sistema completo
+   (flippers.rviz) y otra para posar el robot (view.rviz), con displays
+   RobotModel + TF y el fixed frame adecuado (base_link / odom).
+
+
+9) setup.py  y  package.xml  -- Empaquetado
+--------------------------------------------------------------------------------
+   - setup.py: se registraron los entry_points de consola
+       flipper_node = ugv_bridge.flipper_node:main
+       track_odometry_node = ugv_bridge.track_odometry_node:main
+     y se instalan los data_files de launch/, config/ (*.yaml, *.rviz) y urdf/.
+   - package.xml: se declararon las dependencias del paquete.
+   - Se eliminó el archivo COLCON_IGNORE para que colcon vuelva a compilar el
+     paquete.
+
+
+10) COMO_EJECUTAR.md  -- Runbook del proyecto
+--------------------------------------------------------------------------------
+   Guía práctica de cómo ejecutar cada cosa: entornos ROS (Jazzy/Humble), cómo
+   compilar, los dos launch de flippers, cómo mover el robot por tópicos, cómo
+   inspeccionar (/joint_states, /imu/data_raw, /odom, /odometry/filtered, TF), y
+   los otros tracks (navegación 2D y la app de escritorio de tesis/).
+
+
+COMO PROBAR LO QUE SE HIZO (referencia rapida)
+================================================================================
+   rosdev
+   cd ~/Proyectos/ugv_ws
+   colcon build --packages-select ugv_bridge
+   source install/setup.bash
+
+   # Posar el robot con sliders:
+   ros2 launch ugv_bridge view.launch.py
+
+   # Sistema completo (con EKF y RViz):
+   ros2 launch ugv_bridge flipper.launch.py use_ekf:=true use_rviz:=true
+
+   # Mover (un solo mensaje basta, el nodo retiene el ultimo comando):
+   ros2 topic pub --once /cmd_flippers std_msgs/msg/Float64MultiArray "{data: [0.78,0.78,0.78,0.78]}"
+   ros2 topic pub --once /cmd_tracks   std_msgs/msg/Float64MultiArray "{data: [5.0,5.0,5.0,5.0]}"
+   # Frenar (la velocidad NO se resetea sola):
+   ros2 topic pub --once /cmd_tracks   std_msgs/msg/Float64MultiArray "{data: [0.0,0.0,0.0,0.0]}"
+
+   OJO: usar --once, no -r 20. Un "pub -r" deja un publicador vivo mandando
+   velocidad para siempre y el robot se conduce solo (se vió llegar a ~180 m).
+
+
+PENDIENTE (TODO)
+================================================================================
+   - Implementar modo_simulacion=False: integracion real pi3hat + CAN + IMU
+     (moteus_pi3hat, empaquetado de tramas CAN SteadyWin, lectura IMU real).
+   - Medir y afinar las covarianzas del EKF con el ruido real de encoders/IMU.
+   - Commit: todo esto quedo sin versionar (git status lo muestra como archivos
+     nuevos/modificados sobre el commit inicial db05a74).
+================================================================================

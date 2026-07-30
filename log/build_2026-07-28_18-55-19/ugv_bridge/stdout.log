@@ -1,0 +1,75 @@
+running egg_info
+creating ../../build/ugv_bridge/ugv_bridge.egg-info
+writing ../../build/ugv_bridge/ugv_bridge.egg-info/PKG-INFO
+writing dependency_links to ../../build/ugv_bridge/ugv_bridge.egg-info/dependency_links.txt
+writing entry points to ../../build/ugv_bridge/ugv_bridge.egg-info/entry_points.txt
+writing requirements to ../../build/ugv_bridge/ugv_bridge.egg-info/requires.txt
+writing top-level names to ../../build/ugv_bridge/ugv_bridge.egg-info/top_level.txt
+writing manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+reading manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+writing manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build
+creating /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib
+creating /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/__init__.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/can_monitor.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/driver_movimiento.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/flipper_node.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/gui_a_comandos.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/motor_emulator.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/protocolo_can.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+copying ugv_bridge/track_odometry_node.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge
+running install
+running install_lib
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/__init__.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/can_monitor.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/driver_movimiento.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/flipper_node.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/gui_a_comandos.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/motor_emulator.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/protocolo_can.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+copying /home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build/lib/ugv_bridge/track_odometry_node.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/can_monitor.py to can_monitor.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/driver_movimiento.py to driver_movimiento.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/flipper_node.py to flipper_node.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/gui_a_comandos.py to gui_a_comandos.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/motor_emulator.py to motor_emulator.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/protocolo_can.py to protocolo_can.cpython-312.pyc
+byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge/track_odometry_node.py to track_odometry_node.cpython-312.pyc
+running install_data
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ament_index
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ament_index/resource_index
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ament_index/resource_index/packages
+copying resource/ugv_bridge -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ament_index/resource_index/packages
+copying package.xml -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+copying launch/can_sim.launch.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+copying launch/can_studio.launch.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+copying launch/can_view.launch.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+copying launch/flipper.launch.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+copying launch/view.launch.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/launch
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/config
+copying config/ekf.yaml -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/config
+copying config/flippers.rviz -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/config
+copying config/view.rviz -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/config
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/urdf
+copying urdf/ugv.urdf -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/urdf
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/scripts
+copying scripts/setup_vcan.sh -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/scripts
+creating /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/meshes
+copying meshes/belt.dae -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/meshes
+copying meshes/chassis.dae -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/meshes
+copying meshes/flipper.dae -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/meshes
+running install_egg_info
+Copying ../../build/ugv_bridge/ugv_bridge.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info
+running install_scripts
+Installing dummy_rl_controller script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing flipper_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing gui_a_vcan script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing motor_emulator script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+Installing track_odometry_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge
+writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log'

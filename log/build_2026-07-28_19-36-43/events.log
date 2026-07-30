@@ -1,0 +1,51 @@
+[0.000000] (-) TimerEvent: {}
+[0.000228] (-) JobUnselected: {'identifier': 'ugv_core'}
+[0.000628] (-) JobUnselected: {'identifier': 'ugv_gcs'}
+[0.001042] (-) JobUnselected: {'identifier': 'ugv_policy'}
+[0.001309] (-) JobUnselected: {'identifier': 'ugv_sim'}
+[0.001365] (ugv_bridge) JobQueued: {'identifier': 'ugv_bridge', 'dependencies': OrderedDict()}
+[0.001602] (ugv_bridge) JobStarted: {'identifier': 'ugv_bridge'}
+[0.099604] (-) TimerEvent: {}
+[0.199979] (-) TimerEvent: {}
+[0.300329] (-) TimerEvent: {}
+[0.400664] (-) TimerEvent: {}
+[0.501120] (-) TimerEvent: {}
+[0.601549] (-) TimerEvent: {}
+[0.701981] (-) TimerEvent: {}
+[0.802389] (-) TimerEvent: {}
+[0.902984] (-) TimerEvent: {}
+[1.003405] (-) TimerEvent: {}
+[1.018208] (ugv_bridge) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/ugv_bridge', 'build', '--build-base', '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/build', 'install', '--record', '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log', '--install-scripts', '$base/lib/ugv_bridge', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/dannydevss/Escritorio/TESIS/src/ugv_bridge', 'env': {'PROFILEHOME': '', 'KDE_FULL_SESSION': 'true', 'RUSTICL_ENABLE': 'iris', 'MAIL': 'thunderbird', 'LC_TIME': 'es_CL.UTF-8', 'USER': 'dannydevss', 'LANGUAGE': '', 'PAM_KWALLET5_LOGIN': '/run/user/1000/kwallet5.socket', 'HOSTNAME': 'SkullCachy', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '4', 'BROWSER': 'cachy-browser', 'QT_WAYLAND_RECONNECT': '1', 'KONSOLE_VERSION': '260403', 'XDG_CACHE_HOME': '/home/dannydevss/.cache', 'HOME': '/home/dannydevss', 'KDE_APPLICATIONS_AS_SCOPE': '1', 'MOTD_SHOWN': 'pam', 'MANROFFOPT': '-c', 'DESKTOP_SESSION': 'plasma', 'KDE_SESSION_VERSION': '6', 'GTK_RC_FILES': '/etc/gtk/gtkrc:/home/dannydevss/.gtkrc:/home/dannydevss/.config/gtkrc', 'KONSOLE_DBUS_SESSION': '/Sessions/1', 'MANAGERPID': '709', 'LC_MONETARY': 'es_CL.UTF-8', 'XDG_STATE_HOME': '/home/dannydevss/.local/state', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'DISTROBOX_ENTER_PATH': '/usr/bin/distrobox-enter', 'SYSTEMD_EXEC_PID': '791', 'KONSOLE_DBUS_WINDOW': '/Windows/1', 'KONSOLE_DBUS_ACTIVATION_COOKIE': 'qBRXxgDez1hWT/CBVbgTXG6JsYpggzAUr03yeVc3dSA=', 'COLORTERM': 'truecolor', 'container': 'podman', 'DEBUGINFOD_URLS': 'https://debuginfod.archlinux.org https://debuginfod.cachyos.org', 'WAYLAND_DISPLAY': 'wayland-0', 'XKB_DEFAULT_LAYOUT': 'latam', 'QT_QPA_PLATFORMTHEME': 'qt5ct', 'LOGNAME': 'dannydevss', 'JOURNAL_STREAM': '10:14090', 'MANAGERPIDFDID': '12452', 'WINDOWID': '94839717916480', 'XDG_SESSION_CLASS': 'user', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-kwin_wayland.service/memory.pressure', 'TERMINFO_DIRS': '/usr/share/terminfo:/run/host/usr/share/terminfo', 'COLORFGBG': '15;0', 'XDG_SESSION_ID': '2', 'TERM': 'xterm-256color', 'KGLOBALACCELD_PLATFORM': 'org.kde.kwin', 'GTK2_RC_FILES': '/home/dannydevss/.gtkrc-2.0', 'FLATPAK_TTY_PROGRESS': '1', 'PATH': '/home/dannydevss/.local/bin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin:/usr/local/games:/usr/games', 'INVOCATION_ID': 'f05e3904e98e4ce1a29cd5484c239b83', 'SESSION_MANAGER': 'local/SkullCachy:@/tmp/.ICE-unix/928,unix/SkullCachy:/tmp/.ICE-unix/928', 'LC_ADDRESS': 'es_CL.UTF-8', 'XDG_MENU_PREFIX': 'plasma-', 'XDG_RUNTIME_DIR': '/run/user/1000', 'XDG_SESSION_PATH': '/org/freedesktop/DisplayManager/Session2', 'XKB_DEFAULT_MODEL': 'pc105', 'ICEAUTHORITY': '/run/user/1000/iceauth_jzWSUH', 'DISPLAY': ':1', 'LC_TELEPHONE': 'es_CL.UTF-8', 'LANG': 'es_MX.UTF-8', 'XDG_CURRENT_DESKTOP': 'KDE', 'XDG_CONFIG_HOME': '/home/dannydevss/.config', 'XDG_SESSION_DESKTOP': 'KDE', 'XAUTHORITY': '/run/user/1000/xauth_LGjmMt', 'XDG_DATA_HOME': '/home/dannydevss/.local/share', 'MANPAGER': "sh -c 'col -bx | bat -l man -p'", 'UID': '1000', 'SHELL': '/usr/bin/fish', 'LC_NAME': 'es_CL.UTF-8', 'LC_MEASUREMENT': 'es_CL.UTF-8', 'XKB_DEFAULT_VARIANT': 'deadtilde', 'KONSOLE_DBUS_SERVICE': ':1.48', 'LC_IDENTIFICATION': 'es_CL.UTF-8', 'VSSCRIPT_PATH': '/usr/lib/python3.14/site-packages/vapoursynth/libvsscript.so', 'PWD': '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge', 'CONTAINER_ID': 'ros2-jazzy', 'VIRTUAL_ENV_DISABLE_PROMPT': '1', 'XDG_DATA_DIRS': '/home/dannydevss/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share', 'XDG_CONFIG_DIRS': '/home/dannydevss/.config/kdedefaults:/etc/xdg', 'LC_NUMERIC': 'es_CL.UTF-8', 'LC_PAPER': 'es_CL.UTF-8', 'KDE_SESSION_UID': '1000', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'EDITOR': '/usr/bin/vim', 'PYTHONPATH': '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages:'}, 'shell': False}
+[1.103850] (-) TimerEvent: {}
+[1.204444] (-) TimerEvent: {}
+[1.304818] (-) TimerEvent: {}
+[1.349676] (ugv_bridge) StdoutLine: {'line': b'running egg_info\n'}
+[1.364197] (ugv_bridge) StdoutLine: {'line': b'writing ../../build/ugv_bridge/ugv_bridge.egg-info/PKG-INFO\n'}
+[1.364933] (ugv_bridge) StdoutLine: {'line': b'writing dependency_links to ../../build/ugv_bridge/ugv_bridge.egg-info/dependency_links.txt\n'}
+[1.365376] (ugv_bridge) StdoutLine: {'line': b'writing entry points to ../../build/ugv_bridge/ugv_bridge.egg-info/entry_points.txt\n'}
+[1.365924] (ugv_bridge) StdoutLine: {'line': b'writing requirements to ../../build/ugv_bridge/ugv_bridge.egg-info/requires.txt\n'}
+[1.366209] (ugv_bridge) StdoutLine: {'line': b'writing top-level names to ../../build/ugv_bridge/ugv_bridge.egg-info/top_level.txt\n'}
+[1.395504] (ugv_bridge) StdoutLine: {'line': b"reading manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'\n"}
+[1.396831] (ugv_bridge) StdoutLine: {'line': b"writing manifest file '../../build/ugv_bridge/ugv_bridge.egg-info/SOURCES.txt'\n"}
+[1.397128] (ugv_bridge) StdoutLine: {'line': b'running build\n'}
+[1.397386] (ugv_bridge) StdoutLine: {'line': b'running build_py\n'}
+[1.398060] (ugv_bridge) StdoutLine: {'line': b'running install\n'}
+[1.404942] (-) TimerEvent: {}
+[1.409044] (ugv_bridge) StdoutLine: {'line': b'running install_lib\n'}
+[1.425114] (ugv_bridge) StdoutLine: {'line': b'running install_data\n'}
+[1.426188] (ugv_bridge) StdoutLine: {'line': b'copying urdf/ugv.urdf -> /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/share/ugv_bridge/urdf\n'}
+[1.427236] (ugv_bridge) StdoutLine: {'line': b'running install_egg_info\n'}
+[1.447334] (ugv_bridge) StdoutLine: {'line': b"removing '/home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[1.448114] (ugv_bridge) StdoutLine: {'line': b'Copying ../../build/ugv_bridge/ugv_bridge.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/python3.12/site-packages/ugv_bridge-0.0.0-py3.12.egg-info\n'}
+[1.449489] (ugv_bridge) StdoutLine: {'line': b'running install_scripts\n'}
+[1.505050] (-) TimerEvent: {}
+[1.579845] (ugv_bridge) StdoutLine: {'line': b'Installing dummy_rl_controller script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[1.580509] (ugv_bridge) StdoutLine: {'line': b'Installing flipper_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[1.580893] (ugv_bridge) StdoutLine: {'line': b'Installing gui_a_vcan script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[1.581141] (ugv_bridge) StdoutLine: {'line': b'Installing motor_emulator script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[1.581361] (ugv_bridge) StdoutLine: {'line': b'Installing track_odometry_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_bridge/lib/ugv_bridge\n'}
+[1.581976] (ugv_bridge) StdoutLine: {'line': b"writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_bridge/install.log'\n"}
+[1.605166] (-) TimerEvent: {}
+[1.639594] (ugv_bridge) CommandEnded: {'returncode': 0}
+[1.660239] (ugv_bridge) JobEnded: {'identifier': 'ugv_bridge', 'rc': 0}
+[1.661897] (-) EventReactorShutdown: {}

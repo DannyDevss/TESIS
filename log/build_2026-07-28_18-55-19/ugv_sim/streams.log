@@ -1,0 +1,37 @@
+[1.218s] Invoking command in '/home/dannydevss/Escritorio/TESIS/src/ugv_sim': AMENT_PREFIX_PATH=/home/dannydevss/Escritorio/TESIS/install/ugv_core DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_sim/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_sim build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log --install-scripts $base/lib/ugv_sim --single-version-externally-managed install_data
+[1.508s] running egg_info
+[1.509s] creating ../../build/ugv_sim/ugv_sim.egg-info
+[1.522s] writing ../../build/ugv_sim/ugv_sim.egg-info/PKG-INFO
+[1.524s] writing dependency_links to ../../build/ugv_sim/ugv_sim.egg-info/dependency_links.txt
+[1.524s] writing entry points to ../../build/ugv_sim/ugv_sim.egg-info/entry_points.txt
+[1.525s] writing requirements to ../../build/ugv_sim/ugv_sim.egg-info/requires.txt
+[1.525s] writing top-level names to ../../build/ugv_sim/ugv_sim.egg-info/top_level.txt
+[1.525s] writing manifest file '../../build/ugv_sim/ugv_sim.egg-info/SOURCES.txt'
+[1.560s] reading manifest file '../../build/ugv_sim/ugv_sim.egg-info/SOURCES.txt'
+[1.562s] writing manifest file '../../build/ugv_sim/ugv_sim.egg-info/SOURCES.txt'
+[1.563s] running build
+[1.563s] running build_py
+[1.564s] creating /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build
+[1.565s] creating /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build/lib
+[1.565s] creating /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build/lib/ugv_sim
+[1.565s] copying ugv_sim/__init__.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build/lib/ugv_sim
+[1.565s] copying ugv_sim/sim_node.py -> /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build/lib/ugv_sim
+[1.566s] running install
+[1.576s] running install_lib
+[1.590s] creating /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim
+[1.591s] copying /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build/lib/ugv_sim/__init__.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim
+[1.591s] copying /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build/lib/ugv_sim/sim_node.py -> /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim
+[1.592s] byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim/__init__.py to __init__.cpython-312.pyc
+[1.592s] byte-compiling /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim/sim_node.py to sim_node.cpython-312.pyc
+[1.595s] running install_data
+[1.596s] creating /home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ament_index
+[1.596s] creating /home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ament_index/resource_index
+[1.597s] creating /home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ament_index/resource_index/packages
+[1.597s] copying resource/ugv_sim -> /home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ament_index/resource_index/packages
+[1.597s] copying package.xml -> /home/dannydevss/Escritorio/TESIS/install/ugv_sim/share/ugv_sim
+[1.597s] running install_egg_info
+[1.614s] Copying ../../build/ugv_sim/ugv_sim.egg-info to /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages/ugv_sim-0.0.0-py3.12.egg-info
+[1.616s] running install_scripts
+[1.744s] Installing sim_node script to /home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/ugv_sim
+[1.744s] writing list of installed files to '/home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log'
+[1.815s] Invoked command in '/home/dannydevss/Escritorio/TESIS/src/ugv_sim' returned '0': AMENT_PREFIX_PATH=/home/dannydevss/Escritorio/TESIS/install/ugv_core DEBUGINFOD_URLS=https://debuginfod.archlinux.org https://debuginfod.cachyos.org PYTHONPATH=/home/dannydevss/Escritorio/TESIS/build/ugv_sim/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dannydevss/Escritorio/TESIS/install/ugv_sim/lib/python3.12/site-packages:/home/dannydevss/Escritorio/TESIS/install/ugv_core/lib/python3.12/site-packages /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ugv_sim build --build-base /home/dannydevss/Escritorio/TESIS/build/ugv_sim/build install --record /home/dannydevss/Escritorio/TESIS/build/ugv_sim/install.log --install-scripts $base/lib/ugv_sim --single-version-externally-managed install_data

@@ -1,0 +1,192 @@
+<?xml version="1.0"?>
+<robot name="ugv_MARV">
+
+<!-- Base (Chasis) -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 -0.04" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ugv_bridge/meshes/chassis.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.60 0.36 0.20"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="20.0"/>
+      <inertia ixx="0.2" ixy="0" ixz="0" iyy="1.0" iyz="0" izz="1.0"/>
+    </inertial>
+  </link>
+
+<!-- ========================================== -->
+<!-- Flipper Frontal Izquierdo (FL)             -->
+<!-- ========================================== -->
+  <joint name="flipper_fl" type="continuous">
+    <parent link="base_link"/>
+    <child link="flipper_fl_link"/>
+    <origin xyz="0.23 0.195 -0.03" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="30.0" velocity="3.0"/>
+  </joint>
+
+  <link name="flipper_fl_link">
+    <visual>
+      <origin xyz="0 0.015 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://ugv_bridge/meshes/flipper.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+
+    <!-- COLISIÓN ÓVALO RECTANGULAR -->
+    <collision>
+      <origin xyz="0.13 0.015 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.26 0.055 0.18"/> 
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.26 0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+
+    <inertial><mass value="0.5"/><inertia ixx="0.002" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
+  </link>
+
+<!-- ========================================== -->
+<!-- Flipper Frontal Derecho (FR)               -->
+<!-- ========================================== -->
+  <joint name="flipper_fr" type="continuous">
+    <parent link="base_link"/>
+    <child link="flipper_fr_link"/>
+    <origin xyz="0.23 -0.195 -0.03" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="30.0" velocity="3.0"/>
+  </joint>
+
+  <link name="flipper_fr_link">
+    <visual>
+      <origin xyz="0 -0.015 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://ugv_bridge/meshes/flipper.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+
+    <!-- COLISIÓN ÓVALO RECTANGULAR -->
+    <collision>
+      <origin xyz="0.13 -0.015 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.26 0.055 0.18"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 -0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.26 -0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+
+    <inertial><mass value="0.5"/><inertia ixx="0.002" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
+  </link>
+
+<!-- ========================================== -->
+<!-- Flipper Trasero Izquierdo (RL)             -->
+<!-- ========================================== -->
+  <joint name="flipper_rl" type="continuous">
+    <parent link="base_link"/>
+    <child link="flipper_rl_link"/>
+    <origin xyz="-0.23 0.195 -0.03" rpy="0 0 3.14159"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="30.0" velocity="3.0"/>
+  </joint>
+
+  <link name="flipper_rl_link">
+    <visual>
+      <origin xyz="0 -0.015 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://ugv_bridge/meshes/flipper.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+
+    <!-- COLISIÓN ÓVALO RECTANGULAR -->
+    <collision>
+      <origin xyz="0.13 -0.015 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.26 0.055 0.18"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 -0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.26 -0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+
+    <inertial><mass value="0.5"/><inertia ixx="0.002" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
+  </link>
+
+<!-- ========================================== -->
+<!-- Flipper Trasero Derecho (RR)               -->
+<!-- ========================================== -->
+  <joint name="flipper_rr" type="continuous">
+    <parent link="base_link"/>
+    <child link="flipper_rr_link"/>
+    <origin xyz="-0.23 -0.195 -0.03" rpy="0 0 3.14159"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="30.0" velocity="3.0"/>
+  </joint>
+
+  <link name="flipper_rr_link">
+    <visual>
+      <origin xyz="0 0.015 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://ugv_bridge/meshes/flipper.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+
+    <!-- COLISIÓN ÓVALO RECTANGULAR -->
+    <collision>
+      <origin xyz="0.13 0.015 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.26 0.055 0.18"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.26 0.015 0.001" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.09" length="0.055"/>
+      </geometry>
+    </collision>
+
+    <inertial><mass value="0.5"/><inertia ixx="0.002" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
+  </link>
+
+</robot>
