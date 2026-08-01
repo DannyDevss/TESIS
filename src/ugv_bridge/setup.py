@@ -41,6 +41,7 @@ setup(
             'gui_a_vcan = ugv_bridge.gui_a_vcan:main',
             'dummy_rl_controller = ugv_bridge.dummy_rl_controller:main',
             'kinematic_guardian = ugv_bridge.kinematic_guardian:main',
+            'pi3hat_imu = ugv_bridge.pi3hat_imu_node:main',
         ],
     },
 )

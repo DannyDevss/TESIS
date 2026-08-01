@@ -1,7 +1,0 @@
-[console_scripts]
-dummy_rl_controller = ugv_bridge.dummy_rl_controller:main
-flipper_node = ugv_bridge.flipper_node:main
-gui_a_vcan = ugv_bridge.gui_a_vcan:main
-kinematic_guardian = ugv_bridge.kinematic_guardian:main
-motor_emulator = ugv_bridge.motor_emulator:main
-track_odometry_node = ugv_bridge.track_odometry_node:main

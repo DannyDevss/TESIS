@@ -1,8 +1,0 @@
-Metadata-Version: 2.1
-Name: ugv-core
-Version: 0.0.0
-Summary: Entorno de simulacion comun (RobotEnv + cerebros). Fuente unica compartida por ugv_sim, ugv_policy y la GCS (simu.py).
-Maintainer: benja
-Maintainer-email: benja@todo.todo
-License: TODO: License declaration
-Provides-Extra: test

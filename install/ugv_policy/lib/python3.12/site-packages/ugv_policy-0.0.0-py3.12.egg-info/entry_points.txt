@@ -1,2 +1,0 @@
-[console_scripts]
-policy_node = ugv_policy.policy_node:main

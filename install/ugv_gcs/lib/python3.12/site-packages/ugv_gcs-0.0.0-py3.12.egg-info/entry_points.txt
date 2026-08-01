@@ -1,2 +1,0 @@
-[console_scripts]
-gcs_node = ugv_gcs.gcs_node:main
