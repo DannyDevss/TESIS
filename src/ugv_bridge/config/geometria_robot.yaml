@@ -62,6 +62,20 @@
     ancho_orugas: 0.30          # separación entre orugas izquierda y derecha (m)
 
     # ================================================================== #
+    # CABLEADO DE LOS MOTORES A LOS BUSES CAN DEL pi3hat
+    # ================================================================== #
+    # No es geometría, pero vive aquí para mantener la promesa de "un solo
+    # archivo que editar" cuando cambie el hardware.
+    #
+    # Bus del pi3hat de cada motor, EN ORDEN DE ID 1..8:
+    #   IDs 1-4 = orugas (track_fl, track_fr, track_rl, track_rr)
+    #   IDs 5-8 = flippers (flipper_fl, flipper_fr, flipper_rl, flipper_rr)
+    #
+    # TODO(hardware): confirmar contra el cableado físico con
+    #   python3 src/ugv_bridge/scripts/verificar_pi3hat.py --motores
+    mapa_buses: [1, 1, 1, 1, 2, 2, 2, 2]
+
+    # ================================================================== #
     # MONTAJE DE LA IMU (pi3hat)
     # ================================================================== #
     # Rotación de la placa pi3hat respecto a base_link (rad). Se aplica a la

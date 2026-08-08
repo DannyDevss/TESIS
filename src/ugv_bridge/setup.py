@@ -17,7 +17,8 @@ setup(
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml') + glob('config/*.rviz')),
         # El .xacro es la fuente; el .urdf plano es el generado (scripts/generar_urdf.sh).
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
-        (os.path.join('share', package_name, 'scripts'), glob('scripts/*.sh')),
+        (os.path.join('share', package_name, 'scripts'),
+            glob('scripts/*.sh') + glob('scripts/*.py')),
         
         # --- AQUÍ ESTÁ LA LÍNEA MÁGICA PARA EL MODELO 3D DE DARPA ---
         (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),

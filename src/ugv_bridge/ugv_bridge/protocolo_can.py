@@ -86,6 +86,16 @@ def motor_de_id_comando(id_arbitraje):
     return id_motor if 1 <= id_motor <= 32 else None
 
 
+def motor_de_id_respuesta(id_arbitraje):
+    """ID de motor a partir del ID de arbitraje de una respuesta (o None si no lo es).
+
+    Lo usa el transporte pi3hat, que recibe en cada ciclo TODAS las tramas vistas
+    en los buses y necesita saber a qué motor pertenece cada una.
+    """
+    id_motor = id_arbitraje - ID_RESP_BASE
+    return id_motor if 1 <= id_motor <= 32 else None
+
+
 # ====================================================================== #
 # LADO DRIVER (Raspberry/pi3hat): armar comandos, leer respuestas
 # ====================================================================== #

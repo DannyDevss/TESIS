@@ -13,6 +13,9 @@ Uso:
     ros2 launch ugv_bridge can_sim.launch.py use_rviz:=true use_ekf:=true
     ros2 launch ugv_bridge can_sim.launch.py can_canal:=vcan0 frecuencia_hz:=100.0
 
+Con el pi3hat ya montado (motores emulados, IMU FÍSICA real):
+    ros2 launch ugv_bridge can_sim.launch.py imu_fuente:=pi3hat_real use_ekf:=true
+
 Depurar el tráfico del bus en otra terminal:  candump vcan0
 """
 import os
@@ -32,6 +35,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('can_canal', default_value='vcan0'),
         DeclareLaunchArgument('frecuencia_hz', default_value='100.0'),
+        DeclareLaunchArgument('imu_fuente', default_value='sintetica'),
         DeclareLaunchArgument('use_ekf', default_value='false'),
         DeclareLaunchArgument('use_rviz', default_value='false'),
 
@@ -54,6 +58,7 @@ def generate_launch_description():
                 'modo': 'can',
                 'can_canal': can_canal,
                 'frecuencia_hz': LaunchConfiguration('frecuencia_hz'),
+                'imu_fuente': LaunchConfiguration('imu_fuente'),
                 'use_ekf': LaunchConfiguration('use_ekf'),
                 'use_rviz': LaunchConfiguration('use_rviz'),
             }.items(),

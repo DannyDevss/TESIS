@@ -22,10 +22,19 @@ Parámetros
                                    por modo_simulacion (compatibilidad).
   modo_simulacion (bool, True)     True = gemelo digital; False = pi3hat real.
   can_canal      (string, 'vcan0') interfaz SocketCAN para modo 'can'.
+  imu_fuente     (string, 'sintetica') 'sintetica' | 'pi3hat_real'. INDEPENDIENTE
+                                   del modo de motor.
+  mapa_buses     (int[], [1,1,1,1,2,2,2,2]) bus del pi3hat de cada motor 1..8.
+  radio_oruga / ancho_orugas / imu_montaje_roll|pitch|yaw
+                                   -> config/geometria_robot.yaml.
 
 Notas de sim-to-real: el mismo nodo sirve para simulación y hardware; solo cambia
-`modo` ('gemelo' -> 'can' con motor_emulator -> 'pi3hat'). Para RL determinista,
-subir a 200 Hz y afinar QoS/prioridad de CPU.
+`modo` ('gemelo' -> 'can' con motor_emulator -> 'pi3hat'). Como `imu_fuente` es un
+parámetro aparte, hoy se puede correr con motores emulados e IMU física real:
+
+    ros2 launch ugv_bridge can_sim.launch.py imu_fuente:=pi3hat_real
+
+Para RL determinista, subir a 200 Hz y afinar QoS/prioridad de CPU.
 """
 import math
 
@@ -66,6 +75,13 @@ class FlipperNode(Node):
         # Geometría: config/geometria_robot.yaml (misma fuente que URDF y guardián).
         self.declare_parameter('radio_oruga', 0.05)
         self.declare_parameter('ancho_orugas', 0.30)
+        self.declare_parameter('imu_montaje_roll', 0.0)
+        self.declare_parameter('imu_montaje_pitch', 0.0)
+        self.declare_parameter('imu_montaje_yaw', 0.0)
+        # Fuente de la IMU, independiente del modo de motor.
+        self.declare_parameter('imu_fuente', 'sintetica')
+        # Bus del pi3hat de cada motor, en orden de ID 1..8.
+        self.declare_parameter('mapa_buses', [1, 1, 1, 1, 2, 2, 2, 2])
         frecuencia = self.get_parameter('frecuencia_hz').value
         modo = self.get_parameter('modo').value
         modo_sim = self.get_parameter('modo_simulacion').value
@@ -75,12 +91,25 @@ class FlipperNode(Node):
         if not modo:
             modo = 'gemelo' if modo_sim else 'pi3hat'
 
+        imu_fuente = self.get_parameter('imu_fuente').value
+        buses = list(self.get_parameter('mapa_buses').value)
+        mapa_buses = {mid: buses[i] for i, mid in enumerate(IDS_ORUGAS + IDS_FLIPPERS)
+                      if i < len(buses)}
+
         self.robot = RMD_Hardware(
             modo=modo,
             canal_can=can_canal,
             radio_oruga=self.get_parameter('radio_oruga').value,
             ancho_orugas=self.get_parameter('ancho_orugas').value,
+            imu_fuente=imu_fuente,
+            imu_montaje_rpy=(
+                self.get_parameter('imu_montaje_roll').value,
+                self.get_parameter('imu_montaje_pitch').value,
+                self.get_parameter('imu_montaje_yaw').value,
+            ),
+            mapa_buses=mapa_buses,
         )
+        self._fallo_avisado = False
 
         # Últimos comandos recibidos (por ID de motor). Arranque seguro: quieto.
         self.cmd_orugas = {mid: 0.0 for mid in IDS_ORUGAS}
@@ -97,7 +126,13 @@ class FlipperNode(Node):
             'can': f'BUS CAN "{can_canal}"',
             'pi3hat': 'HARDWARE REAL (pi3hat)',
         }[modo]
-        self.get_logger().info(f'flipper_node iniciado a {frecuencia:.0f} Hz ({etiqueta})')
+        etiqueta_imu = {
+            'sintetica': 'IMU sintética',
+            'pi3hat_real': 'IMU REAL del pi3hat',
+        }[imu_fuente]
+        self.get_logger().info(
+            f'flipper_node iniciado a {frecuencia:.0f} Hz '
+            f'(motores: {etiqueta} | {etiqueta_imu})')
 
     # ------------------------------------------------------------------ #
     # Entrada de comandos
@@ -119,6 +154,18 @@ class FlipperNode(Node):
         stamp = self.get_clock().now().to_msg()
         self.publicar_joint_state(estado, stamp)
         self.publicar_imu(imu, stamp)
+        self.revisar_comunicacion()
+
+    def revisar_comunicacion(self):
+        """Eleva a log de ROS el watchdog del driver (visible en Foxglove/rqt)."""
+        if self.robot.fallo_comunicacion and not self._fallo_avisado:
+            self._fallo_avisado = True
+            self.get_logger().error(
+                'FALLO DE COMUNICACIÓN con los motores: paro de emergencia activo. '
+                '¿Está corriendo motor_emulator / está energizado el bus?')
+        elif not self.robot.fallo_comunicacion and self._fallo_avisado:
+            self._fallo_avisado = False
+            self.get_logger().info('Comunicación con los motores restablecida.')
 
     def publicar_joint_state(self, estado, stamp):
         js = JointState()
@@ -135,7 +182,13 @@ class FlipperNode(Node):
         msg = Imu()
         msg.header.stamp = stamp
         msg.header.frame_id = 'imu_link'
-        x, y, z, w = euler_a_quaternion(imu['roll'], imu['pitch'], imu['yaw'])
+        # La IMU real entrega el cuaternión directo: se publica tal cual, sin
+        # pasar por Euler (que degenera cerca de pitch = ±90°, o sea con el robot
+        # apoyado de canto — un caso perfectamente posible en rescate).
+        if 'quat' in imu:
+            x, y, z, w = imu['quat']
+        else:
+            x, y, z, w = euler_a_quaternion(imu['roll'], imu['pitch'], imu['yaw'])
         msg.orientation.x = x
         msg.orientation.y = y
         msg.orientation.z = z

@@ -14,6 +14,8 @@ Argumentos:
     modo             ('')    'gemelo' | 'can' | 'pi3hat'. Vacío = usar modo_simulacion.
     modo_simulacion  (true)  true = gemelo digital; false = pi3hat/CAN real.
     can_canal        (vcan0) interfaz SocketCAN para modo:=can.
+    imu_fuente       (sintetica) 'sintetica' | 'pi3hat_real'. Independiente de
+                             `modo`: permite motores emulados + IMU física real.
     use_ekf          (false) si true, arranca robot_localization con config/ekf.yaml.
     use_rviz         (false) si true, abre RViz con config/flippers.rviz.
 """
@@ -54,6 +56,7 @@ def generate_launch_description():
         DeclareLaunchArgument('modo', default_value=''),
         DeclareLaunchArgument('modo_simulacion', default_value='true'),
         DeclareLaunchArgument('can_canal', default_value='vcan0'),
+        DeclareLaunchArgument('imu_fuente', default_value='sintetica'),
         DeclareLaunchArgument('use_ekf', default_value='false'),
         DeclareLaunchArgument('use_rviz', default_value='false'),
 
@@ -68,6 +71,7 @@ def generate_launch_description():
                 'modo': modo,
                 'modo_simulacion': modo_simulacion,
                 'can_canal': can_canal,
+                'imu_fuente': LaunchConfiguration('imu_fuente'),
             }],
         ),
 
