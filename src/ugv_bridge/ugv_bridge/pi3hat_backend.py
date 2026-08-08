@@ -41,7 +41,6 @@ propio motor respondiendo) que en el bus aparece 0x141 y no otro ID.
 """
 import asyncio
 import math
-import time
 
 # La importación real se hace perezosa: este módulo se importa también en el PC
 # de desarrollo (sin pi3hat), donde moteus_pi3hat no existe.

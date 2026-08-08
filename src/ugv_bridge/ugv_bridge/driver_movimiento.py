@@ -442,8 +442,10 @@ class RMD_Hardware:
 
         # yaw: velocidad angular skid-steer de las orugas -> integrar el rumbo.
         # IDs: izq = fl(1), rl(3);  der = fr(2), rr(4).
-        v_izq = self.radio_oruga * (estado[1]['velocidad_rad_s'] + estado[3]['velocidad_rad_s']) / 2.0
-        v_der = self.radio_oruga * (estado[2]['velocidad_rad_s'] + estado[4]['velocidad_rad_s']) / 2.0
+        v_izq = self.radio_oruga * (
+            estado[1]['velocidad_rad_s'] + estado[3]['velocidad_rad_s']) / 2.0
+        v_der = self.radio_oruga * (
+            estado[2]['velocidad_rad_s'] + estado[4]['velocidad_rad_s']) / 2.0
         self._yaw += (v_der - v_izq) / self.ancho_orugas * dt
 
         # roll/pitch: asimetría de los flippers -> actitud objetivo saturada.
