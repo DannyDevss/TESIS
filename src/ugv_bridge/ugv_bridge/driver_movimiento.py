@@ -453,8 +453,16 @@ class RMD_Hardware:
         atras = (estado[7]['posicion_rad'] + estado[8]['posicion_rad']) / 2.0
         izq = (estado[5]['posicion_rad'] + estado[7]['posicion_rad']) / 2.0
         der = (estado[6]['posicion_rad'] + estado[8]['posicion_rad']) / 2.0
-        pitch_obj = _clamp(GANANCIA_PITCH * (frente - atras), -INCLINACION_MAX, INCLINACION_MAX)
-        roll_obj = _clamp(GANANCIA_ROLL * (der - izq), -INCLINACION_MAX, INCLINACION_MAX)
+
+        # Signos según REP-103 (X adelante, Y IZQUIERDA, Z arriba), que NO es la
+        # convención aeronáutica: como Y apunta a la izquierda, un pitch POSITIVO
+        # es morro ABAJO, y un roll POSITIVO baja el costado DERECHO.
+        # Un flipper con ángulo positivo gira su punta hacia abajo (rotación sobre
+        # +Y), o sea empuja contra el suelo y LEVANTA ese extremo del chasis:
+        #   flippers delanteros arriba -> morro arriba  -> pitch NEGATIVO
+        #   flippers derechos  arriba -> costado der. arriba -> roll NEGATIVO
+        pitch_obj = _clamp(GANANCIA_PITCH * (atras - frente), -INCLINACION_MAX, INCLINACION_MAX)
+        roll_obj = _clamp(GANANCIA_ROLL * (izq - der), -INCLINACION_MAX, INCLINACION_MAX)
 
         # El chasis se asienta hacia la actitud objetivo (1er orden, ~0.2 s).
         alpha = min(dt * 5.0, 1.0)
@@ -520,10 +528,18 @@ class RMD_Hardware:
         pitch = self._pitch + random.uniform(-0.003, 0.003)
         yaw = self._yaw + random.uniform(-0.003, 0.003)
 
-        # Acelerómetro en reposo = gravedad proyectada al cuerpo (x adelante,
-        # y izquierda, z arriba, REP-103). Coherente con la actitud estimada.
-        accel_x = GRAVEDAD * math.sin(pitch)
-        accel_y = -GRAVEDAD * math.sin(roll) * math.cos(pitch)
+        # Acelerómetro en reposo: mide FUERZA ESPECÍFICA (la reacción que lo
+        # sostiene), no el vector gravedad. Nivelado da (0, 0, +9.81), no
+        # (0, 0, -9.81). Proyectada al cuerpo (REP-103: X adelante, Y izquierda,
+        # Z arriba) queda:
+        #     f = ( -g*sin(pitch), +g*sin(roll)*cos(pitch), +g*cos(roll)*cos(pitch) )
+        # Los signos de X e Y estaban invertidos: con pitch positivo (morro abajo)
+        # el modelo entregaba accel_x positiva, cuando un acelerómetro real
+        # entrega negativa. La Z sí estaba bien, y por eso en reposo nivelado no
+        # se notaba. Corregido para que la IMU sintética y la real coincidan en
+        # convención el día que se cambie imu_fuente.
+        accel_x = -GRAVEDAD * math.sin(pitch)
+        accel_y = GRAVEDAD * math.sin(roll) * math.cos(pitch)
         accel_z = GRAVEDAD * math.cos(roll) * math.cos(pitch)
         return {
             'roll': roll,

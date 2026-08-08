@@ -162,6 +162,37 @@ def test_imu_sintetica_sigue_el_movimiento():
     assert 'quat' not in imu   # la sintética entrega Euler; la real, cuaternión
 
 
+def test_imu_nivelada_en_reposo():
+    """Nivelado, el acelerómetro debe leer (0, 0, +g): fuerza específica, no gravedad."""
+    robot, _ = construir()
+    ciclar(robot, n=5, pausa=0.002)
+    imu = robot.leer_imu()
+    assert abs(imu['accel_x']) < 0.1
+    assert abs(imu['accel_y']) < 0.1
+    assert math.isclose(imu['accel_z'], 9.81, abs_tol=0.1)
+
+
+def test_signos_de_actitud_segun_rep103():
+    """Levantar los flippers delanteros = morro arriba = pitch NEGATIVO.
+
+    En REP-103 el eje Y apunta a la IZQUIERDA, así que un pitch positivo es morro
+    abajo (al revés que en la convención aeronáutica). Un flipper con ángulo
+    positivo gira su punta hacia el suelo y levanta ese extremo del chasis.
+    """
+    robot, _ = construir()
+    # Flippers delanteros (IDs 5 y 6) arriba, traseros en cero.
+    ciclar(robot, flippers={5: 1.0, 6: 1.0, 7: 0.0, 8: 0.0}, n=60, pausa=0.002)
+    imu = robot.leer_imu()
+    assert imu['pitch'] < -0.05, f'pitch={imu["pitch"]}: el morro debería subir'
+    # Y con morro arriba, el acelerómetro ve componente X POSITIVA.
+    assert imu['accel_x'] > 0.1
+
+    # Flippers derechos (IDs 6 y 8) arriba -> costado derecho arriba -> roll < 0.
+    robot2, _ = construir()
+    ciclar(robot2, flippers={5: 0.0, 6: 1.0, 7: 0.0, 8: 1.0}, n=60, pausa=0.002)
+    assert robot2.leer_imu()['roll'] < -0.05
+
+
 def test_imu_fuente_invalida_falla_temprano():
     import pytest
     with pytest.raises(ValueError):

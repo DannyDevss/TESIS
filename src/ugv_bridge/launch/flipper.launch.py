@@ -25,7 +25,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration, NotSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -76,13 +76,22 @@ def generate_launch_description():
         ),
 
         # Odometría de orugas: /joint_states -> /odom (odom0 del EKF).
-        # publish_tf=false: con EKF activo, el TF odom->base_link lo emite el EKF.
+        #
+        # publish_tf sigue a "not use_ekf", y esto NO es un detalle:
+        #   - con EKF: el TF odom->base_link lo emite el EKF (con la inclinación
+        #     que mide la IMU). Si este nodo también lo emitiera, base_link
+        #     tendría dos padres y el árbol TF quedaría inválido.
+        #   - sin EKF: lo emite este nodo, para que el robot no quede huérfano en
+        #     el frame odom (en Foxglove: sin esto el modelo no aparece). Ojo, esa
+        #     versión es sólo planar: mueve el robot pero no lo inclina.
         Node(
             package='ugv_bridge',
             executable='track_odometry_node',
             name='track_odometry_node',
             output='screen',
-            parameters=[geometria_yaml, {'publish_tf': False}],
+            parameters=[geometria_yaml, {
+                'publish_tf': ParameterValue(NotSubstitution(use_ekf), value_type=bool),
+            }],
         ),
 
         # Modelo del robot: lee /joint_states y publica el TF de cada flipper.

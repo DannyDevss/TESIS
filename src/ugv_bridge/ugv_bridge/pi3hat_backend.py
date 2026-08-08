@@ -376,11 +376,12 @@ class LectorImuPi3Hat:
             # También hay que llevarla al marco del chasis.
             return _rotar_vector(self.q_montaje, (v.x, v.y, v.z))
 
-        # Fallback: gravedad proyectada en el cuerpo (REP-103: X adelante,
-        # Y izquierda, Z arriba).
+        # Fallback: fuerza específica proyectada en el cuerpo (REP-103: X
+        # adelante, Y izquierda, Z arriba). Misma convención que la IMU sintética
+        # del gemelo digital, para que ambas fuentes sean intercambiables.
         return (
-            GRAVEDAD * math.sin(pitch),
-            -GRAVEDAD * math.sin(roll) * math.cos(pitch),
+            -GRAVEDAD * math.sin(pitch),
+            GRAVEDAD * math.sin(roll) * math.cos(pitch),
             GRAVEDAD * math.cos(roll) * math.cos(pitch),
         )
 

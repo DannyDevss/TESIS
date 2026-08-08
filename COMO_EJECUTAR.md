@@ -64,8 +64,13 @@ Nodos sueltos (para depurar):
 
 ```bash
 ros2 run ugv_bridge flipper_node
-ros2 run ugv_bridge track_odometry_node --ros-args -p wheel_radius:=0.05 -p track_width:=0.30
+ros2 run ugv_bridge track_odometry_node --ros-args \
+    --params-file src/ugv_bridge/config/geometria_robot.yaml
 ```
+
+> Los parámetros de geometría (`radio_oruga`, `ancho_orugas`, antes
+> `wheel_radius`/`track_width`) salen de `config/geometria_robot.yaml`, que es la
+> única fuente de verdad y la comparte con el URDF y el guardián de colisiones.
 
 ### Cómo mover el robot en la simulación
 
@@ -109,6 +114,43 @@ ros2 run rqt_plot rqt_plot /joint_states/position[4]  # ángulo de un flipper en
 ```
 
 En RViz: fixed frame `base_link` (sin EKF) u `odom` (con EKF); displays RobotModel + TF.
+
+### Que el modelo 3D se INCLINE en Foxglove (no sólo los flippers)
+
+`robot_state_publisher` dibuja únicamente la geometría **interna** del robot: mueve
+los flippers respecto a `base_link`, pero **nunca mueve `base_link` dentro del
+mundo**. Por eso, aunque `/imu/data_raw` traiga una orientación perfecta, el modelo
+se ve plano: falta quién publique dónde está el chasis.
+
+Eso lo hace el **EKF**, con el TF `odom -> base_link`. Hay que levantarlo:
+
+```bash
+ros2 launch ugv_bridge can_sim.launch.py use_ekf:=true
+# o, sin emulador CAN (gemelo digital):
+ros2 launch ugv_bridge flipper.launch.py use_ekf:=true
+```
+
+En el panel 3D de Foxglove, poner **Display frame = `odom`** (con `base_link` el
+robot queda fijo y sólo se mueven los flippers, que es justo el síntoma).
+
+Comprobar que la inclinación llega de verdad:
+
+```bash
+ros2 run tf2_ros tf2_echo odom base_link      # debe cambiar el RPY al inclinarse
+ros2 topic pub --once /cmd_flippers std_msgs/msg/Float64MultiArray "{data: [1.0,1.0,0.0,0.0]}"
+# -> pitch NEGATIVO (~-34°): en REP-103 el eje Y apunta a la izquierda, así que
+#    morro ARRIBA es pitch negativo (al revés que en convención aeronáutica).
+```
+
+Las dos cadenas de TF son complementarias y no se pisan:
+
+```
+odom --[EKF]--> base_link --[robot_state_publisher]--> flippers, imu_link
+```
+
+`track_odometry_node` emite `odom -> base_link` **sólo cuando el EKF está apagado**
+(el launch lo ajusta solo). Si ambos lo publicaran, `base_link` tendría dos padres
+y el árbol TF quedaría inválido: en Foxglove el modelo tiembla o desaparece.
 
 ## 3. Track de NAVEGACIÓN 2D (simulación + política RL)
 

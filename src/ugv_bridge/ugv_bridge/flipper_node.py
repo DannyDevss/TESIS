@@ -51,6 +51,19 @@ from ugv_bridge.driver_movimiento import (
 )
 
 
+# Covarianzas de la IMU publicada en /imu/data_raw.
+#
+# Cero significa "medición perfecta" para robot_localization (satura a 1e-9) y
+# -1 significa "este dato no existe", con lo que el EKF DESCARTA la orientación
+# y nunca emitiría la inclinación del chasis. Ninguno de los dos sirve: hay que
+# poner varianzas reales para que el filtro pueda fusionar IMU y odometría.
+# TODO(caracterizar): medir el ruido de la placa en reposo y ajustar.
+VAR_ORIENTACION_RP = 0.01   # rad^2, roll/pitch: los estabiliza la gravedad
+VAR_ORIENTACION_YAW = 0.05  # rad^2, yaw: deriva (no hay magnetómetro fiable)
+VAR_ACELERACION = 0.05      # (m/s^2)^2
+VAR_VEL_ANGULAR = 0.01      # (rad/s)^2
+
+
 def euler_a_quaternion(roll, pitch, yaw):
     """Euler (rad, XYZ) -> cuaternión (x, y, z, w). ROS no usa ángulos de Euler."""
     cr, sr = math.cos(roll / 2.0), math.sin(roll / 2.0)
@@ -196,6 +209,15 @@ class FlipperNode(Node):
         msg.linear_acceleration.x = imu['accel_x']
         msg.linear_acceleration.y = imu['accel_y']
         msg.linear_acceleration.z = imu['accel_z']
+
+        # Diagonales de las 3x3 (fila-mayor): índices 0, 4, 8.
+        msg.orientation_covariance[0] = VAR_ORIENTACION_RP    # roll
+        msg.orientation_covariance[4] = VAR_ORIENTACION_RP    # pitch
+        msg.orientation_covariance[8] = VAR_ORIENTACION_YAW   # yaw
+        for i in (0, 4, 8):
+            msg.angular_velocity_covariance[i] = VAR_VEL_ANGULAR
+            msg.linear_acceleration_covariance[i] = VAR_ACELERACION
+
         self.imu_pub.publish(msg)
 
 
