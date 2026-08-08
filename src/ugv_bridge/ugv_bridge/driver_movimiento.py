@@ -51,6 +51,11 @@ MODOS_VALIDOS = ('gemelo', 'can', 'pi3hat')
 # --- Modelo de actitud de la IMU sintética (gemelo/can) ---
 # La IMU real vive en el pi3hat; en 'gemelo'/'can' se sintetiza a partir del
 # estado de los motores para que roll/pitch/yaw reflejen de verdad el movimiento.
+#
+# OJO: radio y ancho de orugas son GEOMETRÍA, no constantes del modelo: su fuente
+# de verdad es config/geometria_robot.yaml y `flipper_node` los inyecta por el
+# constructor. Los valores de abajo son sólo el respaldo para usar la clase suelta
+# (tests, scripts) sin ROS.
 RADIO_ORUGA_M = 0.05        # radio efectivo de la oruga (coincide con la odometría)
 ANCHO_ORUGAS_M = 0.30       # separación entre orugas izq/der (idem odometría)
 GANANCIA_PITCH = 0.6        # rad de cabeceo por rad de asimetría flippers frente-atrás
@@ -75,9 +80,14 @@ class RMD_Hardware:
         'gemelo' (default), 'can' (SocketCAN, p.ej. vcan0) o 'pi3hat' (TODO).
     canal_can : str
         Interfaz SocketCAN para modo='can' (default 'vcan0'; con hardware: 'can0').
+    radio_oruga : float
+        Radio efectivo de la rueda motriz (m). Fuente: config/geometria_robot.yaml.
+    ancho_orugas : float
+        Separación entre orugas izquierda y derecha (m). Misma fuente.
     """
 
-    def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0'):
+    def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0',
+                 radio_oruga=RADIO_ORUGA_M, ancho_orugas=ANCHO_ORUGAS_M):
         if modo is None:
             modo = 'gemelo' if modo_simulacion else 'pi3hat'
         if modo not in MODOS_VALIDOS:
@@ -85,6 +95,8 @@ class RMD_Hardware:
         self.modo = modo
         self.modo_simulacion = (modo != 'pi3hat')  # compat con código existente
         self.canal_can = canal_can
+        self.radio_oruga = float(radio_oruga)
+        self.ancho_orugas = float(ancho_orugas)
         self.ids_orugas = list(IDS_ORUGAS)
         self.ids_flippers = list(IDS_FLIPPERS)
 
@@ -269,9 +281,9 @@ class RMD_Hardware:
 
         # yaw: velocidad angular skid-steer de las orugas -> integrar el rumbo.
         # IDs: izq = fl(1), rl(3);  der = fr(2), rr(4).
-        v_izq = RADIO_ORUGA_M * (estado[1]['velocidad_rad_s'] + estado[3]['velocidad_rad_s']) / 2.0
-        v_der = RADIO_ORUGA_M * (estado[2]['velocidad_rad_s'] + estado[4]['velocidad_rad_s']) / 2.0
-        self._yaw += (v_der - v_izq) / ANCHO_ORUGAS_M * dt
+        v_izq = self.radio_oruga * (estado[1]['velocidad_rad_s'] + estado[3]['velocidad_rad_s']) / 2.0
+        v_der = self.radio_oruga * (estado[2]['velocidad_rad_s'] + estado[4]['velocidad_rad_s']) / 2.0
+        self._yaw += (v_der - v_izq) / self.ancho_orugas * dt
 
         # roll/pitch: asimetría de los flippers -> actitud objetivo saturada.
         # IDs: frente = fl(5), fr(6);  atrás = rl(7), rr(8);

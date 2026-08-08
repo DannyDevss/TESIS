@@ -15,9 +15,14 @@ corregir. Por eso este nodo publica sólo el mensaje, **no** el TF odom->base_li
 (ese lo emite el EKF cuando está activo; ver `config/ekf.yaml`).
 
 Parámetros:
-    wheel_radius  (double, 0.05) radio efectivo de la oruga/rueda motriz (m).
-    track_width   (double, 0.30) separación entre orugas izq/der (m).
+    radio_oruga   (double, 0.05) radio efectivo de la oruga/rueda motriz (m).
+    ancho_orugas  (double, 0.30) separación entre orugas izq/der (m).
     publish_tf    (bool, false)  si true, emite TF odom->base_link (usar SÓLO sin EKF).
+
+Los dos primeros salen de config/geometria_robot.yaml (única fuente de verdad de
+la geometría, compartida con el URDF y el guardián de colisiones). Antes se
+llamaban wheel_radius/track_width; se renombraron para que coincidan con las
+claves del YAML y no haya dos nombres para el mismo número.
 """
 import math
 
@@ -44,11 +49,11 @@ class TrackOdometryNode(Node):
     def __init__(self):
         super().__init__('track_odometry_node')
 
-        self.declare_parameter('wheel_radius', 0.05)
-        self.declare_parameter('track_width', 0.30)
+        self.declare_parameter('radio_oruga', 0.05)
+        self.declare_parameter('ancho_orugas', 0.30)
         self.declare_parameter('publish_tf', False)
-        self.r = self.get_parameter('wheel_radius').value
-        self.track_width = self.get_parameter('track_width').value
+        self.r = self.get_parameter('radio_oruga').value
+        self.track_width = self.get_parameter('ancho_orugas').value
         self.publish_tf = self.get_parameter('publish_tf').value
 
         # Pose integrada (frame odom).

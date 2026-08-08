@@ -23,8 +23,9 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -38,9 +39,15 @@ def generate_launch_description():
     pkg_share = get_package_share_directory('ugv_bridge')
     ekf_config = os.path.join(pkg_share, 'config', 'ekf.yaml')
     rviz_config = os.path.join(pkg_share, 'config', 'flippers.rviz')
-    urdf_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf')
-    with open(urdf_path, 'r') as f:
-        robot_description = f.read()
+
+    # Geometría: única fuente de verdad, compartida por el URDF y los nodos.
+    geometria_yaml = os.path.join(pkg_share, 'config', 'geometria_robot.yaml')
+    xacro_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf.xacro')
+    # Se procesa el xacro en caliente: el modelo nunca queda desfasado del YAML.
+    robot_description = ParameterValue(
+        Command(['xacro ', xacro_path, ' geometria:=', geometria_yaml]),
+        value_type=str,
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument('frecuencia_hz', default_value='100.0'),
@@ -56,7 +63,7 @@ def generate_launch_description():
             executable='flipper_node',
             name='flipper_node',
             output='screen',
-            parameters=[{
+            parameters=[geometria_yaml, {
                 'frecuencia_hz': frecuencia_hz,
                 'modo': modo,
                 'modo_simulacion': modo_simulacion,
@@ -71,7 +78,7 @@ def generate_launch_description():
             executable='track_odometry_node',
             name='track_odometry_node',
             output='screen',
-            parameters=[{'publish_tf': False}],
+            parameters=[geometria_yaml, {'publish_tf': False}],
         ),
 
         # Modelo del robot: lee /joint_states y publica el TF de cada flipper.

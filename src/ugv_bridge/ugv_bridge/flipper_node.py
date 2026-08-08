@@ -63,6 +63,9 @@ class FlipperNode(Node):
         self.declare_parameter('modo', '')
         self.declare_parameter('modo_simulacion', True)
         self.declare_parameter('can_canal', 'vcan0')
+        # Geometría: config/geometria_robot.yaml (misma fuente que URDF y guardián).
+        self.declare_parameter('radio_oruga', 0.05)
+        self.declare_parameter('ancho_orugas', 0.30)
         frecuencia = self.get_parameter('frecuencia_hz').value
         modo = self.get_parameter('modo').value
         modo_sim = self.get_parameter('modo_simulacion').value
@@ -72,7 +75,12 @@ class FlipperNode(Node):
         if not modo:
             modo = 'gemelo' if modo_sim else 'pi3hat'
 
-        self.robot = RMD_Hardware(modo=modo, canal_can=can_canal)
+        self.robot = RMD_Hardware(
+            modo=modo,
+            canal_can=can_canal,
+            radio_oruga=self.get_parameter('radio_oruga').value,
+            ancho_orugas=self.get_parameter('ancho_orugas').value,
+        )
 
         # Últimos comandos recibidos (por ID de motor). Arranque seguro: quieto.
         self.cmd_orugas = {mid: 0.0 for mid in IDS_ORUGAS}

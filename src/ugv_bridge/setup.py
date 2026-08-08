@@ -15,7 +15,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml') + glob('config/*.rviz')),
-        (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf')),
+        # El .xacro es la fuente; el .urdf plano es el generado (scripts/generar_urdf.sh).
+        (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
         (os.path.join('share', package_name, 'scripts'), glob('scripts/*.sh')),
         
         # --- AQUÍ ESTÁ LA LÍNEA MÁGICA PARA EL MODELO 3D DE DARPA ---
@@ -38,8 +39,10 @@ setup(
             'flipper_node = ugv_bridge.flipper_node:main',
             'track_odometry_node = ugv_bridge.track_odometry_node:main',
             'motor_emulator = ugv_bridge.motor_emulator:main',
-            'gui_a_vcan = ugv_bridge.gui_a_vcan:main',
-            'dummy_rl_controller = ugv_bridge.dummy_rl_controller:main',
+            # 'gui_a_vcan' y 'dummy_rl_controller' apuntaban a módulos inexistentes
+            # (fallaban al ejecutarse). Los reemplazan los dos de abajo, que sí existen.
+            'gui_a_comandos = ugv_bridge.gui_a_comandos:main',
+            'can_monitor = ugv_bridge.can_monitor:main',
             'kinematic_guardian = ugv_bridge.kinematic_guardian:main',
             'pi3hat_imu = ugv_bridge.pi3hat_imu_node:main',
         ],
