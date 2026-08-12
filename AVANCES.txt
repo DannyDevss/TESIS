@@ -422,13 +422,23 @@ DOCUMENTACION
 2.2 PARTES PARCIALMENTE HECHAS O EN PROCESO
 --------------------------------------------
 
-MODO 'pi3hat' - LA MITAD DE IMU YA VERIFICADA, LA DE MOTORES NO
+MODO 'pi3hat' - CAMINO DE BUS YA EJERCITADO CONTRA LA PLACA, FALTAN LOS MOTORES
 
   El codigo esta completo (apertura de la placa, mapa de buses, ciclo de
-  comunicacion, watchdog, cierre limpio). Desde el 12 de agosto de 2026, la
-  parte de IMU esta PROBADA contra la placa real: la libreria moteus_pi3hat
-  abre el router y la lectura de actitud funciona (ver 2.1). Lo que sigue sin
-  probar es el camino de MOTORES, porque no han llegado.
+  comunicacion, watchdog, cierre limpio). El 12 de agosto de 2026 se ejercito
+  contra la placa REAL, con los motores todavia ausentes, y eso destapo tres
+  fallos que estaban esperando al dia del estreno (ver 2.3, puntos 11 a 13).
+  Corregidos esos, hoy el modo 'pi3hat' arranca, cicla el bus a ritmo estable y
+  degrada como debe cuando nadie contesta: publica /joint_states y el watchdog
+  dispara el paro de emergencia.
+
+  Lo que sigue SIN verificar es lo que necesita motores de verdad:
+    - que el ID que aparece en el bus sea el esperado (0x141 y no otro),
+    - las escalas y el orden de bytes del protocolo (ver 2.4),
+    - el cableado real de cada motor a su bus,
+    - la frecuencia alcanzable con los 8 motores respondiendo. Con el bus mudo
+      el bucle cae a ~18 Hz por los dos timeouts de 25 ms por iteracion; con
+      motores que contestan deberia subir mucho, pero hay que medirlo.
 
   El punto concreto sin verificar es UNO SOLO y esta aislado en una funcion:
   como compone la libreria el ID de arbitraje CAN a partir de source y
@@ -583,6 +593,34 @@ del codigo actual:
      Sin xacro el launch ni siquiera construye la descripcion del robot; sin
      robot_localization no hay EKF y por lo tanto el chasis no se inclina.
 
+Los tres siguientes son del modo 'pi3hat' y se encontraron el 12 de agosto de
+2026 ejercitando el bus contra la placa REAL, con los motores aun sin llegar.
+Los tres habrian aparecido el dia del estreno, disfrazados de "los motores no
+responden" o de "se colgo el robot":
+
+ 11. TODAS LAS TRAMAS SALIAN CON ID 0x0. El backend repartia el ID del protocolo
+     RMD en los campos source/destination de moteus, asumiendo que la libreria
+     lo recomponia como (source << 8) | destination. En la version instalada, una
+     Command con raw=True NO compone nada: emite command.arbitration_id tal cual,
+     y ese campo vale 0 por defecto. Comprobado pidiendole a la propia libreria
+     que convirtiera la trama: salia con arbitration_id = 0x0. Ningun motor
+     habria contestado jamas. Ahora se asigna el ID completo y directo.
+
+ 12. EL BUS SE ELEGIA CON UN CAMPO EQUIVOCADO. Al pasar el numero de bus en
+     `channel`, la libreria reventaba en el primer ciclo con "'int' object has
+     no attribute 'parent'": ahi espera un objeto de dispositivo. El campo
+     correcto es `bus`, que la libreria resuelve por su cuenta.
+
+ 13. UN BUS MUDO COLGABA EL BUCLE DE CONTROL PARA SIEMPRE. Con force_can_check y
+     ningun motor contestando, el ciclo del pi3hat no volvia NUNCA (mas de 5
+     minutos medidos en una sola llamada). Consecuencia: no se publicaba
+     /joint_states, el watchdog no llegaba a contar y no habia paro de
+     emergencia; el nodo parecia vivo pero estaba congelado. Un solo motor sin
+     energizar bastaba. Resuelto con un techo de tiempo por ciclo
+     (TIMEOUT_CICLO_MIN_S = 25 ms): al vencer se devuelve "sin respuestas", que
+     es justo lo que el watchdog sabe manejar. Verificado que la placa se
+     recupera ciclo tras ciclo tras cancelar la corrutina.
+
 
 2.4 LIMITACIONES ACTUALES
 --------------------------
@@ -614,39 +652,47 @@ del codigo actual:
      a /imu/sintetica en vez de apagarla, dejando /imu/data_raw libre para la
      real y permitiendo comparar las dos.
 
-  5. LA IMU SINTETICA ES UN MODELO DEMOSTRATIVO. El cabeceo y el alabeo se
+  5. EL GUARDIAN DE COLISIONES NO ESTA EN EL CAMINO DE LOS COMANDOS. Esto
+     importa MUCHO cuando lleguen los motores. kinematic_guardian filtra
+     /joint_states_raw -> /joint_states, es decir la POSE QUE SE DIBUJA, y solo
+     lo lanzan view.launch.py y pi_view.launch.py. Los comandos reales viajan
+     por otro camino: /cmd_flippers -> flipper_node -> motores, y ahi el
+     guardian no aparece. flipper.launch.py, que es el que mueve hardware, ni
+     siquiera lo levanta. Ademas on_cmd_flippers acepta cualquier valor sin
+     limitar. Resultado: hoy nada impide mandar una pose que haga chocar el
+     flipper delantero con el trasero del mismo lado. Antes de energizar los
+     motores hay que decidir si el guardian se mueve al camino de comandos
+     (/cmd_flippers_raw -> /cmd_flippers) o si flipper_node aplica los limites.
+
+  6. LA IMU SINTETICA ES UN MODELO DEMOSTRATIVO. El cabeceo y el alabeo se
      derivan de la asimetria de los flippers con una ganancia fija y saturacion
      en 0.6 rad. Sirve para que el pipeline vea una actitud coherente, pero no
      modela el contacto real con el terreno.
 
-  6. LA ODOMETRIA DE ORUGAS PATINA POR DISENO. En un robot de orugas el
+  7. LA ODOMETRIA DE ORUGAS PATINA POR DISENO. En un robot de orugas el
      deslizamiento es grande, sobre todo al girar. De ahi las covarianzas altas.
      Sin una referencia absoluta (GPS, SLAM, marcadores) la pose derivara sin
      limite en trayectos largos.
 
-  7. YAW SIN REFERENCIA ABSOLUTA. No hay magnetometro fiable en uso, asi que el
+  8. YAW SIN REFERENCIA ABSOLUTA. No hay magnetometro fiable en uso, asi que el
      rumbo deriva. El EKF lo suaviza pero no lo corrige.
 
-  8. EL PROTOCOLO CAN NO SE HA CONTRASTADO CON EL MANUAL OFICIAL. protocolo_can.py
+  9. EL PROTOCOLO CAN NO SE HA CONTRASTADO CON EL MANUAL OFICIAL. protocolo_can.py
      implementa el protocolo RMD V3 estandar, que es el que clonan estos drivers,
      pero las escalas, el orden de bytes y los IDs de respuesta llevan un
      TODO(manual) pendiente de verificar contra la documentacion de SteadyWin.
-
-  9. CALIDAD DE CODIGO HEREDADA. flake8 reporta 216 hallazgos en el repositorio
+ 10. CALIDAD DE CODIGO HEREDADA. flake8 reporta 216 hallazgos en el repositorio
      (mayormente docstrings faltantes, espacios en blanco al final de linea y
      orden de imports). El codigo nuevo esta limpio, pero el linter no esta
      integrado en CI y las pruebas de ament (test_flake8, test_pep257) fallarian
      si se ejecutaran.
-
- 10. FALTAN DEPENDENCIAS DECLARADAS. ugv_gcs usa nav_msgs y PySide6 sin
+ 11. FALTAN DEPENDENCIAS DECLARADAS. ugv_gcs usa nav_msgs y PySide6 sin
      declararlos en su package.xml; ugv_policy usa numpy sin declararlo. Funciona
      porque estan instalados, pero rosdep no los instalaria en una maquina nueva.
-
- 11. LA INTERFAZ vcan0 NO PERSISTE entre reinicios del PC y requiere root para
+ 12. LA INTERFAZ vcan0 NO PERSISTE entre reinicios del PC y requiere root para
      crearse, asi que hay que ejecutar setup_vcan.sh en cada arranque antes de
      usar el modo 'can'.
-
- 12. FALTA docs/TROUBLESHOOTING_PI3HAT.md. Se referencia en las notas de trabajo
+ 13. FALTA docs/TROUBLESHOOTING_PI3HAT.md. Se referencia en las notas de trabajo
      (permisos de sistema del pi3hat ya resueltos) pero no esta commiteado en el
      repositorio.
 
@@ -696,6 +742,12 @@ del codigo actual:
 3.2 TAREAS AL LLEGAR LOS MOTORES
 ---------------------------------
 
+  0. ANTES DE ENERGIZAR NADA: poner el guardian de colisiones en el camino de
+     los COMANDOS, o limitar los angulos en flipper_node. Hoy no hay nada que
+     impida mandar una pose que estrelle el flipper delantero contra el trasero
+     (ver 2.4, punto 5). Es la unica tarea de esta lista que puede romper
+     hardware si se saltea, y por eso va primero.
+
   1. Confirmar el cableado real de los 8 motores a los buses del pi3hat y
      ajustar mapa_buses en config/geometria_robot.yaml. El default asumido es
      orugas en el bus 1 y flippers en el bus 2.
@@ -704,7 +756,13 @@ del codigo actual:
      al mismo bus.
 
   3. Sondear los 8 motores con "verificar_pi3hat.py --motores" (usa una trama de
-     solo lectura, no mueve nada) antes de comandar movimiento.
+     solo lectura, no mueve nada) antes de comandar movimiento. El script ya
+     comprueba solo, y sin motores, con que ID de arbitraje sale la trama al bus.
+
+  3b. Medir la frecuencia real del bucle con los 8 motores respondiendo. Con el
+     bus mudo son ~18 Hz (dos timeouts de 25 ms por iteracion); con motores
+     deberia acercarse a los 100 Hz nominales. Si no llega, revisar el punto 6
+     de 3.4 (dos intercambios por ciclo) antes que subir la frecuencia.
 
   4. Medir el radio efectivo de las orugas y la separacion real entre ellas, y
      actualizar radio_oruga y ancho_orugas en el YAML. Son los dos parametros de

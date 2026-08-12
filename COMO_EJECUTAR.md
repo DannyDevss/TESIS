@@ -191,11 +191,32 @@ corra EN la Raspberry. Y el grafo ROS **no se puede repartir** entre el PC y la
 Pi: el multicast de discovery no cruza la wifi (y `ROS_STATIC_PEERS` tampoco
 enganchó). Con IMU real, entonces, todo se lanza allá y el PC solo mira:
 
+Dentro de la Pi hay **dos comandos** que hacen todo (matar restos de la corrida
+anterior, compilar y lanzar). Se usan desde cualquier directorio:
+
 ```bash
-ssh ros2@robotdeteccion.local          # o el nombre/IP que tenga la Pi
+ssh ros2@robotdeteccion.local
+
+compilar_simu      # motores SIMULADOS (gemelo digital) + IMU FISICA real
+compilar_real      # motores REALES por los buses CAN del pi3hat + IMU real
+```
+
+Los dos encienden el EKF y el puente Foxglove. Aceptan argumentos extra, que se
+pasan tal cual al launch: `compilar_simu frecuencia_hz:=200.0`.
+
+Salen de `scripts/tesis_lanzar.sh` (un solo script; el nombre con el que se lo
+invoca decide el modo) y se instalan con:
+
+```bash
+bash src/ugv_bridge/scripts/instalar_comandos.sh
+```
+
+El equivalente a mano, por si hace falta cambiar algo:
+
+```bash
 source /opt/ros/jazzy/setup.bash && source ~/TESIS/install/setup.bash
 ros2 launch ugv_bridge flipper.launch.py \
-    modo_simulacion:=true imu_fuente:=pi3hat_real use_ekf:=true use_foxglove:=true
+    modo:=gemelo imu_fuente:=pi3hat_real use_ekf:=true use_foxglove:=true
 ```
 
 Desde el PC, Foxglove se conecta al puente de la Pi (TCP, eso sí cruza):

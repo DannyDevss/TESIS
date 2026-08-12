@@ -12,9 +12,9 @@ y de las que depende el modo 'pi3hat' del driver:
   1. ¿Qué versión de moteus_pi3hat hay y qué API expone?
   2. ¿La IMU entrega sólo el cuaternión, o también aceleración lineal cruda?
      (de eso depende si el driver usa el dato real o proyecta la gravedad)
-  3. ¿Cómo compone la librería el ID de arbitraje CAN a partir de source/destination?
-     (de eso depende que en el bus aparezca 0x141 y no otro ID, ver
-     pi3hat_backend._partir_id_arbitraje)
+  3. ¿Con qué ID de arbitraje sale al bus una trama `raw` de la librería?
+     (de eso depende que en el bus aparezca 0x141 y no otro ID, ver la cabecera
+     de pi3hat_backend.py)
 
 Con --motores manda además una trama de LECTURA DE ESTADO (0x9C, sin efecto sobre
 el movimiento) a los 8 IDs y reporta cuáles contestan y por qué bus. Es la forma
@@ -22,7 +22,6 @@ de validar el cableado sin mover nada.
 """
 import argparse
 import asyncio
-import inspect
 import math
 import sys
 
@@ -48,25 +47,31 @@ async def main_async(args):
     print(f'  moteus_pi3hat : {getattr(moteus_pi3hat, "__version__", "?")}')
 
     titulo('2. ID DE ARBITRAJE CAN (crítico para el protocolo RMD)')
-    # Se busca en el código de la librería cómo se compone el ID, para confirmar
-    # que _partir_id_arbitraje() del backend sigue siendo válido.
-    encontrado = False
-    for nombre, obj in inspect.getmembers(moteus_pi3hat):
-        if not inspect.isclass(obj) and not inspect.isfunction(obj):
-            continue
-        try:
-            fuente = inspect.getsource(obj)
-        except (OSError, TypeError):
-            continue
-        for linea in fuente.splitlines():
-            if 'source' in linea and ('<< 8' in linea or 'destination' in linea):
-                print(f'  {nombre}: {linea.strip()}')
-                encontrado = True
-    if not encontrado:
-        print('  No se pudo leer el código (¿extensión compilada?).')
-        print('  Verificar entonces con un analizador CAN que el ID emitido sea 0x141.')
-    print('\n  Esperado por pi3hat_backend: arbitration_id = (source << 8) | destination')
-    print('  -> para RMD 0x141:  source=0x01, destination=0x41')
+    # Prueba DIRECTA: se arma la trama igual que TransportePi3Hat y se le pide a
+    # la propia librería que la convierta, para ver con qué ID saldría al bus.
+    # Es mucho mas fiable que leer su codigo fuente buscando patrones.
+    try:
+        from moteus.transport import Transport
+
+        cmd = moteus.Command()
+        cmd.raw = True
+        cmd.reply_required = False
+        cmd.arbitration_id = 0x141
+        cmd.bus = 1
+        cmd.data = bytes(8)
+        trama = Transport._command_to_frame(None, cmd)
+        emitido = trama.arbitration_id
+        print(f'  ID pedido : 0x141   (0x140 + motor 1)')
+        print(f'  ID emitido: 0x{emitido:X}')
+        if emitido == 0x141:
+            print('  OK: la librería emite el ID tal cual con raw=True.')
+        else:
+            print('  ATENCION: el ID emitido NO coincide con el pedido.')
+            print('  Revisar TransportePi3Hat.intercambiar en pi3hat_backend.py:')
+            print('  esta version de la libreria compone el ID de otra forma.')
+    except Exception as e:
+        print(f'  No se pudo comprobar automaticamente ({type(e).__name__}: {e}).')
+        print('  Verificar con un analizador CAN que el ID emitido sea 0x141.')
 
     titulo('3. APERTURA DE LA PLACA')
     mapa = MAPA_BUSES if args.motores else {}
@@ -128,18 +133,15 @@ async def main_async(args):
 
     titulo('6. SONDEO DE LOS 8 MOTORES (trama 0x9C, no mueve nada)')
     from ugv_bridge import protocolo_can as proto
-    from ugv_bridge.pi3hat_backend import _partir_id_arbitraje
 
     comandos = []
     for mid, bus in sorted(mapa.items()):
-        source, dest = _partir_id_arbitraje(proto.id_comando(mid))
         cmd = moteus.Command()
-        cmd.destination = dest
-        cmd.source = source
+        cmd.raw = True                                  # ID emitido tal cual
+        cmd.arbitration_id = proto.id_comando(mid)      # 0x140 + id_motor
         cmd.bus = bus
         cmd.data = proto.trama_leer_estado()
         cmd.reply_required = False
-        cmd.raw = True
         comandos.append(cmd)
 
     mascara = 0

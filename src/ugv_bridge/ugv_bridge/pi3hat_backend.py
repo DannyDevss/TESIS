@@ -26,18 +26,32 @@ Aquí el pi3hat se usa sólo como TRANSPORTE CAN, y las tramas las arma
 `motor_emulator` sobre vcan0. Un solo protocolo, probado de punta a punta.
 
 ---------------------------------------------------------------------------
-TODO(hardware): VERIFICAR ANTES DE ENERGIZAR LOS MOTORES
+CÓMO SE EMITE UN ID DE ARBITRAJE ARBITRARIO (verificado el 12/08/2026)
 ---------------------------------------------------------------------------
-La construcción del ID de arbitraje CAN (`_partir_id_arbitraje`) depende de cómo
-la versión instalada de moteus_pi3hat compone el ID a partir de source/destination.
-NADA de este archivo pudo probarse contra hardware ni contra la librería real.
+Contra la librería instalada en la Raspberry (moteus/transport.py), una Command
+con `raw = True` se convierte en trama así:
 
-Antes de conectar los motores, correr en la Raspberry:
+    def _command_to_frame(self, command):
+        if getattr(command, 'raw', False):
+            return Frame(arbitration_id=command.arbitration_id, ...)
+        arbitration_id = (destination | (0x8000 if reply_required else 0)
+                          | (source << 8) | (can_prefix << 16))
 
-    python3 src/ugv_bridge/scripts/verificar_pi3hat.py
+Es decir: con `raw=True` la librería NO compone nada a partir de source y
+destination, sino que emite `command.arbitration_id` TAL CUAL. Eso es justo lo
+que necesita este proyecto, que manda tramas de un protocolo ajeno (RMD): se
+asigna el ID completo y listo.
 
-que reporta la API disponible y permite comprobar con un analizador (o con el
-propio motor respondiendo) que en el bus aparece 0x141 y no otro ID.
+    cmd.arbitration_id = 0x141      # 0x140 + id_motor
+
+OJO con la versión anterior de este archivo: repartía el ID en
+source/destination y NO asignaba arbitration_id, que por defecto vale 0. El
+resultado comprobado era que TODAS las tramas salían con ID 0x0 y ningún motor
+habría respondido nunca. El sintoma habria sido "los motores no contestan", que
+es facil de confundir con un problema de cableado o de IDs mal configurados.
+
+Sigue pendiente de verificar con los motores en la mano que el ID que aparece en
+el bus es el esperado (scripts/verificar_pi3hat.py --motores).
 """
 import asyncio
 import math
@@ -115,22 +129,10 @@ def cerrar_router():
 # ====================================================================== #
 # TRANSPORTE CAN DE LOS MOTORES
 # ====================================================================== #
-def _partir_id_arbitraje(id_arbitraje):
-    """Descompone un ID CAN de 11 bits en el par (source, destination) de moteus.
-
-    moteus_pi3hat construye el ID de arbitraje de cada trama como
-    `(source << 8) | destination`. Para emitir un ID arbitrario del protocolo RMD
-    (0x140 + id_motor) basta con repartirlo:
-
-        0x141  ->  source = 0x01,  destination = 0x41
-
-    Es la vía para mandar tramas de un protocolo ajeno por el pi3hat sin tocar la
-    librería.
-
-    TODO(hardware): confirmar con verificar_pi3hat.py que la versión instalada
-    compone el ID así. Si no, hay que ajustar SOLO esta función.
-    """
-    return (id_arbitraje >> 8) & 0xFF, id_arbitraje & 0xFF
+# Suelo del techo de tiempo de un ciclo del bus. Una transacción SPI con los 8
+# motores respondiendo es de milisegundos; 25 ms deja margen de sobra y aun así
+# mantiene el bucle de control por encima de los 40 Hz en el peor caso.
+TIMEOUT_CICLO_MIN_S = 0.025
 
 
 class TransportePi3Hat:
@@ -152,6 +154,7 @@ class TransportePi3Hat:
         self.router = abrir_router(self.mapa_buses)
         self.loop = obtener_loop()
         self.timeouts = 0
+        self.ciclos_vencidos = 0   # ciclos que se cortaron por el techo de tiempo
         # Máscara de buses a revisar por respuestas entrantes en cada ciclo.
         self._mascara_buses = 0
         for bus in set(self.mapa_buses.values()):
@@ -165,8 +168,19 @@ class TransportePi3Hat:
         peticiones : list[tuple[int, bytes]]
             [(id_motor, datos_de_8_bytes), ...]
         timeout : float
-            Sin efecto aquí (el pi3hat resuelve el ciclo completo por SPI); se
-            acepta por simetría con el transporte SocketCAN.
+            Techo de tiempo del ciclo. Se respeta con un suelo de
+            TIMEOUT_CICLO_MIN_S, porque una transacción SPI legítima con los 8
+            motores tarda más que el timeout que usa el transporte SocketCAN.
+
+            NO es decorativo: comprobado en la placa (12/08/2026), si se piden
+            respuestas con `force_can_check` y NINGÚN motor contesta, el ciclo
+            se queda colgado INDEFINIDAMENTE (más de 5 minutos en una sola
+            llamada). Sin este techo, un motor sin alimentar o un bus mal
+            terminado congela el bucle de control entero: no se publica
+            /joint_states, el watchdog no llega a contar y no hay paro de
+            emergencia. Con el techo, el ciclo vuelve sin respuestas, el
+            watchdog cuenta ciclos mudos y fuerza el paro, que es justo el
+            comportamiento para el que se diseñó.
 
         Returns
         -------
@@ -182,23 +196,41 @@ class TransportePi3Hat:
         comandos = []
         for id_motor, datos in peticiones:
             bus = self.mapa_buses.get(id_motor, 1)
-            source, dest = _partir_id_arbitraje(proto.id_comando(id_motor))
             cmd = _moteus.Command()
-            cmd.destination = dest
-            cmd.source = source
+            # raw=True: la librería emite arbitration_id tal cual, sin componerlo
+            # desde source/destination (ver la cabecera del módulo). Es lo que
+            # permite mandar el ID del protocolo RMD sin tocar la librería.
+            cmd.raw = True
+            cmd.arbitration_id = proto.id_comando(id_motor)   # 0x140 + id_motor
+            # El bus del pi3hat se elige SOLO con `bus`, que la librería resuelve
+            # como `[d for d in devices if d.bus() == cmd.bus]`. NO usar
+            # `channel`: ahí espera un objeto de dispositivo, no un número, y
+            # pasarle un int revienta con "'int' object has no attribute
+            # 'parent'" en el primer ciclo (comprobado en la placa).
             cmd.bus = bus
             cmd.data = bytes(datos)
-            # OJO: reply_required=True haría que moteus_pi3hat encienda el bit
-            # 0x8000 del ID, corrompiendo el ID RMD. Las respuestas se recogen
-            # con force_can_check sobre los buses en uso.
+            # OJO: reply_required=True encendería el bit 0x8000 del ID en la rama
+            # NO raw. Aquí no aplica, pero se deja en False igual porque las
+            # respuestas se recogen con force_can_check sobre los buses en uso.
             cmd.reply_required = False
-            cmd.raw = True
             comandos.append(cmd)
 
+        techo = max(float(timeout), TIMEOUT_CICLO_MIN_S)
         try:
             resultados = self.loop.run_until_complete(
-                self.router.cycle(comandos, force_can_check=self._mascara_buses)
+                asyncio.wait_for(
+                    self.router.cycle(comandos, force_can_check=self._mascara_buses),
+                    timeout=techo,
+                )
             )
+        except asyncio.TimeoutError:
+            # Nadie contestó a tiempo. NO es un error del transporte: es el caso
+            # que el watchdog del driver sabe manejar (cuenta ciclos mudos por
+            # motor y fuerza el paro). Se devuelve "ninguna respuesta" y el
+            # bucle de control sigue vivo y publicando.
+            self.timeouts += len(peticiones)
+            self.ciclos_vencidos += 1
+            return {id_motor: None for id_motor, _ in peticiones}
         except Exception as e:  # bus caído, SPI ocupado, motor desconectado...
             self.timeouts += len(peticiones)
             raise ErrorTransportePi3Hat(f'fallo en el ciclo del pi3hat: {e}') from e
