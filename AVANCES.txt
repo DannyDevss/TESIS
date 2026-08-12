@@ -1,8 +1,8 @@
 ================================================================================
 AVANCES DEL PROYECTO - UGV DE RESCATE CON ORUGAS Y FLIPPERS
 Workspace ROS 2 Jazzy
-Ultima actualizacion: 7 de agosto de 2026
-Rama de trabajo: feature/parametrizacion-geometria
+Ultima actualizacion: 12 de agosto de 2026
+Rama de trabajo: feature/parametrizacion-geometria (ultimo commit: P6)
 ================================================================================
 
 
@@ -92,6 +92,8 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
                                (paquete robot_localization).
         view.rviz              Vista RViz con el robot fijo en base_link.
         flippers.rviz          Vista RViz del sistema completo.
+        foxglove_layout.json   Layout de Foxglove con los 8 paneles del proyecto.
+                               Se importa una vez desde la app.
 
       urdf/
         ugv.urdf.xacro         Plantilla del modelo. Lee geometria_robot.yaml con
@@ -102,6 +104,10 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
                                procesan xacro.
 
       meshes/                  Modelos 3D: chassis.dae, flipper.dae, belt.dae.
+
+      textures/                Texturas que los .dae piden como ../textures/*.png
+                               (chassis.png, flipper_color.png). Sin ellas
+                               Foxglove descarta la malla entera.
 
       ugv_bridge/              Codigo Python (los nodos):
         driver_movimiento.py   Clase RMD_Hardware: capa de abstraccion sobre el
@@ -128,10 +134,13 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
       launch/
         view.launch.py         Posar el robot con sliders. Sin locomocion.
         flipper.launch.py      Sistema completo: driver + odometria +
-                               robot_state_publisher (+ EKF y RViz opcionales).
+                               robot_state_publisher (+ EKF, RViz y puente
+                               Foxglove opcionales). Es el que se lanza en la
+                               Raspberry para correr con IMU fisica.
         can_sim.launch.py      Emulador de motores + el sistema completo en modo
                                CAN. Es el launch de uso diario hoy.
-        can_view.launch.py     Sliders + RViz sobre el bus CAN real.
+        can_view.launch.py     Sliders + visor (Foxglove por defecto, RViz
+                               opcional) sobre el bus CAN real.
         can_studio.launch.py   can_sim + monitor grafico del bus.
         pi_view.launch.py      Version headless para correr en la Raspberry Pi.
 
@@ -333,9 +342,40 @@ MODELO DEL ROBOT (URDF)
   - Los 4 flippers se generan desde una sola macro de xacro.
   - Sin warnings de kdl_parser al arrancar robot_state_publisher.
 
+IMU FISICA DEL pi3hat - VERIFICADA CONTRA LA PLACA (12 de agosto de 2026)
+
+  Primera corrida del sistema con hardware real. Con los motores todavia
+  simulados, la IMU de la placa alimenta el EKF y este inclina el modelo 3D:
+
+        ros2 launch ugv_bridge flipper.launch.py modo_simulacion:=true \
+            imu_fuente:=pi3hat_real use_ekf:=true use_foxglove:=true
+
+  Lo que quedo comprobado, corriendo TODO en la Raspberry:
+    - La libreria moteus_pi3hat abre la placa y LectorImuPi3Hat lee actitud real
+      (roll, pitch y yaw siguiendo el movimiento de la mano).
+    - /imu/data_raw publica a ~50-70 Hz y /joint_states a 100 Hz.
+    - El EKF emite odom -> base_link con la orientacion medida, que es la cadena
+      que faltaba para que el chasis se incline y no solo los flippers.
+    - imu_fuente es de verdad independiente del modo de motor: 'gemelo' con
+      IMU real funciona.
+
+  El offset de montaje de 180 grados en roll quedo CONFIRMADO y corregido (ver
+  2.2). El pitch sigue pendiente de confirmar con el robot nivelado.
+
+  Nota de despliegue: la IMU se lee por SPI, asi que solo puede abrirla un
+  proceso que corra EN la Raspberry, y el grafo ROS no se puede repartir entre
+  el PC y la Pi (ver 2.4). Con IMU real, todo se lanza en la Pi y el PC solo
+  abre Foxglove contra ws://robotdeteccion.local:8765.
+
 VISUALIZACION
 
-  - foxglove_bridge en el puerto 8765 (view.launch.py y pi_view.launch.py).
+  - foxglove_bridge en el puerto 8765 (view.launch.py, pi_view.launch.py y,
+    desde P6, flipper.launch.py y can_view.launch.py con use_foxglove:=true).
+  - config/foxglove_layout.json: layout del proyecto con 8 paneles (3D, angulos
+    de flipper, velocidad de orugas, pose del EKF, publicacion de /cmd_flippers
+    y /cmd_tracks, IMU cruda y /rosout).
+  - textures/: las dos texturas que los COLLADA referenciaban y que no estaban
+    en el repositorio. Sin ellas Foxglove descarta la malla entera.
   - RViz con dos configuraciones: view.rviz (robot fijo, para posarlo con
     sliders) y flippers.rviz (sistema completo).
   - Monitor grafico del bus CAN (can_monitor) con panel por motor y log crudo.
@@ -382,12 +422,13 @@ DOCUMENTACION
 2.2 PARTES PARCIALMENTE HECHAS O EN PROCESO
 --------------------------------------------
 
-MODO 'pi3hat' - ESCRITO PERO NO VERIFICADO CONTRA HARDWARE
+MODO 'pi3hat' - LA MITAD DE IMU YA VERIFICADA, LA DE MOTORES NO
 
   El codigo esta completo (apertura de la placa, mapa de buses, ciclo de
-  comunicacion, watchdog, cierre limpio), pero NO se ha podido probar ni contra
-  la libreria moteus_pi3hat ni contra la placa, porque los motores no han llegado
-  y el PC de desarrollo no tiene la libreria instalada.
+  comunicacion, watchdog, cierre limpio). Desde el 12 de agosto de 2026, la
+  parte de IMU esta PROBADA contra la placa real: la libreria moteus_pi3hat
+  abre el router y la lectura de actitud funciona (ver 2.1). Lo que sigue sin
+  probar es el camino de MOTORES, porque no han llegado.
 
   El punto concreto sin verificar es UNO SOLO y esta aislado en una funcion:
   como compone la libreria el ID de arbitraje CAN a partir de source y
@@ -407,14 +448,21 @@ ACELERACION LINEAL DE LA IMU REAL
   proyecta la gravedad segun la orientacion, igual que el modelo sintetico. Las
   dos rutas estan escritas, pero solo la del fallback esta probada.
 
-OFFSET DE MONTAJE DE LA IMU
+OFFSET DE MONTAJE DE LA IMU - ROLL RESUELTO, PITCH PENDIENTE
 
-  En pruebas de banco se detecto un offset de aproximadamente 180 grados en roll.
-  Esta preparado como parametro (imu_montaje_roll en el YAML) y se aplica en el
-  driver, pero CONFIRMARLO requiere el pi3hat en su posicion definitiva del
-  chasis. Procedimiento: con el robot nivelado, /imu/data_raw debe dar roll y
-  pitch cercanos a cero; si roll sale cerca de +/-180, poner
-  imu_montaje_roll: 3.14159265.
+  ROLL: confirmado y corregido el 12 de agosto de 2026. Con el sistema corriendo
+  en la Raspberry, el TF odom -> base_link daba roll cercano a -179.9 grados, es
+  decir el modelo 3D de cabeza. imu_montaje_roll paso a 3.14159265 en el YAML y
+  el mismo TF pasa a dar roll cercano a 0.07 grados.
+
+  PITCH: pendiente. En esa misma corrida el pitch se mantenia entre 22 y 29
+  grados. Falta determinar si la placa estaba fisicamente inclinada o si es un
+  segundo offset de montaje. Procedimiento: con el robot NIVELADO y quieto,
+  /imu/data_raw debe dar roll y pitch cercanos a cero; lo que sobre, va a
+  imu_montaje_pitch.
+
+  Ojo: todo esto hay que rehacerlo cuando el pi3hat quede en su posicion
+  DEFINITIVA del chasis.
 
 MODO 'can' SOBRE vcan0 - PENDIENTE DE PRUEBA DE REGRESION
 
@@ -511,6 +559,30 @@ del codigo actual:
      padres (dummy_link y el odom -> base_link del EKF) y el arbol TF quedaria
      invalido.
 
+  8. LAS CAPABILITIES DE python3 BORRAN LD_LIBRARY_PATH (en la Raspberry). A
+     /usr/bin/python3.12 se le pusieron capabilities para hablar con el pi3hat
+     sin root (cap_dac_override, cap_sys_rawio). Efecto colateral: glibc trata a
+     python3 como binario de EJECUCION SEGURA y le borra LD_LIBRARY_PATH. Como
+     ros2 run y ros2 launch son scripts de Python, todo nodo lanzado por ahi
+     hereda la variable vacia. Sintoma: robot_state_publisher moria con
+     "cannot open shared object file: liburdfdom_model.so.4.0" sobre un archivo
+     que existia y con permisos correctos, mientras que el MISMO binario
+     ejecutado a mano funcionaba. Resuelto agregando
+     /opt/ros/jazzy/lib/aarch64-linux-gnu a /etc/ld.so.conf.d/ros2-jazzy.conf
+     (el archivo ya existia con solo /opt/ros/jazzy/lib) y corriendo ldconfig.
+
+  9. NODOS HUERFANOS DEJANDO TOMADO EL LOCK DEL pi3hat. Cuando un launch falla a
+     medias (por ejemplo por una dependencia que falta), los nodos que alcanzaron
+     a arrancar SOBREVIVEN. Como la placa admite un solo dueño del bus SPI, el
+     siguiente intento muere con "pi3hat: could not acquire lock, is another
+     process running?", que parece un problema de la placa y no lo es. Antes de
+     relanzar: pkill -9 -f "lib/ugv_bridge/".
+
+ 10. DEPENDENCIAS DECLARADAS PERO NO INSTALADAS EN LA RASPBERRY. Faltaban
+     ros-jazzy-xacro y ros-jazzy-robot-localization, ambas en el package.xml.
+     Sin xacro el launch ni siquiera construye la descripcion del robot; sin
+     robot_localization no hay EKF y por lo tanto el chasis no se inclina.
+
 
 2.4 LIMITACIONES ACTUALES
 --------------------------
@@ -528,41 +600,53 @@ del codigo actual:
 
   3. UN SOLO DUENO DE LA PLACA pi3hat. El bus SPI admite un unico proceso. Si
      corren a la vez flipper_node con imu_fuente:=pi3hat_real y el nodo suelto
-     pi3hat_imu_node, el segundo en arrancar fallara. Son alternativos.
+     pi3hat_imu_node, el segundo en arrancar fallara. Son alternativos. Ojo
+     tambien con los nodos huerfanos de un launch fallido (ver 2.3, punto 9).
 
-  4. LA IMU SINTETICA ES UN MODELO DEMOSTRATIVO. El cabeceo y el alabeo se
+  4. EL GRAFO ROS NO SE PUEDE REPARTIR ENTRE EL PC Y LA RASPBERRY. Se intento el
+     esquema hibrido (IMU real publicando desde la Pi, resto del sistema en el
+     PC) y no funciono: el multicast de discovery de DDS no cruza la wifi
+     (comprobado con ros2 multicast send/receive) y el descubrimiento unicast por
+     ROS_STATIC_PEERS tampoco engancho. Ademas el ufw del PC descarta el trafico
+     DDS entrante. Por eso, con IMU real, TODO corre en la Raspberry y el PC solo
+     abre Foxglove contra el puente. El argumento imu_externa de flipper.launch.py
+     quedo implementado para el dia que esto se resuelva: desvia la IMU sintetica
+     a /imu/sintetica en vez de apagarla, dejando /imu/data_raw libre para la
+     real y permitiendo comparar las dos.
+
+  5. LA IMU SINTETICA ES UN MODELO DEMOSTRATIVO. El cabeceo y el alabeo se
      derivan de la asimetria de los flippers con una ganancia fija y saturacion
      en 0.6 rad. Sirve para que el pipeline vea una actitud coherente, pero no
      modela el contacto real con el terreno.
 
-  5. LA ODOMETRIA DE ORUGAS PATINA POR DISENO. En un robot de orugas el
+  6. LA ODOMETRIA DE ORUGAS PATINA POR DISENO. En un robot de orugas el
      deslizamiento es grande, sobre todo al girar. De ahi las covarianzas altas.
      Sin una referencia absoluta (GPS, SLAM, marcadores) la pose derivara sin
      limite en trayectos largos.
 
-  6. YAW SIN REFERENCIA ABSOLUTA. No hay magnetometro fiable en uso, asi que el
+  7. YAW SIN REFERENCIA ABSOLUTA. No hay magnetometro fiable en uso, asi que el
      rumbo deriva. El EKF lo suaviza pero no lo corrige.
 
-  7. EL PROTOCOLO CAN NO SE HA CONTRASTADO CON EL MANUAL OFICIAL. protocolo_can.py
+  8. EL PROTOCOLO CAN NO SE HA CONTRASTADO CON EL MANUAL OFICIAL. protocolo_can.py
      implementa el protocolo RMD V3 estandar, que es el que clonan estos drivers,
      pero las escalas, el orden de bytes y los IDs de respuesta llevan un
      TODO(manual) pendiente de verificar contra la documentacion de SteadyWin.
 
-  8. CALIDAD DE CODIGO HEREDADA. flake8 reporta 216 hallazgos en el repositorio
+  9. CALIDAD DE CODIGO HEREDADA. flake8 reporta 216 hallazgos en el repositorio
      (mayormente docstrings faltantes, espacios en blanco al final de linea y
      orden de imports). El codigo nuevo esta limpio, pero el linter no esta
      integrado en CI y las pruebas de ament (test_flake8, test_pep257) fallarian
      si se ejecutaran.
 
-  9. FALTAN DEPENDENCIAS DECLARADAS. ugv_gcs usa nav_msgs y PySide6 sin
+ 10. FALTAN DEPENDENCIAS DECLARADAS. ugv_gcs usa nav_msgs y PySide6 sin
      declararlos en su package.xml; ugv_policy usa numpy sin declararlo. Funciona
      porque estan instalados, pero rosdep no los instalaria en una maquina nueva.
 
- 10. LA INTERFAZ vcan0 NO PERSISTE entre reinicios del PC y requiere root para
+ 11. LA INTERFAZ vcan0 NO PERSISTE entre reinicios del PC y requiere root para
      crearse, asi que hay que ejecutar setup_vcan.sh en cada arranque antes de
      usar el modo 'can'.
 
- 11. FALTA docs/TROUBLESHOOTING_PI3HAT.md. Se referencia en las notas de trabajo
+ 12. FALTA docs/TROUBLESHOOTING_PI3HAT.md. Se referencia en las notas de trabajo
      (permisos de sistema del pi3hat ya resueltos) pero no esta commiteado en el
      repositorio.
 
@@ -579,22 +663,32 @@ del codigo actual:
          sudo bash src/ugv_bridge/scripts/setup_vcan.sh
          ros2 launch ugv_bridge can_sim.launch.py use_ekf:=true
 
-  2. Correr scripts/verificar_pi3hat.py en la Raspberry Pi. Confirma tres cosas
-     que hoy son suposiciones: la API real de moteus_pi3hat, si la IMU entrega
-     aceleracion cruda, y como se compone el ID de arbitraje CAN.
+  2. Correr scripts/verificar_pi3hat.py en la Raspberry Pi. De las tres cosas que
+     confirma, una ya quedo despejada el 12 de agosto: la libreria moteus_pi3hat
+     abre la placa y la IMU se lee. Siguen abiertas las otras dos: si la IMU
+     entrega aceleracion cruda, y como se compone el ID de arbitraje CAN.
 
-  3. Confirmar el offset de montaje de la IMU con el pi3hat en su posicion
-     definitiva y fijar imu_montaje_roll/pitch/yaw en el YAML.
+  3. Fijar imu_montaje_pitch. El roll ya quedo resuelto (3.14159265, placa
+     montada invertida). Falta medir el pitch con el robot NIVELADO y quieto:
+     en la corrida del 12 de agosto se mantenia entre 22 y 29 grados y no se
+     pudo distinguir si era inclinacion fisica u offset de montaje. Rehacerlo
+     igualmente cuando el pi3hat quede en su posicion definitiva.
 
-  4. Validar en Foxglove que el modelo 3D se inclina de verdad al mover el robot
-     fisico, con imu_fuente:=pi3hat_real, use_ekf:=true y Display frame = odom.
+  4. Validar en Foxglove que el modelo 3D se inclina al mover el robot fisico.
+     El TF odom -> base_link YA refleja la orientacion real medida (verificado
+     con tf2_echo el 12 de agosto); lo que falta es la confirmacion visual en el
+     panel 3D, con Display frame = odom.
 
   5. Contrastar protocolo_can.py con el manual oficial de SteadyWin: escalas de
      velocidad y posicion, orden de bytes, IDs de respuesta y constante de torque
      KT_NM_POR_A (hoy vale 1.0, que es un valor de relleno).
 
-  6. Commitear docs/TROUBLESHOOTING_PI3HAT.md con los permisos de sistema y la
-     configuracion SPI ya resueltos, para que no se pierda ese conocimiento.
+  6. Commitear docs/TROUBLESHOOTING_PI3HAT.md. Ya hay material concreto que hoy
+     solo vive en COMO_EJECUTAR.md y en la seccion 2.3 de este documento: los
+     permisos SPI, las capabilities de python3 que borran LD_LIBRARY_PATH y su
+     arreglo en ld.so.conf.d, los nodos huerfanos que dejan tomado el lock de la
+     placa, y las dependencias que faltaban en la Raspberry (ros-jazzy-xacro y
+     ros-jazzy-robot-localization).
 
   7. Fusionar la rama feature/parametrizacion-geometria a main tras revision.
 
