@@ -148,7 +148,13 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
         setup_vcan.sh          Crea y levanta la interfaz virtual vcan0.
         generar_urdf.sh        Regenera ugv.urdf desde el .xacro y el YAML.
         verificar_pi3hat.py    Diagnostico de la placa, a correr en la Raspberry
-                               ANTES de energizar los motores.
+                               ANTES de energizar los motores. Comprueba solo,
+                               y sin motores, con que ID de arbitraje sale la
+                               trama al bus.
+        tesis_lanzar.sh        Arranque de la tesis en la Raspberry. UN solo
+                               script: el nombre con el que se lo invoca decide
+                               el modo (compilar_simu / compilar_real).
+        instalar_comandos.sh   Deja esos dos comandos en ~/.local/bin.
 
       test/
         test_driver_bus.py     10 pruebas del ciclo de bus con los motores
@@ -345,9 +351,17 @@ MODELO DEL ROBOT (URDF)
 IMU FISICA DEL pi3hat - VERIFICADA CONTRA LA PLACA (12 de agosto de 2026)
 
   Primera corrida del sistema con hardware real. Con los motores todavia
-  simulados, la IMU de la placa alimenta el EKF y este inclina el modelo 3D:
+  simulados, la IMU de la placa alimenta el EKF y este inclina el modelo 3D.
+  En la Raspberry hay un comando para cada combinacion:
 
-        ros2 launch ugv_bridge flipper.launch.py modo_simulacion:=true \
+        compilar_simu     motores simulados (gemelo digital) + IMU fisica real
+        compilar_real     motores reales por el pi3hat       + IMU fisica real
+
+  Los dos compilan y lanzan con EKF y puente Foxglove, y antes matan los nodos
+  huerfanos de la corrida anterior (que si no dejan tomado el lock del pi3hat).
+  El equivalente a mano:
+
+        ros2 launch ugv_bridge flipper.launch.py modo:=gemelo \
             imu_fuente:=pi3hat_real use_ekf:=true use_foxglove:=true
 
   Lo que quedo comprobado, corriendo TODO en la Raspberry:
