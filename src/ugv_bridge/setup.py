@@ -51,6 +51,7 @@ setup(
             'can_monitor = ugv_bridge.can_monitor:main',
             'kinematic_guardian = ugv_bridge.kinematic_guardian:main',
             'pi3hat_imu = ugv_bridge.pi3hat_imu_node:main',
+            'teleop_flippers = ugv_bridge.teleop_flippers:main',
         ],
     },
 )

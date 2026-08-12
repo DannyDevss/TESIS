@@ -24,6 +24,8 @@ Argumentos:
                              única visualización posible cuando esto corre en la
                              Raspberry (headless): Foxglove se conecta desde otra
                              máquina a ws://<ip-de-la-pi>:8765.
+    use_teleop       (true)  nodo teleop_flippers: mueve los flippers a mano desde
+                             los paneles Teleop de Foxglove (ver su docstring).
 
 IMU FÍSICA EN OTRA MÁQUINA (imu_externa:=true)
 ----------------------------------------------
@@ -90,6 +92,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_ekf', default_value='false'),
         DeclareLaunchArgument('use_rviz', default_value='false'),
         DeclareLaunchArgument('use_foxglove', default_value='false'),
+        DeclareLaunchArgument('use_teleop', default_value='true'),
 
         # Puente ROS <-> motores (orugas + flippers) + IMU.
         Node(
@@ -153,6 +156,16 @@ def generate_launch_description():
             name='rviz2',
             output='screen',
             arguments=['-d', rviz_config],
+        ),
+
+        # Mover los flippers a mano desde los paneles Teleop de Foxglove.
+        # Solo publica cuando llega un comando, así que no estorba a nadie.
+        Node(
+            condition=IfCondition(LaunchConfiguration('use_teleop')),
+            package='ugv_bridge',
+            executable='teleop_flippers',
+            name='teleop_flippers',
+            output='screen',
         ),
 
         # Puente WebSocket para Foxglove Studio, que corre en otra máquina.

@@ -857,6 +857,199 @@
           }
         }
       ]
+    },
+    "Teleop!fl_fl": {
+      "topic": "/teleop/flipper_fl",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "Delantero izq.  (fl)"
+    },
+    "Teleop!fl_fr": {
+      "topic": "/teleop/flipper_fr",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "Delantero der.  (fr)"
+    },
+    "Teleop!fl_rl": {
+      "topic": "/teleop/flipper_rl",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "Trasero izq.  (rl)"
+    },
+    "Teleop!fl_rr": {
+      "topic": "/teleop/flipper_rr",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "Trasero der.  (rr)"
+    },
+    "Teleop!fl_todos": {
+      "topic": "/teleop/flippers",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "LOS CUATRO A LA VEZ"
+    },
+    "Tab!control": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "Mover a mano",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 70,
+            "first": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 50,
+                "first": "Teleop!fl_fl",
+                "second": "Teleop!fl_fr"
+              },
+              "second": {
+                "direction": "row",
+                "splitPercentage": 50,
+                "first": "Teleop!fl_rl",
+                "second": "Teleop!fl_rr"
+              }
+            },
+            "second": "Teleop!fl_todos"
+          }
+        },
+        {
+          "title": "Poses fijas",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 40,
+            "first": {
+              "direction": "row",
+              "splitPercentage": 50.0,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 50.0,
+                "first": "Publish!f_plano",
+                "second": "Publish!f_45"
+              },
+              "second": {
+                "direction": "row",
+                "splitPercentage": 50.0,
+                "first": "Publish!f_morro",
+                "second": "Publish!f_plegado"
+              }
+            },
+            "second": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 50.0,
+                "first": "Publish!t_avanzar",
+                "second": "Publish!t_stop"
+              },
+              "second": "Publish!f_libre"
+            }
+          }
+        }
+      ]
     }
   },
   "globalVariables": {},
@@ -880,38 +1073,8 @@
     },
     "second": {
       "direction": "column",
-      "splitPercentage": 30,
-      "first": {
-        "direction": "column",
-        "splitPercentage": 40,
-        "first": {
-          "direction": "row",
-          "splitPercentage": 50.0,
-          "first": {
-            "direction": "row",
-            "splitPercentage": 50.0,
-            "first": "Publish!f_plano",
-            "second": "Publish!f_45"
-          },
-          "second": {
-            "direction": "row",
-            "splitPercentage": 50.0,
-            "first": "Publish!f_morro",
-            "second": "Publish!f_plegado"
-          }
-        },
-        "second": {
-          "direction": "column",
-          "splitPercentage": 50,
-          "first": {
-            "direction": "row",
-            "splitPercentage": 50.0,
-            "first": "Publish!t_avanzar",
-            "second": "Publish!t_stop"
-          },
-          "second": "Publish!f_libre"
-        }
-      },
+      "splitPercentage": 46,
+      "first": "Tab!control",
       "second": "Tab!motores"
     }
   }
