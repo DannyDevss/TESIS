@@ -92,8 +92,10 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
                                (paquete robot_localization).
         view.rviz              Vista RViz con el robot fijo en base_link.
         flippers.rviz          Vista RViz del sistema completo.
-        foxglove_layout.json   Layout de Foxglove con los 8 paneles del proyecto.
-                               Se importa una vez desde la app.
+        ugv_control_v2.json    Layout de Foxglove del proyecto: vista 3D,
+                               graficas, y los mandos para mover los flippers
+                               a mano. Se importa desde la app; ojo, Foxglove
+                               guarda su propia copia (ver COMO_EJECUTAR.md).
 
       urdf/
         ugv.urdf.xacro         Plantilla del modelo. Lee geometria_robot.yaml con
@@ -130,6 +132,11 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
         can_monitor.py         Monitor grafico del trafico del bus CAN.
         gui_a_comandos.py      Puente: sliders de joint_state_publisher_gui hacia
                                /cmd_flippers.
+        teleop_flippers.py     Mover los flippers a mano desde los paneles Teleop
+                               de Foxglove: integra la velocidad que manda el
+                               panel mientras se mantiene pulsado y publica el
+                               angulo en /cmd_flippers. Existe porque ningun
+                               panel de Foxglove puede publicar desde un slider.
 
       launch/
         view.launch.py         Posar el robot con sliders. Sin locomocion.
@@ -385,7 +392,7 @@ VISUALIZACION
 
   - foxglove_bridge en el puerto 8765 (view.launch.py, pi_view.launch.py y,
     desde P6, flipper.launch.py y can_view.launch.py con use_foxglove:=true).
-  - config/foxglove_layout.json: layout del proyecto con 8 paneles (3D, angulos
+  - config/ugv_control_v2.json: layout del proyecto con 8 paneles (3D, angulos
     de flipper, velocidad de orugas, pose del EKF, publicacion de /cmd_flippers
     y /cmd_tracks, IMU cruda y /rosout).
   - textures/: las dos texturas que los COLLADA referenciaban y que no estaban

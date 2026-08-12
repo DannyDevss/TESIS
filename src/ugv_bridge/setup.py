@@ -14,7 +14,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
-        # *.json = layouts de Foxglove (foxglove_layout.json).
+        # *.json = layouts de Foxglove (ugv_control_v2.json).
         (os.path.join('share', package_name, 'config'),
             glob('config/*.yaml') + glob('config/*.rviz') + glob('config/*.json')),
         # El .xacro es la fuente; el .urdf plano es el generado (scripts/generar_urdf.sh).
