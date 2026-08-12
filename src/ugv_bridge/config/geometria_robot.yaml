@@ -82,10 +82,12 @@
     # lectura de la IMU real para llevarla al marco del robot (REP-103:
     # X adelante, Y izquierda, Z arriba).
     #
-    # TODO(hardware): en pruebas de banco se detectó un offset de ~180° en roll.
-    # Confirmar con el pi3hat en su posición DEFINITIVA del chasis antes de fijar
-    # este valor: con el robot nivelado, /imu/data_raw debe dar roll≈0, pitch≈0.
-    # Si aparece invertido, poner imu_montaje_roll: 3.14159265.
-    imu_montaje_roll: 0.0
+    # Offset de ~180° en roll CONFIRMADO con la placa montada (2026-08-12): con el
+    # sistema corriendo en la Raspberry, el EKF daba roll≈-179.9° en odom->base_link,
+    # o sea el modelo 3D de cabeza. La placa está montada invertida y esta rotación
+    # lo compensa.
+    # Sigue pendiente confirmarlo con el pi3hat en su posición DEFINITIVA del
+    # chasis: con el robot nivelado, /imu/data_raw debe dar roll≈0, pitch≈0.
+    imu_montaje_roll: 3.14159265
     imu_montaje_pitch: 0.0
     imu_montaje_yaw: 0.0

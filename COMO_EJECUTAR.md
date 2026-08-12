@@ -115,6 +115,38 @@ ros2 run rqt_plot rqt_plot /joint_states/position[4]  # ángulo de un flipper en
 
 En RViz: fixed frame `base_link` (sin EKF) u `odom` (con EKF); displays RobotModel + TF.
 
+### 2c. Foxglove: puente + layout del proyecto
+
+Foxglove **no habla ROS 2 directamente**: necesita el puente WebSocket. Se levanta
+aparte, sobre un sistema que ya esté corriendo (no hace falta relanzar nada):
+
+```bash
+ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765
+```
+
+Luego, en Foxglove Studio, conectar a `ws://localhost:8765` (fuente *Foxglove
+WebSocket*). Desde el host se puede abrir ya conectado, sin elegir fuente a mano:
+
+```bash
+foxglove-studio "foxglove://open?ds=foxglove-websocket&ds.url=ws%3A%2F%2Flocalhost%3A8765"
+```
+
+> El puente corre **dentro** de `rosdev`, pero distrobox comparte la red con el host,
+> así que `localhost:8765` funciona desde Foxglove instalado en el host.
+
+**Layout del proyecto:** `config/foxglove_layout.json`. Se importa una sola vez con
+*Layouts → (menú ⋯) → Import from file…* y queda guardado en la app.
+
+Trae 8 paneles ya configurados: 3D (con **Display frame = `odom`** y el modelo desde
+`/robot_description`, así nadie se vuelve a tropezar con el robot "plano"), gráficas
+de ángulos de flipper y de velocidad de orugas, gráfica de la pose del EKF (para
+vigilar que Z no derive), dos paneles de publicación para `/cmd_flippers` y
+`/cmd_tracks`, la IMU cruda y `/rosout`.
+
+Los paneles de publicación funcionan porque el puente expone la capability
+`clientPublish` (activa por defecto). Recuerda que la velocidad de orugas es
+persistente: hay que frenar mandando `[0,0,0,0]`.
+
 ### Que el modelo 3D se INCLINE en Foxglove (no sólo los flippers)
 
 `robot_state_publisher` dibuja únicamente la geometría **interna** del robot: mueve
@@ -151,6 +183,45 @@ odom --[EKF]--> base_link --[robot_state_publisher]--> flippers, imu_link
 `track_odometry_node` emite `odom -> base_link` **sólo cuando el EKF está apagado**
 (el launch lo ajusta solo). Si ambos lo publicaran, `base_link` tendría dos padres
 y el árbol TF quedaría inválido: en Foxglove el modelo tiembla o desaparece.
+
+### 2d. Motores simulados + IMU FÍSICA: todo corre en la Raspberry
+
+La IMU del pi3hat se lee por **SPI**, así que solo puede abrirla un proceso que
+corra EN la Raspberry. Y el grafo ROS **no se puede repartir** entre el PC y la
+Pi: el multicast de discovery no cruza la wifi (y `ROS_STATIC_PEERS` tampoco
+enganchó). Con IMU real, entonces, todo se lanza allá y el PC solo mira:
+
+```bash
+ssh ros2@robotdeteccion.local          # o el nombre/IP que tenga la Pi
+source /opt/ros/jazzy/setup.bash && source ~/TESIS/install/setup.bash
+ros2 launch ugv_bridge flipper.launch.py \
+    modo_simulacion:=true imu_fuente:=pi3hat_real use_ekf:=true use_foxglove:=true
+```
+
+Desde el PC, Foxglove se conecta al puente de la Pi (TCP, eso sí cruza):
+
+```
+ws://robotdeteccion.local:8765
+```
+
+> Usa el nombre mDNS y no la IP: la Pi salta entre wifi y cable y la IP cambia.
+> El panel 3D, como siempre, con **Display frame = `odom`**.
+
+Si un launch falla a medias deja **nodos huérfanos**, y el siguiente intento
+muere con `pi3hat: could not acquire lock, is another process running?` (la placa
+admite un solo dueño del SPI). Antes de relanzar:
+
+```bash
+pkill -9 -f "lib/ugv_bridge/"
+```
+
+**Trampa del sistema en la Pi:** `python3` tiene capabilities puestas para hablar
+con el pi3hat sin root (`cap_dac_override,cap_sys_rawio`), y por eso glibc le
+**borra `LD_LIBRARY_PATH`**. Todo nodo lanzado con `ros2 run`/`ros2 launch` (que
+son Python) hereda esa variable vacía: el síntoma es un nodo C++ que muere con
+`cannot open shared object file` sobre una librería que existe y tiene permisos.
+La solución no es pelear con `LD_LIBRARY_PATH`, es registrar el directorio en
+`/etc/ld.so.conf.d/ros2-jazzy.conf` y correr `sudo ldconfig`.
 
 ## 3. Track de NAVEGACIÓN 2D (simulación + política RL)
 

@@ -16,8 +16,28 @@ Argumentos:
     can_canal        (vcan0) interfaz SocketCAN para modo:=can.
     imu_fuente       (sintetica) 'sintetica' | 'pi3hat_real'. Independiente de
                              `modo`: permite motores emulados + IMU física real.
+    imu_externa      (false) la IMU real la publica OTRA máquina (la Raspberry con
+                             el pi3hat) en /imu/data_raw. Ver abajo.
     use_ekf          (false) si true, arranca robot_localization con config/ekf.yaml.
     use_rviz         (false) si true, abre RViz con config/flippers.rviz.
+    use_foxglove     (false) si true, levanta el puente WebSocket en el 8765. Es la
+                             única visualización posible cuando esto corre en la
+                             Raspberry (headless): Foxglove se conecta desde otra
+                             máquina a ws://<ip-de-la-pi>:8765.
+
+IMU FÍSICA EN OTRA MÁQUINA (imu_externa:=true)
+----------------------------------------------
+La IMU del pi3hat se lee por SPI, así que solo puede abrirla un proceso que corra
+EN la Raspberry. Para tener motores emulados en el PC + IMU física real, la Pi
+publica /imu/data_raw y aquí hay que callar la IMU sintética: si las dos publican
+en el mismo tópico, el EKF fusiona las dos y el modelo 3D se pelea consigo mismo.
+
+`imu_externa:=true` no apaga la IMU sintética (flipper_node siempre publica una);
+la desvía a /imu/sintetica, donde no molesta y además queda disponible para
+compararla con la real. El EKF sigue leyendo /imu/data_raw, que ahora viene de la
+Pi. En la Raspberry:
+
+    ros2 run ugv_bridge pi3hat_imu --ros-args -r /imu/data:=/imu/data_raw
 """
 import os
 
@@ -25,7 +45,8 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import Command, LaunchConfiguration, NotSubstitution
+from launch.substitutions import (
+    Command, LaunchConfiguration, NotSubstitution, PythonExpression)
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -51,14 +72,24 @@ def generate_launch_description():
         value_type=str,
     )
 
+    # Destino de la IMU que publica flipper_node. Con imu_externa:=true se aparta
+    # a /imu/sintetica para dejarle /imu/data_raw a la IMU real de la Raspberry;
+    # si no, el remapeo es tópico -> mismo tópico, o sea nada.
+    destino_imu = PythonExpression([
+        "'/imu/sintetica' if '", LaunchConfiguration('imu_externa'),
+        "'.lower() in ('true', '1') else '/imu/data_raw'",
+    ])
+
     return LaunchDescription([
         DeclareLaunchArgument('frecuencia_hz', default_value='100.0'),
         DeclareLaunchArgument('modo', default_value=''),
         DeclareLaunchArgument('modo_simulacion', default_value='true'),
         DeclareLaunchArgument('can_canal', default_value='vcan0'),
         DeclareLaunchArgument('imu_fuente', default_value='sintetica'),
+        DeclareLaunchArgument('imu_externa', default_value='false'),
         DeclareLaunchArgument('use_ekf', default_value='false'),
         DeclareLaunchArgument('use_rviz', default_value='false'),
+        DeclareLaunchArgument('use_foxglove', default_value='false'),
 
         # Puente ROS <-> motores (orugas + flippers) + IMU.
         Node(
@@ -73,6 +104,7 @@ def generate_launch_description():
                 'can_canal': can_canal,
                 'imu_fuente': LaunchConfiguration('imu_fuente'),
             }],
+            remappings=[('/imu/data_raw', destino_imu)],
         ),
 
         # Odometría de orugas: /joint_states -> /odom (odom0 del EKF).
@@ -121,5 +153,17 @@ def generate_launch_description():
             name='rviz2',
             output='screen',
             arguments=['-d', rviz_config],
+        ),
+
+        # Puente WebSocket para Foxglove Studio, que corre en otra máquina.
+        # send_buffer_limit ampliado: las mallas del modelo son pesadas y con el
+        # límite por defecto el puente corta la conexión al mandar el modelo.
+        Node(
+            condition=IfCondition(LaunchConfiguration('use_foxglove')),
+            package='foxglove_bridge',
+            executable='foxglove_bridge',
+            name='foxglove_bridge',
+            output='screen',
+            parameters=[{'port': 8765, 'send_buffer_limit': 100000000}],
         ),
     ])

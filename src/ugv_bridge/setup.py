@@ -14,7 +14,9 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'config'), glob('config/*.yaml') + glob('config/*.rviz')),
+        # *.json = layouts de Foxglove (foxglove_layout.json).
+        (os.path.join('share', package_name, 'config'),
+            glob('config/*.yaml') + glob('config/*.rviz') + glob('config/*.json')),
         # El .xacro es la fuente; el .urdf plano es el generado (scripts/generar_urdf.sh).
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
         (os.path.join('share', package_name, 'scripts'),
@@ -22,6 +24,9 @@ setup(
         
         # --- AQUÍ ESTÁ LA LÍNEA MÁGICA PARA EL MODELO 3D DE DARPA ---
         (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),
+        # Los .dae piden sus texturas como ../textures/*.png. Sin esto, Foxglove
+        # no resuelve el asset y DESCARTA la malla entera (RViz sólo avisa).
+        (os.path.join('share', package_name, 'textures'), glob('textures/*.png')),
         # -----------------------------------------------------------
     ],
     install_requires=['setuptools'],
