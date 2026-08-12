@@ -882,7 +882,7 @@
         "value": 0.0
       },
       "autoSendStopOnRelease": true,
-      "foxglovePanelTitle": "Delantero izq.  (fl)"
+      "foxglovePanelTitle": "fl · delantero izq.   ↑ sube  ↓ baja  (← → fino)"
     },
     "Teleop!fl_fr": {
       "topic": "/teleop/flipper_fr",
@@ -908,7 +908,7 @@
         "value": 0.0
       },
       "autoSendStopOnRelease": true,
-      "foxglovePanelTitle": "Delantero der.  (fr)"
+      "foxglovePanelTitle": "fr · delantero der.   ↑ sube  ↓ baja  (← → fino)"
     },
     "Teleop!fl_rl": {
       "topic": "/teleop/flipper_rl",
@@ -934,7 +934,7 @@
         "value": 0.0
       },
       "autoSendStopOnRelease": true,
-      "foxglovePanelTitle": "Trasero izq.  (rl)"
+      "foxglovePanelTitle": "rl · trasero izq.     ↑ sube  ↓ baja  (← → fino)"
     },
     "Teleop!fl_rr": {
       "topic": "/teleop/flipper_rr",
@@ -960,7 +960,7 @@
         "value": 0.0
       },
       "autoSendStopOnRelease": true,
-      "foxglovePanelTitle": "Trasero der.  (rr)"
+      "foxglovePanelTitle": "rr · trasero der.     ↑ sube  ↓ baja  (← → fino)"
     },
     "Teleop!fl_todos": {
       "topic": "/teleop/flippers",
@@ -986,7 +986,7 @@
         "value": 0.0
       },
       "autoSendStopOnRelease": true,
-      "foxglovePanelTitle": "LOS CUATRO A LA VEZ"
+      "foxglovePanelTitle": "LOS CUATRO A LA VEZ   ↑ suben  ↓ bajan"
     },
     "Tab!control": {
       "activeTabIdx": 0,
