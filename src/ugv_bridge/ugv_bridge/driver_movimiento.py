@@ -186,8 +186,11 @@ class RMD_Hardware:
         # Modo 'can': último estado conocido por motor (respaldo ante timeouts).
         self._bus = None
         self._ultimo_estado = {
+            # temperatura_c se queda en 0: ODrive no la publica por CAN (sólo por
+            # USB). estado_eje/error_eje los rellena el heartbeat del motor.
             mid: {'posicion_rad': 0.0, 'velocidad_rad_s': 0.0,
-                  'torque_nm': 0.0, 'temperatura_c': 0.0}
+                  'torque_nm': 0.0, 'temperatura_c': 0.0,
+                  'estado_eje': 0, 'error_eje': 0}
             for mid in self.ids_orugas + self.ids_flippers
         }
         self.timeouts_can = 0          # contador acumulado de respuestas perdidas
@@ -221,6 +224,11 @@ class RMD_Hardware:
                   f'Ausentes (ignorados por el watchdog): '
                   f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in ausentes)}.')
 
+        # Con ODrive no basta con abrir el bus: hay que armar los ejes o los
+        # comandos se ignoran en silencio.
+        if self.modo in ('can', 'pi3hat'):
+            self._armar_motores()
+
         if self.imu_fuente == 'pi3hat_real':
             self._init_imu_real(imu_montaje_rpy)
         else:
@@ -248,43 +256,95 @@ class RMD_Hardware:
         while self._bus.recv(timeout=0.0) is not None:
             pass
 
-    def _transferir(self, id_motor, datos, timeout=0.004):
-        """Envía una trama al motor y espera SU respuesta (0x240+id).
+    def _intercambiar(self, peticiones, timeout=0.004):
+        """Manda un LOTE de mensajes y devuelve lo que llegó, por motor.
 
-        Devuelve los bytes de datos de la respuesta, o None si venció el timeout
-        (motor/emulador ausente). Descartar respuestas ajenas es seguro porque
-        el ciclo es estrictamente pregunta-respuesta.
+        Parameters
+        ----------
+        peticiones : list[tuple[int, int, bytes]]
+            [(node_id, cmd_id, datos), ...]
+
+        Returns
+        -------
+        dict[int, dict[int, bytes]]
+            {node_id: {cmd_id: datos}}. Diccionario vacío = ese motor no dijo nada.
+
+        Con ODrive esto NO es pregunta-respuesta: el motor emite posición y
+        velocidad cada 10 ms por su cuenta (ver protocolo_can). Lo que se recoge
+        aquí es "lo que haya llegado desde el ciclo anterior", que a 100 Hz es
+        justo una trama de encoder por motor.
+
+        Es el único punto donde 'can' y 'pi3hat' difieren: SocketCAN manda por el
+        socket y drena el buffer; el pi3hat lo hace todo en UN ciclo SPI.
         """
-        self._bus.send(self._can.Message(
-            arbitration_id=proto.id_comando(id_motor),
-            data=datos,
-            is_extended_id=False,
-        ))
+        if self.modo == 'pi3hat':
+            return self._transporte.intercambiar(peticiones, timeout=timeout)
+        return self._intercambiar_socketcan(peticiones, timeout=timeout)
+
+    def _intercambiar_socketcan(self, peticiones, timeout=0.004):
+        """Versión SocketCAN: enviar todo y luego escuchar el bus `timeout` segundos."""
+        for node_id, cmd_id, datos in peticiones:
+            self._bus.send(self._can.Message(
+                arbitration_id=proto.id_arbitraje(node_id, cmd_id),
+                data=datos,
+                is_extended_id=False,
+            ))
+
+        recibido = {node_id: {} for node_id, _, _ in peticiones}
         limite = time.monotonic() + timeout
         while True:
             restante = limite - time.monotonic()
             if restante <= 0:
-                self.timeouts_can += 1
-                return None
+                break
             msg = self._bus.recv(timeout=restante)
-            if msg is not None and msg.arbitration_id == proto.id_respuesta(id_motor):
-                return msg.data
+            if msg is None:
+                continue
+            nodo = proto.nodo_de_id(msg.arbitration_id)
+            if nodo is None:
+                continue
+            recibido.setdefault(nodo, {})[proto.cmd_de_id(msg.arbitration_id)] = \
+                bytes(msg.data)
 
-    def _intercambiar(self, peticiones, timeout=0.004):
-        """Envía un LOTE de tramas y devuelve {id_motor: datos_respuesta | None}.
+        self.timeouts_can += sum(1 for m in recibido.values() if not m)
+        return recibido
 
-        Es el único punto donde 'can' y 'pi3hat' difieren:
-          - SocketCAN: pregunta-respuesta motor por motor sobre el socket.
-          - pi3hat:    las 8 tramas viajan en UN ciclo SPI (para eso existe la placa).
-        El protocolo que va dentro de `datos` es el mismo en ambos casos.
+    def _armar_motores(self):
+        """Deja cada motor sin errores, en su modo de control y en LAZO CERRADO.
+
+        Es OBLIGATORIO con ODrive y no lo era con el protocolo anterior: un eje en
+        IDLE acepta los comandos de velocidad/posición y NO HACE NADA, sin
+        devolver ningún error. Sin este paso el robot parece muerto aunque el bus
+        esté perfecto.
+
+        Orugas en control de VELOCIDAD (passthrough) y flippers en POSICIÓN (con
+        filtro de entrada, que suaviza el salto cuando llega una consigna nueva).
         """
-        if self.modo == 'pi3hat':
-            return self._transporte.intercambiar(peticiones, timeout=timeout)
-        return {mid: self._transferir(mid, datos, timeout=timeout)
-                for mid, datos in peticiones}
+        if self.modo not in ('can', 'pi3hat'):
+            return
+
+        orugas = set(self.ids_orugas)
+        peticiones = []
+        for mid in self.ids_presentes:
+            if mid in orugas:
+                control, entrada = proto.CONTROL_VELOCIDAD, proto.ENTRADA_PASSTHROUGH
+            else:
+                control, entrada = proto.CONTROL_POSICION, proto.ENTRADA_POS_FILTER
+            peticiones += [
+                (mid, proto.CMD_CLEAR_ERRORS, proto.trama_clear_errors()),
+                (mid, proto.CMD_SET_CONTROLLER_MODE,
+                 proto.trama_set_controller_mode(control, entrada)),
+                (mid, proto.CMD_SET_AXIS_STATE,
+                 proto.trama_set_axis_state(proto.ESTADO_CLOSED_LOOP)),
+            ]
+        try:
+            self._intercambiar(peticiones, timeout=0.005)
+            print(f'[HARDWARE] {len(self.ids_presentes)} motor(es) armados '
+                  f'en lazo cerrado.')
+        except Exception as e:
+            print(f'[HARDWARE] No se pudieron armar los motores: {e}')
 
     def _estado_via_bus(self, comandos_orugas, comandos_flippers):
-        """Ciclo de comunicación con los 8 motores (común a 'can' y 'pi3hat')."""
+        """Ciclo de comunicación con los motores (común a 'can' y 'pi3hat')."""
         estado = {}
 
         # Si el watchdog detectó fallo de comunicación, no se sigue mandando
@@ -295,49 +355,48 @@ class RMD_Hardware:
             comandos_flippers = {
                 mid: self._ultimo_estado[mid]['posicion_rad'] for mid in self.ids_flippers}
 
-        # 1. Comandar cada motor y leer su trama de estado (temp/torque/vel).
-        #    Sólo a los presentes: en modo banco los ausentes ni siquiera se
-        #    consultan, así no gastan un ciclo del bus esperándolos.
+        # Comandar. Sólo a los presentes: en modo banco los ausentes ni siquiera
+        # se consultan. Ya no hay una segunda ronda para leer la posición: la
+        # trama de encoder de ODrive es multivuelta y llega sola.
         presentes = set(self.ids_presentes)
         peticiones = [
-            (mid, proto.trama_cmd_velocidad(float(comandos_orugas.get(mid, 0.0))))
+            (mid, proto.CMD_SET_INPUT_VEL,
+             proto.trama_set_input_vel(float(comandos_orugas.get(mid, 0.0))))
             for mid in self.ids_orugas if mid in presentes
         ]
         peticiones += [
-            (mid, proto.trama_cmd_posicion(float(comandos_flippers.get(
-                mid, self._ultimo_estado[mid]['posicion_rad']))))
+            (mid, proto.CMD_SET_INPUT_POS,
+             proto.trama_set_input_pos(float(comandos_flippers.get(
+                 mid, self._ultimo_estado[mid]['posicion_rad']))))
             for mid in self.ids_flippers if mid in presentes
         ]
-        for mid, datos in self._intercambiar(peticiones).items():
-            self._aplicar_respuesta_estado(mid, datos)
 
-        # 2. Leer posición multivuelta (la de 1 vuelta de la respuesta anterior
-        #    no sirve para odometría: se enrolla cada 360°).
-        todos = self.ids_orugas + self.ids_flippers
-        respuestas = self._intercambiar(
-            [(mid, proto.trama_leer_multivuelta()) for mid in self.ids_presentes])
-        for mid in todos:
-            datos = respuestas.get(mid)
-            resp = proto.parsear_respuesta(datos) if datos is not None else None
-            if resp is not None and 'posicion_rad' in resp:
-                self._ultimo_estado[mid]['posicion_rad'] = resp['posicion_rad']
+        recibido = self._intercambiar(peticiones)
+        for mid, mensajes in recibido.items():
+            self._aplicar_mensajes(mid, mensajes)
+
+        for mid in self.ids_orugas + self.ids_flippers:
             estado[mid] = dict(self._ultimo_estado[mid])
 
-        self._vigilar_comunicacion(respuestas)
+        self._vigilar_comunicacion(recibido)
         self._avisar_timeouts()
         return estado
 
-    def _vigilar_comunicacion(self, respuestas):
-        """Watchdog de seguridad: detecta motores que dejaron de responder.
+    def _vigilar_comunicacion(self, recibido):
+        """Watchdog de seguridad: detecta motores que dejaron de emitir.
 
-        Un motor mudo con un comando de velocidad ya aceptado seguiría girando:
-        por eso, al superar `ciclos_watchdog` ciclos sin respuesta se envía un
-        paro a TODOS los motores y se entra en modo fallo (comandos forzados a
-        cero) hasta que el bus se recupere.
+        Un motor mudo con una consigna de velocidad ya aceptada seguiría girando:
+        por eso, al superar `ciclos_watchdog` ciclos sin oír nada de él se para
+        todo y se entra en modo fallo (comandos forzados a cero) hasta que el bus
+        se recupere.
+
+        Con ODrive "responder" es emitir: el motor manda su trama de encoder cada
+        10 ms sin que nadie se la pida, así que un silencio de varios ciclos
+        significa de verdad que ese motor no está.
         """
         mudos = []
         for mid in self.ids_presentes:
-            if respuestas.get(mid) is None:
+            if not recibido.get(mid):
                 self._sin_respuesta[mid] += 1
                 if self._sin_respuesta[mid] >= self.ciclos_watchdog:
                     mudos.append(mid)
@@ -347,34 +406,63 @@ class RMD_Hardware:
         if mudos and not self.fallo_comunicacion:
             self.fallo_comunicacion = True
             nombres = ', '.join(f'{m}({ID_A_NOMBRE[m]})' for m in mudos)
-            print(f'[HARDWARE] ¡FALLO DE COMUNICACIÓN! Sin respuesta de: {nombres}. '
+            print(f'[HARDWARE] ¡FALLO DE COMUNICACIÓN! Sin señal de: {nombres}. '
                   f'Paro de emergencia; comandos forzados a cero.')
             self.parar_motores()
         elif not mudos and self.fallo_comunicacion:
             self.fallo_comunicacion = False
             print(f'[HARDWARE] Comunicación restablecida con '
                   f'{len(self.ids_presentes)} motor(es).')
+            # El paro los dejó en IDLE: sin rearmar, ignorarían los comandos.
+            self._armar_motores()
 
     def parar_motores(self):
-        """Manda la trama de paro a los motores presentes (best effort)."""
+        """Paro de emergencia: consigna cero y ejes a IDLE (best effort).
+
+        IDLE deja el driver energizado pero sin par, que es el equivalente al
+        'paro' del protocolo anterior. Para volver a mover hay que rearmar
+        (lo hace `_armar_motores`, que llama el watchdog al recuperarse).
+        """
+        orugas = set(self.ids_orugas)
         try:
-            self._intercambiar(
-                [(mid, proto.trama_paro()) for mid in self.ids_presentes],
-                timeout=0.002,
-            )
+            peticiones = [
+                (mid, proto.CMD_SET_INPUT_VEL, proto.trama_set_input_vel(0.0))
+                for mid in self.ids_presentes if mid in orugas
+            ]
+            peticiones += [
+                (mid, proto.CMD_SET_AXIS_STATE,
+                 proto.trama_set_axis_state(proto.ESTADO_IDLE))
+                for mid in self.ids_presentes
+            ]
+            self._intercambiar(peticiones, timeout=0.002)
         except Exception as e:
             print(f'[HARDWARE] No se pudo enviar el paro: {e}')
 
-    def _aplicar_respuesta_estado(self, id_motor, datos):
-        if datos is None:
+    def _aplicar_mensajes(self, id_motor, mensajes):
+        """Vuelca en el último estado conocido lo que haya emitido un motor."""
+        u = self._ultimo_estado.get(id_motor)
+        if not u or not mensajes:
             return
-        resp = proto.parsear_respuesta(datos)
-        if resp is None or 'velocidad_rad_s' not in resp:
-            return
-        u = self._ultimo_estado[id_motor]
-        u['velocidad_rad_s'] = resp['velocidad_rad_s']
-        u['torque_nm'] = resp['torque_nm']
-        u['temperatura_c'] = resp['temperatura_c']
+
+        datos = mensajes.get(proto.CMD_GET_ENCODER_ESTIMATES)
+        if datos is not None:
+            enc = proto.parsear_encoder(datos)
+            if enc is not None:
+                u['posicion_rad'] = enc['posicion_rad']
+                u['velocidad_rad_s'] = enc['velocidad_rad_s']
+
+        datos = mensajes.get(proto.CMD_GET_IQ)
+        if datos is not None:
+            iq = proto.parsear_iq(datos)
+            if iq is not None:
+                u['torque_nm'] = iq['iq_medido_a'] * proto.KT_NM_POR_A
+
+        datos = mensajes.get(proto.CMD_HEARTBEAT)
+        if datos is not None:
+            hb = proto.parsear_heartbeat(datos)
+            if hb is not None:
+                u['estado_eje'] = hb['estado_eje']
+                u['error_eje'] = hb['error_eje']
 
     def _avisar_timeouts(self):
         """Advierte (máx. 1 vez/s) si hay respuestas perdidas en el bus."""

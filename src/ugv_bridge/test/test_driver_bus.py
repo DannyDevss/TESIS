@@ -21,7 +21,10 @@ class TransporteMemoria:
     """Los 8 motores emulados al otro lado, sin bus de por medio.
 
     Implementa la misma interfaz que TransportePi3Hat y que el camino SocketCAN:
-    recibe una lista [(id_motor, bytes)] y devuelve {id_motor: bytes | None}.
+    recibe [(node_id, cmd_id, datos)] y devuelve {node_id: {cmd_id: datos}}.
+
+    Como el motor real, EMITE por su cuenta: cada ciclo devuelve la trama de
+    encoder y el heartbeat de cada motor, le hayan mandado algo o no.
     """
 
     def __init__(self, dt=0.01, mudos=()):
@@ -32,18 +35,26 @@ class TransporteMemoria:
         self.cerrado = False
 
     def intercambiar(self, peticiones, timeout=0.004):
-        respuestas = {}
-        for id_motor, datos in peticiones:
-            if id_motor in self.mudos:
-                respuestas[id_motor] = None
+        for node_id, cmd_id, datos in peticiones:
+            if node_id in self.mudos:
+                continue
+            comando = proto.parsear_comando(cmd_id, bytes(datos))
+            assert comando is not None, \
+                f'trama no reconocida para el motor {node_id} (cmd 0x{cmd_id:03X})'
+            atender(self.motores[node_id], comando)
+
+        recibido = {node_id: {} for node_id, _, _ in peticiones}
+        for mid, motor in self.motores.items():
+            if mid in self.mudos:
+                recibido.setdefault(mid, {})
                 self.timeouts += 1
                 continue
-            motor = self.motores[id_motor]
             motor.integrar(self.dt)
-            comando = proto.parsear_comando(bytes(datos))
-            assert comando is not None, f'trama no reconocida para el motor {id_motor}'
-            respuestas[id_motor] = atender(motor, comando)
-        return respuestas
+            recibido[mid] = {
+                proto.CMD_GET_ENCODER_ESTIMATES: motor.trama_encoder(),
+                proto.CMD_HEARTBEAT: motor.trama_heartbeat(),
+            }
+        return recibido
 
     def cerrar(self):
         self.cerrado = True
@@ -103,6 +114,106 @@ def test_posicion_multivuelta_no_se_enrolla():
     estado = ciclar(robot, orugas={mid: 20.0 for mid in IDS_ORUGAS}, n=100)
     for mid in IDS_ORUGAS:
         assert estado[mid]['posicion_rad'] > 2 * math.pi
+
+
+# ====================================================================== #
+# Formato ODrive en el cable
+# ====================================================================== #
+# Estas pruebas NO son redundantes con las de arriba: allí el driver y el
+# emulador usan las mismas funciones, así que un error de convención se cancela
+# en el ida y vuelta. Aquí se fija lo que viaja por el cable.
+def test_id_de_arbitraje_es_node_id_desplazado_cinco_bits():
+    """(node_id << 5) | cmd_id, según la sección 4.1.1 del manual."""
+    # El heartbeat del nodo 1 es 0x021; el ejemplo del manual, nodo 5 con
+    # Set_Input_Pos (0x00C), es 0x0AC.
+    assert proto.id_arbitraje(1, proto.CMD_HEARTBEAT) == 0x021
+    assert proto.id_arbitraje(5, proto.CMD_SET_INPUT_POS) == 0x0AC
+
+    for nodo in (1, 8, 63):
+        for cmd in (proto.CMD_HEARTBEAT, proto.CMD_SET_INPUT_VEL, proto.CMD_GET_IQ):
+            arb = proto.id_arbitraje(nodo, cmd)
+            assert proto.nodo_de_id(arb) == nodo
+            assert proto.cmd_de_id(arb) == cmd
+
+
+def test_la_velocidad_viaja_en_revoluciones_del_rotor():
+    """El bus habla rev/s del ROTOR; la tesis, rad/s del eje de salida."""
+    import struct
+    # Una vuelta por segundo en la salida = RELACION_REDUCCION rev/s en el rotor.
+    (rev_s, torque) = struct.unpack('<ff', proto.trama_set_input_vel(2 * math.pi))
+    assert math.isclose(rev_s, proto.RELACION_REDUCCION, rel_tol=1e-6)
+    assert torque == 0.0
+
+
+def test_la_posicion_viaja_en_revoluciones_del_rotor():
+    import struct
+    pos_rev, vel_ff, tq_ff = struct.unpack('<fhh', proto.trama_set_input_pos(math.pi))
+    # Media vuelta en la salida.
+    assert math.isclose(pos_rev, proto.RELACION_REDUCCION / 2.0, rel_tol=1e-6)
+    assert (vel_ff, tq_ff) == (0, 0)
+
+
+def test_encoder_y_heartbeat_se_decodifican():
+    enc = proto.parsear_encoder(proto.trama_encoder(1.25, -0.5))
+    assert math.isclose(enc['posicion_rad'], 1.25, rel_tol=1e-6)
+    assert math.isclose(enc['velocidad_rad_s'], -0.5, rel_tol=1e-6)
+
+    hb = proto.parsear_heartbeat(proto.trama_heartbeat(
+        estado_eje=proto.ESTADO_CLOSED_LOOP, error_eje=0))
+    assert hb['estado_eje'] == proto.ESTADO_CLOSED_LOOP
+    assert not hb['error_motor'] and not hb['error_encoder']
+
+    hb = proto.parsear_heartbeat(proto.trama_heartbeat(
+        estado_eje=proto.ESTADO_IDLE, error_eje=0x42, error_motor=True))
+    assert hb['estado_eje'] == proto.ESTADO_IDLE
+    assert hb['error_eje'] == 0x42
+    assert hb['error_motor']
+
+
+# ====================================================================== #
+# Armado de los ejes (modo de fallo propio de ODrive)
+# ====================================================================== #
+def test_el_driver_arma_los_ejes_al_arrancar():
+    """Sin armar, un eje ODrive acepta las consignas y no se mueve, sin dar error."""
+    _, transporte = construir()
+    for mid, motor in transporte.motores.items():
+        assert motor.estado_eje == proto.ESTADO_CLOSED_LOOP, \
+            f'el motor {mid} quedó en estado {motor.estado_eje}'
+
+
+def test_un_eje_en_idle_ignora_las_consignas():
+    """El emulador debe reproducir el fallo silencioso del hardware."""
+    robot, transporte = construir()
+    transporte.motores[1].poner_estado(proto.ESTADO_IDLE)
+
+    estado = ciclar(robot, orugas={mid: 4.0 for mid in IDS_ORUGAS}, n=10)
+
+    assert math.isclose(estado[1]['velocidad_rad_s'], 0.0, abs_tol=1e-6), \
+        'un eje en IDLE no debería moverse'
+    assert estado[2]['velocidad_rad_s'] > 3.0, 'los demás sí deberían moverse'
+
+
+def test_el_paro_deja_los_ejes_en_idle():
+    robot, transporte = construir()
+    robot.parar_motores()
+    for mid, motor in transporte.motores.items():
+        assert motor.estado_eje == proto.ESTADO_IDLE, f'el motor {mid} siguió armado'
+
+
+def test_el_watchdog_rearma_al_recuperarse():
+    """Tras el paro los ejes quedan en IDLE: si no se rearman, no vuelven a moverse."""
+    robot, transporte = construir(ciclos_watchdog=5)
+    transporte.mudos.add(7)
+    ciclar(robot, n=10)
+    assert robot.fallo_comunicacion
+    assert transporte.motores[1].estado_eje == proto.ESTADO_IDLE
+
+    transporte.mudos.clear()
+    ciclar(robot, n=10)
+    assert not robot.fallo_comunicacion
+    for mid, motor in transporte.motores.items():
+        assert motor.estado_eje == proto.ESTADO_CLOSED_LOOP, \
+            f'el motor {mid} se quedó sin rearmar tras el fallo'
 
 
 # ====================================================================== #

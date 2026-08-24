@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
 """motor_emulator.py — Emula los 8 motores SteadyWin al otro lado del bus CAN.
 
-Proceso independiente SIN ROS: escucha el bus (vcan0 por defecto), decodifica
-las tramas de comando con `protocolo_can`, integra un modelo físico simple por
-motor y responde las tramas de estado exactamente como lo haría el motor real.
+Proceso independiente SIN ROS: escucha el bus (vcan0 por defecto), decodifica las
+tramas con `protocolo_can`, integra un modelo físico simple por motor y EMITE los
+mensajes periódicos igual que el driver ODrive real.
 
 Con esto el driver (`RMD_Hardware(modo='can')`) ejercita su código de
 empaquetado/desempaquetado de bytes de verdad, cosa que el gemelo digital
 (`modo='gemelo'`) no prueba.
+
+---------------------------------------------------------------------------
+LO QUE CAMBIÓ AL PASAR A ODrive
+---------------------------------------------------------------------------
+El motor ya NO contesta a cada trama: emite por su cuenta. Este emulador hace lo
+mismo (ver sección 4.1.5 del manual del GIM6010-8):
+
+    Get_Encoder_Estimates (0x009)   cada  10 ms
+    Heartbeat (0x001)               cada 100 ms
+
+Y respeta el ESTADO DEL EJE: en IDLE acepta las consignas y no se mueve, sin dar
+ningún error. Es exactamente el comportamiento del hardware, y el que hace que
+olvidarse de armar los ejes se note aquí y no en el robot.
 
 Uso (no necesita ROS, solo python3-can y la interfaz vcan0 arriba):
 
@@ -24,35 +37,56 @@ import time
 from ugv_bridge import protocolo_can as proto
 from ugv_bridge.driver_movimiento import IDS_ORUGAS, IDS_FLIPPERS, ID_A_NOMBRE
 
-MODO_VELOCIDAD = 'velocidad'
-MODO_POSICION = 'posicion'
+# Periodos de los mensajes periódicos, en segundos (valores de fábrica).
+PERIODO_ENCODER_S = 0.010
+PERIODO_HEARTBEAT_S = 0.100
 
 
 class MotorEmulado:
-    """Modelo físico mínimo de un motor: el mismo del gemelo digital."""
+    """Modelo físico mínimo de un motor ODrive: el mismo del gemelo digital."""
 
     def __init__(self, id_motor):
         self.id = id_motor
-        self.pos = 0.0            # rad, multivuelta (acumulada)
-        self.vel = 0.0            # rad/s
-        self.temperatura = 35.0   # °C
-        self.modo = MODO_VELOCIDAD
-        self.objetivo = 0.0       # rad/s o rad según el modo
+        self.pos = 0.0            # rad en el eje de salida, multivuelta
+        self.vel = 0.0            # rad/s en el eje de salida
+        self.temperatura = 35.0   # °C (no se publica por CAN; sólo para el log)
+        self.estado_eje = proto.ESTADO_IDLE
+        self.control_mode = proto.CONTROL_VELOCIDAD
+        self.input_mode = proto.ENTRADA_PASSTHROUGH
+        self.objetivo = 0.0       # rad/s o rad según control_mode
+        self.error_eje = 0
 
+    # ---------------- comandos que llegan del host ---------------- #
     def comandar_velocidad(self, vel_rad_s):
-        self.modo = MODO_VELOCIDAD
         self.objetivo = vel_rad_s
 
     def comandar_posicion(self, pos_rad):
-        self.modo = MODO_POSICION
         self.objetivo = pos_rad
 
-    def parar(self):
-        self.comandar_velocidad(0.0)
+    def poner_estado(self, estado):
+        self.estado_eje = estado
+        if estado == proto.ESTADO_IDLE:
+            # Sin par: la consigna deja de aplicarse y el eje se queda quieto.
+            self.vel = 0.0
 
+    def poner_modo(self, control_mode, input_mode):
+        self.control_mode = control_mode
+        self.input_mode = input_mode
+        # Cambiar de modo descarta la consigna anterior, que era de otras unidades.
+        self.objetivo = self.pos if control_mode == proto.CONTROL_POSICION else 0.0
+
+    def parar(self):
+        self.objetivo = 0.0
+        self.poner_estado(proto.ESTADO_IDLE)
+
+    # ---------------- física ---------------- #
     def integrar(self, dt):
-        if self.modo == MODO_VELOCIDAD:
-            # Lazo de velocidad: sigue el objetivo con ruido de encoder.
+        if self.estado_eje != proto.ESTADO_CLOSED_LOOP:
+            # En IDLE el eje no tiene par: no sigue ninguna consigna.
+            self.vel = 0.0
+            return
+
+        if self.control_mode == proto.CONTROL_VELOCIDAD:
             self.vel = self.objetivo + random.uniform(-0.02, 0.02)
             self.pos += self.vel * dt
         else:
@@ -64,9 +98,45 @@ class MotorEmulado:
 
     @property
     def torque(self):
-        if self.modo == MODO_VELOCIDAD:
+        if self.control_mode == proto.CONTROL_VELOCIDAD:
             return abs(self.objetivo) * 0.3 + random.uniform(0.0, 0.2)
         return abs(self.objetivo - self.pos) * 2.0 + random.uniform(0.0, 0.3)
+
+    # ---------------- mensajes que emite ---------------- #
+    def trama_encoder(self):
+        return proto.trama_encoder(self.pos, self.vel)
+
+    def trama_heartbeat(self):
+        return proto.trama_heartbeat(estado_eje=self.estado_eje,
+                                     error_eje=self.error_eje)
+
+
+def atender(motor, comando, verbose=False):
+    """Aplica un mensaje host->motor al motor emulado.
+
+    A diferencia del protocolo anterior, NO devuelve una respuesta: en ODrive el
+    motor contesta emitiendo sus mensajes periódicos, no trama a trama.
+    """
+    if comando is None:
+        return
+    cmd = comando['cmd']
+
+    if cmd == proto.CMD_SET_INPUT_VEL:
+        motor.comandar_velocidad(comando['velocidad_rad_s'])
+    elif cmd == proto.CMD_SET_INPUT_POS:
+        motor.comandar_posicion(comando['posicion_rad'])
+    elif cmd == proto.CMD_SET_AXIS_STATE:
+        motor.poner_estado(comando['estado'])
+    elif cmd == proto.CMD_SET_CONTROLLER_MODE:
+        motor.poner_modo(comando['control_mode'], comando['input_mode'])
+    elif cmd == proto.CMD_CLEAR_ERRORS:
+        motor.error_eje = 0
+    elif cmd == proto.CMD_ESTOP:
+        motor.parar()
+
+    if verbose:
+        print(f'[EMULADOR] motor {motor.id} cmd=0x{cmd:03X} '
+              f'estado={motor.estado_eje} pos={motor.pos:+.3f} vel={motor.vel:+.3f}')
 
 
 def main(argv=None):
@@ -91,18 +161,28 @@ def main(argv=None):
         )
 
     motores = {mid: MotorEmulado(mid) for mid in IDS_ORUGAS + IDS_FLIPPERS}
-    print(f'[EMULADOR] {len(motores)} motores en {args.canal} '
+    print(f'[EMULADOR] {len(motores)} motores ODrive en {args.canal} '
           f'(orugas {IDS_ORUGAS}, flippers {IDS_FLIPPERS}). Ctrl+C para salir.')
+    print(f'[EMULADOR] emitiendo encoder cada {PERIODO_ENCODER_S * 1000:.0f} ms '
+          f'y heartbeat cada {PERIODO_HEARTBEAT_S * 1000:.0f} ms')
 
     t_prev = time.monotonic()
-    t_stats = t_prev
+    t_encoder = t_heartbeat = t_stats = t_prev
     rx = tx = ignoradas = 0
+
+    def emitir(id_motor, cmd_id, datos):
+        bus.send(can.Message(
+            arbitration_id=proto.id_arbitraje(id_motor, cmd_id),
+            data=datos,
+            is_extended_id=False,
+        ))
 
     try:
         while True:
-            msg = bus.recv(timeout=1.0)
+            # Timeout corto: hay que volver aquí para emitir los periódicos aunque
+            # el host no mande nada.
+            msg = bus.recv(timeout=PERIODO_ENCODER_S / 2.0)
 
-            # La física avanza con el tiempo real, llegue o no tráfico.
             ahora = time.monotonic()
             dt = min(ahora - t_prev, 0.1)
             t_prev = ahora
@@ -111,53 +191,38 @@ def main(argv=None):
 
             if msg is not None:
                 rx += 1
-                id_motor = proto.motor_de_id_comando(msg.arbitration_id)
-                comando = proto.parsear_comando(msg.data) if id_motor in motores else None
+                nodo = proto.nodo_de_id(msg.arbitration_id)
+                cmd_id = proto.cmd_de_id(msg.arbitration_id)
+                comando = (proto.parsear_comando(cmd_id, msg.data)
+                           if nodo in motores else None)
                 if comando is None:
                     ignoradas += 1
                 else:
-                    respuesta = atender(motores[id_motor], comando, args.verbose)
-                    if respuesta is not None:
-                        bus.send(can.Message(
-                            arbitration_id=proto.id_respuesta(id_motor),
-                            data=respuesta,
-                            is_extended_id=False,
-                        ))
-                        tx += 1
+                    atender(motores[nodo], comando, args.verbose)
+
+            if ahora - t_encoder >= PERIODO_ENCODER_S:
+                t_encoder = ahora
+                for m in motores.values():
+                    emitir(m.id, proto.CMD_GET_ENCODER_ESTIMATES, m.trama_encoder())
+                    tx += 1
+
+            if ahora - t_heartbeat >= PERIODO_HEARTBEAT_S:
+                t_heartbeat = ahora
+                for m in motores.values():
+                    emitir(m.id, proto.CMD_HEARTBEAT, m.trama_heartbeat())
+                    tx += 1
 
             if ahora - t_stats >= 5.0:
                 t_stats = ahora
+                armados = sum(1 for m in motores.values()
+                              if m.estado_eje == proto.ESTADO_CLOSED_LOOP)
                 pos = ' '.join(f'{ID_A_NOMBRE[m.id]}={m.pos:+.2f}' for m in motores.values())
-                print(f'[EMULADOR] rx={rx} tx={tx} ignoradas={ignoradas} | pos(rad): {pos}')
+                print(f'[EMULADOR] rx={rx} tx={tx} ignoradas={ignoradas} '
+                      f'armados={armados}/{len(motores)} | pos(rad): {pos}')
     except KeyboardInterrupt:
         print('\n[EMULADOR] Cerrando bus.')
     finally:
         bus.shutdown()
-
-
-def atender(motor, comando, verbose=False):
-    """Aplica un comando al motor emulado y devuelve los bytes de respuesta."""
-    cmd = comando['cmd']
-
-    if cmd == proto.CMD_VELOCIDAD:
-        motor.comandar_velocidad(comando['velocidad_rad_s'])
-    elif cmd == proto.CMD_POSICION:
-        motor.comandar_posicion(comando['posicion_rad'])
-    elif cmd == proto.CMD_PARO:
-        motor.parar()
-    elif cmd == proto.CMD_APAGADO:
-        motor.parar()
-
-    if verbose:
-        print(f'[EMULADOR] motor {motor.id} cmd=0x{cmd:02X} '
-              f'pos={motor.pos:+.3f} vel={motor.vel:+.3f}')
-
-    if cmd == proto.CMD_LEER_MULTIVUELTA:
-        return proto.trama_respuesta_multivuelta(motor.pos)
-
-    # 0xA2/0xA4/0x9C/0x81/0x80 responden todos la trama de estado.
-    return proto.trama_respuesta_estado(
-        cmd, motor.temperatura, motor.torque, motor.vel, motor.pos)
 
 
 if __name__ == '__main__':

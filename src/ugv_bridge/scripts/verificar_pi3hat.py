@@ -16,9 +16,9 @@ y de las que depende el modo 'pi3hat' del driver:
      (de eso depende que en el bus aparezca 0x141 y no otro ID, ver la cabecera
      de pi3hat_backend.py)
 
-Con --motores manda además una trama de LECTURA DE ESTADO (0x9C, sin efecto sobre
-el movimiento) a los 8 IDs y reporta cuáles contestan y por qué bus. Es la forma
-de validar el cableado sin mover nada.
+Con --motores escucha además el bus unos segundos y reporta qué node_id emiten y
+en qué estado están. No transmite nada: los drivers ODrive publican su heartbeat
+y su encoder de fábrica. Es la forma de validar el cableado sin mover nada.
 """
 import argparse
 import asyncio
@@ -55,7 +55,7 @@ async def main_async(args):
           f'{"SÍ" if hasattr(moteus_pi3hat, "CanConfiguration") else "NO"}'
           '   (hace falta para apagar CAN-FD)')
 
-    titulo('2. ID DE ARBITRAJE CAN (crítico para el protocolo RMD)')
+    titulo('2. ID DE ARBITRAJE CAN (crítico para el protocolo ODrive)')
     # Prueba DIRECTA: se arma la trama igual que TransportePi3Hat y se le pide a
     # la propia librería que la convierta, para ver con qué ID saldría al bus.
     # Es mucho mas fiable que leer su codigo fuente buscando patrones.
@@ -65,14 +65,14 @@ async def main_async(args):
         cmd = moteus.Command()
         cmd.raw = True
         cmd.reply_required = False
-        cmd.arbitration_id = 0x141
+        cmd.arbitration_id = 0x0AD
         cmd.bus = 1
         cmd.data = bytes(8)
         trama = Transport._command_to_frame(None, cmd)
         emitido = trama.arbitration_id
-        print(f'  ID pedido : 0x141   (0x140 + motor 1)')
+        print('  ID pedido : 0x0AD   (node_id 5, Set_Input_Vel: (5<<5)|0x0D)')
         print(f'  ID emitido: 0x{emitido:X}')
-        if emitido == 0x141:
+        if emitido == 0x0AD:
             print('  OK: la librería emite el ID tal cual con raw=True.')
         else:
             print('  ATENCION: el ID emitido NO coincide con el pedido.')
@@ -151,58 +151,69 @@ async def main_async(args):
         print('  Para sondear los motores:  --motores')
         return 0
 
-    titulo(f'6. SONDEO DE {len(mapa)} MOTOR(ES) (trama 0x9C, no mueve nada)')
+    titulo(f'6. ESCUCHA DE {len(mapa)} MOTOR(ES) (sin transmitir nada)')
     from ugv_bridge import protocolo_can as proto
 
-    comandos = []
-    for mid, bus in sorted(mapa.items()):
-        cmd = moteus.Command()
-        cmd.raw = True                                  # ID emitido tal cual
-        cmd.arbitration_id = proto.id_comando(mid)      # 0x140 + id_motor
-        cmd.bus = bus
-        cmd.data = proto.trama_leer_estado()
-        cmd.reply_required = False
-        comandos.append(cmd)
-
+    # Los drivers ODrive emiten heartbeat (100 ms) y encoder (10 ms) de fábrica,
+    # así que no hay que preguntarles: basta con escuchar. Y al no transmitir, el
+    # diagnóstico no puede mover un motor ni dejar el bus en bus-off.
     mascara = 0
     for bus in set(mapa.values()):
         mascara |= (1 << bus)
-    # Techo de tiempo OBLIGATORIO: con force_can_check y ningún motor
-    # contestando, el ciclo se queda colgado indefinidamente (comprobado en la
-    # placa). Es el mismo techo que aplica TransportePi3Hat en el driver.
-    try:
-        resultados = await asyncio.wait_for(
-            router.cycle(comandos, force_can_check=mascara), timeout=2.0)
-    except asyncio.TimeoutError:
-        print('  El ciclo del pi3hat venció sin ninguna respuesta.')
-        resultados = []
 
     vistos = {}
-    for r in resultados or []:
-        arb = getattr(r, 'arbitration_id', None)
-        if arb is None:
+    fin_escucha = asyncio.get_event_loop().time() + args.segundos
+    while asyncio.get_event_loop().time() < fin_escucha:
+        try:
+            resultados = await asyncio.wait_for(
+                router.cycle([], force_can_check=mascara), timeout=1.0)
+        except asyncio.TimeoutError:
             continue
-        mid = proto.motor_de_id_respuesta(arb)
-        if mid is not None:
-            vistos[mid] = r
+        for r in resultados or []:
+            arb = getattr(r, 'arbitration_id', None)
+            if arb is None:
+                continue
+            nodo = proto.nodo_de_id(arb)
+            if nodo is not None:
+                vistos.setdefault(nodo, {})[proto.cmd_de_id(arb)] = \
+                    bytes(getattr(r, 'data', b''))
 
+    nombres = {1: 'track_fl', 2: 'track_fr', 3: 'track_rl', 4: 'track_rr',
+               5: 'flipper_fl', 6: 'flipper_fr', 7: 'flipper_rl', 8: 'flipper_rr'}
     for mid, bus in sorted(mapa.items()):
-        nombre = {1: 'track_fl', 2: 'track_fr', 3: 'track_rl', 4: 'track_rr',
-                  5: 'flipper_fl', 6: 'flipper_fr', 7: 'flipper_rl',
-                  8: 'flipper_rr'}[mid]
-        if mid in vistos:
-            estado = proto.parsear_respuesta(bytes(vistos[mid].data))
-            print(f'  ID {mid} ({nombre:11s}) bus {bus}: RESPONDE  {estado}')
-        else:
-            print(f'  ID {mid} ({nombre:11s}) bus {bus}: SIN RESPUESTA')
+        etiqueta = f'  node {mid} ({nombres.get(mid, "?"):11s}) bus {bus}:'
+        mensajes = vistos.get(mid)
+        if not mensajes:
+            print(f'{etiqueta} SIN SEÑAL')
+            continue
+        hb = proto.parsear_heartbeat(mensajes.get(proto.CMD_HEARTBEAT, b''))
+        enc = proto.parsear_encoder(mensajes.get(proto.CMD_GET_ENCODER_ESTIMATES, b''))
+        detalle = []
+        if hb:
+            estado = {proto.ESTADO_IDLE: 'IDLE',
+                      proto.ESTADO_CLOSED_LOOP: 'LAZO CERRADO'}.get(
+                          hb['estado_eje'], str(hb['estado_eje']))
+            detalle.append(f'estado={estado}')
+            if hb['error_eje']:
+                detalle.append(f"ERROR=0x{hb['error_eje']:X}")
+        if enc:
+            detalle.append(f"pos={enc['posicion_rad']:+.3f} rad")
+        print(f'{etiqueta} EMITE  {"  ".join(detalle) or "(sin decodificar)"}')
+
+    ajenos = sorted(n for n in vistos if n not in mapa)
+    if ajenos:
+        print(f'\n  Además emiten node_id que no están en el mapa: {ajenos}')
+        print('  Reconfigurar node_id por USB, o corregir el mapa de buses.')
 
     faltan = [m for m in mapa if m not in vistos]
     if faltan:
-        print(f'\n  {len(faltan)} motor(es) sin responder: {faltan}')
-        print('  Revisar: alimentación, terminación del bus, IDs configurados en')
-        print('  cada driver, y el mapa de buses (mapa_buses en el launch).')
+        print(f'\n  {len(faltan)} motor(es) sin señal: {faltan}')
+        print('  Revisar: alimentación del driver (15-60 V por el XT30),')
+        print('  CAN_H/CAN_L en el conector del motor, node_id configurado, y')
+        print('  que el CAN esté habilitado (odrv0.config.enable_can_a por USB).')
+        print('  Para barrer otras velocidades: scripts/escanear_can.py')
     else:
-        print('\n  Los 8 motores responden. El mapa de buses es correcto.')
+        print(f'\n  Los {len(mapa)} motores emiten. El mapa de buses es correcto.')
     return 0
 
 
@@ -215,6 +226,8 @@ def main():
                    help='sondear sólo estos IDs (banco con un motor suelto)')
     p.add_argument('--bus', type=int, metavar='N',
                    help='forzar el bus del pi3hat de los IDs sondeados')
+    p.add_argument('--segundos', type=float, default=3.0,
+                   help='cuánto escuchar a los motores (default: 3)')
     args = p.parse_args()
     if args.id or args.bus:      # pedir un ID concreto ya implica sondear
         args.motores = True

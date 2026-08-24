@@ -5,8 +5,9 @@ Este módulo concentra TODO lo que depende de `moteus_pi3hat`, para que el resto
 del código (driver_movimiento, flipper_node, pi3hat_imu_node) no sepa de SPI ni
 de asyncio. Ofrece dos piezas independientes:
 
-    TransportePi3Hat  -> envía/recibe tramas CAN de los motores (protocolo RMD,
-                         el mismo de protocolo_can.py que valida motor_emulator).
+    TransportePi3Hat  -> envía/recibe tramas CAN de los motores (protocolo
+                         ODrive, el mismo de protocolo_can.py que valida
+                         motor_emulator).
     LectorImuPi3Hat   -> lee la actitud (y la aceleración, si el firmware la
                          expone) de la IMU integrada en la placa.
 
@@ -17,8 +18,8 @@ descriptor SPI está tomado). Por eso `abrir_router()` cachea la instancia.
 ---------------------------------------------------------------------------
 POR QUÉ TRAMAS CRUDAS Y NO moteus.Controller
 ---------------------------------------------------------------------------
-Los motores son SteadyWin (GIM6010-8 / GDS68) y hablan protocolo estilo RMD V3
-(IDs 0x140+id / 0x240+id, comandos 0xA2/0xA4/0x92...), NO el protocolo moteus.
+Los motores son SteadyWin GIM6010-8 y hablan protocolo ODrive
+(ID = (node_id << 5) | cmd_id), NO el protocolo moteus.
 `moteus.Controller.set_position()` produciría tramas que estos motores ignoran.
 
 Aquí el pi3hat se usa sólo como TRANSPORTE CAN, y las tramas las arma
@@ -39,7 +40,8 @@ con `raw = True` se convierte en trama así:
 
 Es decir: con `raw=True` la librería NO compone nada a partir de source y
 destination, sino que emite `command.arbitration_id` TAL CUAL. Eso es justo lo
-que necesita este proyecto, que manda tramas de un protocolo ajeno (RMD): se
+que necesita este proyecto, que manda tramas de un protocolo ajeno (ODrive):
+se
 asigna el ID completo y listo.
 
     cmd.arbitration_id = 0x141      # 0x140 + id_motor
@@ -209,7 +211,7 @@ TIMEOUT_CICLO_MIN_S = 0.025
 
 
 class TransportePi3Hat:
-    """Envía tramas CAN a los motores por el pi3hat y devuelve sus respuestas.
+    """Envía tramas CAN a los motores por el pi3hat y recoge lo que emiten.
 
     Expone la MISMA interfaz `intercambiar()` que el transporte SocketCAN, de
     modo que `driver_movimiento` usa el mismo código de protocolo en modo 'can'
@@ -234,16 +236,16 @@ class TransportePi3Hat:
             self._mascara_buses |= (1 << bus)
 
     def intercambiar(self, peticiones, timeout=0.004):
-        """Envía todas las tramas en UN ciclo del pi3hat y recoge las respuestas.
+        """Manda todas las tramas en UN ciclo del pi3hat y recoge lo que llegue.
 
         Parameters
         ----------
-        peticiones : list[tuple[int, bytes]]
-            [(id_motor, datos_de_8_bytes), ...]
+        peticiones : list[tuple[int, int, bytes]]
+            [(node_id, cmd_id, datos), ...]
         timeout : float
             Techo de tiempo del ciclo. Se respeta con un suelo de
             TIMEOUT_CICLO_MIN_S, porque una transacción SPI legítima con los 8
-            motores tarda más que el timeout que usa el transporte SocketCAN.
+            motores tarda más que el timeout que usaba el transporte SocketCAN.
 
             NO es decorativo: comprobado en la placa (12/08/2026), si se piden
             respuestas con `force_can_check` y NINGÚN motor contesta, el ciclo
@@ -251,30 +253,35 @@ class TransportePi3Hat:
             llamada). Sin este techo, un motor sin alimentar o un bus mal
             terminado congela el bucle de control entero: no se publica
             /joint_states, el watchdog no llega a contar y no hay paro de
-            emergencia. Con el techo, el ciclo vuelve sin respuestas, el
-            watchdog cuenta ciclos mudos y fuerza el paro, que es justo el
+            emergencia. Con el techo, el ciclo vuelve sin nada, el watchdog
+            cuenta ciclos mudos y fuerza el paro, que es justo el
             comportamiento para el que se diseñó.
 
         Returns
         -------
-        dict[int, bytes | None]
-            {id_motor: datos_de_respuesta}. None si ese motor no respondió.
+        dict[int, dict[int, bytes]]
+            {node_id: {cmd_id: datos}}. Diccionario vacío = ese motor no emitió
+            nada en este ciclo.
 
-        Un solo ciclo para los 8 motores es la razón de ser del pi3hat: hacer
-        pregunta-respuesta motor por motor costaría 8 transacciones SPI por
+        Con ODrive no hay pregunta-respuesta: los motores emiten su trama de
+        encoder cada 10 ms por su cuenta, y aquí se recoge lo que haya en el
+        buffer de los buses. Un solo ciclo para los 8 motores es la razón de ser
+        del pi3hat: hacerlo motor por motor costaría 8 transacciones SPI por
         iteración del bucle de control.
         """
         from ugv_bridge import protocolo_can as proto
 
+        nodos = []
         comandos = []
-        for id_motor, datos in peticiones:
-            bus = self.mapa_buses.get(id_motor, 1)
+        for node_id, cmd_id, datos in peticiones:
+            nodos.append(node_id)
+            bus = self.mapa_buses.get(node_id, 1)
             cmd = _moteus.Command()
             # raw=True: la librería emite arbitration_id tal cual, sin componerlo
             # desde source/destination (ver la cabecera del módulo). Es lo que
-            # permite mandar el ID del protocolo RMD sin tocar la librería.
+            # permite mandar el ID de un protocolo ajeno sin tocar la librería.
             cmd.raw = True
-            cmd.arbitration_id = proto.id_comando(id_motor)   # 0x140 + id_motor
+            cmd.arbitration_id = proto.id_arbitraje(node_id, cmd_id)
             # El bus del pi3hat se elige SOLO con `bus`, que la librería resuelve
             # como `[d for d in devices if d.bus() == cmd.bus]`. NO usar
             # `channel`: ahí espera un objeto de dispositivo, no un número, y
@@ -282,9 +289,8 @@ class TransportePi3Hat:
             # 'parent'" en el primer ciclo (comprobado en la placa).
             cmd.bus = bus
             cmd.data = bytes(datos)
-            # OJO: reply_required=True encendería el bit 0x8000 del ID en la rama
-            # NO raw. Aquí no aplica, pero se deja en False igual porque las
-            # respuestas se recogen con force_can_check sobre los buses en uso.
+            # Las tramas entrantes se recogen con force_can_check sobre los buses
+            # en uso, no pidiendo respuesta trama a trama.
             cmd.reply_required = False
             comandos.append(cmd)
 
@@ -297,34 +303,30 @@ class TransportePi3Hat:
                 )
             )
         except asyncio.TimeoutError:
-            # Nadie contestó a tiempo. NO es un error del transporte: es el caso
+            # Nadie emitió a tiempo. NO es un error del transporte: es el caso
             # que el watchdog del driver sabe manejar (cuenta ciclos mudos por
-            # motor y fuerza el paro). Se devuelve "ninguna respuesta" y el
-            # bucle de control sigue vivo y publicando.
-            self.timeouts += len(peticiones)
+            # motor y fuerza el paro). Se devuelve "nada" y el bucle de control
+            # sigue vivo y publicando.
+            self.timeouts += len(set(nodos))
             self.ciclos_vencidos += 1
-            return {id_motor: None for id_motor, _ in peticiones}
+            return {node_id: {} for node_id in nodos}
         except Exception as e:  # bus caído, SPI ocupado, motor desconectado...
-            self.timeouts += len(peticiones)
+            self.timeouts += len(set(nodos))
             raise ErrorTransportePi3Hat(f'fallo en el ciclo del pi3hat: {e}') from e
 
-        # Emparejar cada respuesta (ID 0x240+id) con su motor.
-        respuestas = {}
+        recibido = {node_id: {} for node_id in nodos}
         for r in resultados or []:
             arb = getattr(r, 'arbitration_id', None)
             if arb is None:
                 continue
-            id_motor = proto.motor_de_id_respuesta(arb)
-            if id_motor is not None:
-                respuestas[id_motor] = bytes(getattr(r, 'data', b''))
+            nodo = proto.nodo_de_id(arb)
+            if nodo is None:
+                continue
+            recibido.setdefault(nodo, {})[proto.cmd_de_id(arb)] = \
+                bytes(getattr(r, 'data', b''))
 
-        salida = {}
-        for id_motor, _ in peticiones:
-            datos = respuestas.get(id_motor)
-            if datos is None:
-                self.timeouts += 1
-            salida[id_motor] = datos
-        return salida
+        self.timeouts += sum(1 for n in set(nodos) if not recibido.get(n))
+        return recibido
 
     def cerrar(self):
         cerrar_router()

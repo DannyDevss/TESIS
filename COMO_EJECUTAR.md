@@ -241,6 +241,28 @@ Conectores **JST PH-3** (JC1..JC5, uno por bus), según la
 - Velocidad de fábrica del **GIM6010-8: 500 kbps** — es la que fija
   `BITRATE_CAN` en `pi3hat_backend.py`.
 
+#### El protocolo es ODrive, no RMD
+
+El driver del GIM6010-8 (CyberBeast BL72) es compatible ODrive, y su protocolo
+CAN es el de ODrive:
+
+    ID de arbitraje (11 bits) = (node_id << 5) | cmd_id
+
+Tres consecuencias prácticas:
+
+1. **El motor habla solo.** De fábrica emite `Heartbeat` cada 100 ms y
+   `Get_Encoder_Estimates` (posición y velocidad) cada 10 ms. El driver no
+   pregunta: manda su consigna y recoge lo que llegó. Por eso el diagnóstico
+   (`escanear_can.py`, `verificar_pi3hat.py --motores`) sólo **escucha**.
+2. **Hay que ARMAR los ejes.** Un eje en IDLE acepta las consignas y no se mueve,
+   sin devolver ningún error. `driver_movimiento` lo hace al arrancar y cada vez
+   que el watchdog se recupera de un fallo.
+3. **El `node_id` sustituye al ID del motor.** Se lee y se cambia por USB con
+   `odrv0.axis0.config.can.node_id`. El motor de pruebas viene con `node_id = 1`.
+
+Para depurar por USB: `~/.venvs/odrive/bin/odrivetool` en el PC (necesita la
+regla udev de `/etc/udev/rules.d/91-odrive.rules`).
+
 Si no contesta nadie, `scripts/escanear_can.py` barre buses, velocidades e IDs y
 muestra cualquier trama que llegue.
 

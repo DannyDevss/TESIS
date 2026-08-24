@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
 """escanear_can.py — Busca motores en los buses del pi3hat sin suponer nada.
 
-`verificar_pi3hat.py --motores` responde "¿contestan los motores donde los
-espero?". Este script responde la pregunta de antes: "¿hay ALGÚN motor ahí?",
-cuando no contesta nadie y no se sabe si falla el bus, la velocidad o el ID.
+`verificar_pi3hat.py --motores` responde "¿están los motores donde los espero?".
+Este script responde la pregunta de antes: "¿hay ALGÚN motor ahí?", cuando no
+aparece nadie y no se sabe si falla el bus, la velocidad o el node_id.
 
-Barre, para una velocidad de bus dada, todos los buses de la placa mandando la
-trama de lectura de estado (0x9C, NO mueve nada) a un rango de IDs, y muestra
-CUALQUIER trama que llegue de vuelta — con su ID de arbitraje crudo, sin dar por
-hecho que la respuesta es 0x240+id. Así también se ve un motor que conteste con
-otro esquema de IDs.
+ESCUCHA SIN TRANSMITIR. Los drivers ODrive emiten de fábrica su heartbeat cada
+100 ms y sus estimaciones de encoder cada 10 ms, sin que nadie se lo pida (ver
+sección 4.1.5 del manual), así que para encontrarlos basta con abrir la oreja.
+Eso hace el barrido más fiable y además inofensivo:
 
-Correr en la Raspberry, una velocidad por vez (la velocidad se fija al abrir la
-placa, así que cada barrido necesita su propio proceso):
+  - no hace falta acertar el node_id, porque el motor lo dice en cada trama;
+  - no se transmite nada, así que ninguna trama se queda sin ACK y el
+    controlador CAN no puede irse a "bus-off" durante el propio diagnóstico;
+  - no se le manda al motor ni una consigna, así que no se puede mover.
+
+Correr en la Raspberry, una velocidad por vez (la velocidad del bus se fija al
+abrir la placa, así que cada barrido necesita su propio proceso):
 
     source /opt/ros/jazzy/setup.bash && source ~/TESIS/install/setup.bash
+    python3 -u src/ugv_bridge/scripts/escanear_can.py                 # 500 kbps
     python3 -u src/ugv_bridge/scripts/escanear_can.py --bitrate 1000000
-    python3 -u src/ugv_bridge/scripts/escanear_can.py --bitrate 500000
 
-Por qué manda pocas tramas por ciclo: en un bus donde no hay NADIE, ninguna
-trama recibe ACK. El controlador CAN suma 8 al contador de errores de
-transmisión por cada intento fallido y a los 255 se va a "bus-off", desde donde
-ya no transmite. Con `automatic_retransmission=False` y lotes pequeños se evita
-llegar ahí durante el propio barrido.
+Si no aparece nada a ninguna velocidad, el problema es físico: alimentación del
+driver, CAN_H/CAN_L cruzados en el conector del motor, o CAN deshabilitado en el
+propio driver (odrv0.config.enable_can_a por USB).
 """
 import argparse
 import asyncio
@@ -36,53 +38,26 @@ from ugv_bridge import protocolo_can as proto  # noqa: E402
 # Buses físicos del pi3hat (los conectores JST van del 1 al 5).
 BUSES = [1, 2, 3, 4, 5]
 
-# Velocidades habituales en drivers RMD/SteadyWin.
+# Velocidades habituales. 500 kbps es la de fábrica del GIM6010-8.
 BITRATES = [500000, 1000000, 250000, 125000]
 
-# Tramas por ciclo. Ver la nota sobre bus-off en la cabecera.
-LOTE = 4
-
-
-async def barrer(router, bus, ids, timeout):
-    """Manda 0x9C a `ids` por `bus` y devuelve las tramas que lleguen."""
-    vistas = []
-    for i in range(0, len(ids), LOTE):
-        lote = ids[i:i + LOTE]
-        comandos = []
-        for id_motor in lote:
-            cmd = backend._moteus.Command()
-            cmd.raw = True
-            cmd.arbitration_id = proto.id_comando(id_motor)
-            cmd.bus = bus
-            cmd.data = proto.trama_leer_estado()
-            cmd.reply_required = False
-            comandos.append(cmd)
-        try:
-            resultados = await asyncio.wait_for(
-                router.cycle(comandos, force_can_check=(1 << bus)),
-                timeout=timeout)
-        except asyncio.TimeoutError:
-            continue
-        for r in resultados or []:
-            arb = getattr(r, 'arbitration_id', None)
-            if arb is None:
-                continue
-            vistas.append((arb, bytes(getattr(r, 'data', b''))))
-    return vistas
+NOMBRE_CMD = {
+    proto.CMD_HEARTBEAT: 'heartbeat',
+    proto.CMD_GET_ENCODER_ESTIMATES: 'encoder',
+    proto.CMD_GET_IQ: 'iq',
+}
 
 
 async def escuchar(router, buses, segundos):
-    """Escucha SIN transmitir nada y devuelve las tramas que lleguen.
+    """Escucha sin transmitir. Devuelve [(arb_id, datos), ...].
 
-    Vale la pena aparte del barrido: no toca el bus, así que no puede llevar el
-    controlador a bus-off, y delata a un driver que emita algo por su cuenta
-    (arranque, heartbeat) aunque no entienda la trama que le mandamos. Si aquí
-    aparece algo, el cableado y la velocidad son correctos y el problema es de
-    protocolo, no físico.
+    El pi3hat no dice por qué bus entró cada trama, así que se apunta sólo el ID
+    de arbitraje: para localizar el bus, escuchar de uno en uno con --buses.
     """
     mascara = 0
     for bus in buses:
         mascara |= (1 << bus)
+
     vistas = []
     fin = asyncio.get_event_loop().time() + segundos
     while asyncio.get_event_loop().time() < fin:
@@ -98,19 +73,32 @@ async def escuchar(router, buses, segundos):
     return vistas
 
 
-async def main_async(args):
-    ids = list(range(args.id_min, args.id_max + 1))
-    buses = args.buses or BUSES
-
-    if args.escuchar:
-        print(f'Escuchando buses {buses} a {args.bitrate // 1000} kbps, '
-              f'sin transmitir.\n')
+def describir(arb, datos):
+    """Una línea legible por trama."""
+    nodo = proto.nodo_de_id(arb)
+    cmd = proto.cmd_de_id(arb)
+    nombre = NOMBRE_CMD.get(cmd, f'cmd 0x{cmd:03X}')
+    info = proto.parsear(cmd, datos)
+    if cmd == proto.CMD_HEARTBEAT and info:
+        estado = {proto.ESTADO_IDLE: 'IDLE',
+                  proto.ESTADO_CLOSED_LOOP: 'LAZO CERRADO'}.get(
+                      info['estado_eje'], str(info['estado_eje']))
+        extra = f'estado={estado}'
+        if info['error_eje']:
+            extra += f" ERROR=0x{info['error_eje']:X}"
+    elif cmd == proto.CMD_GET_ENCODER_ESTIMATES and info:
+        extra = (f"pos={info['posicion_rad']:+.3f} rad "
+                 f"vel={info['velocidad_rad_s']:+.3f} rad/s")
     else:
-        print(f'Barriendo buses {buses}, IDs {args.id_min}..{args.id_max}, '
-              f'a {args.bitrate // 1000} kbps.')
-        print('Trama 0x9C (lectura de estado): no mueve nada.\n')
+        extra = datos.hex()
+    return f'  node {nodo:<3} {nombre:<10} 0x{arb:03X}  {extra}'
 
-    # Todos los buses en la misma velocidad, sin reintentos automáticos.
+
+async def main_async(args):
+    buses = args.buses or BUSES
+    print(f'Escuchando buses {buses} a {args.bitrate // 1000} kbps '
+          f'durante {args.segundos:.0f} s, sin transmitir nada.\n')
+
     backend._importar()
     cfg = backend.config_can_clasico(buses)
     if cfg is None:
@@ -120,42 +108,38 @@ async def main_async(args):
     for c in cfg.values():
         c.slow_bitrate = args.bitrate
         c.fast_bitrate = args.bitrate
-        c.automatic_retransmission = False
+    # servo_bus_map vacío: no se va a comandar a nadie, sólo escuchar.
     router = backend._moteus_pi3hat.Pi3HatRouter(
-        servo_bus_map={bus: ids for bus in buses}, can=cfg)
+        servo_bus_map={bus: [] for bus in buses}, can=cfg)
 
-    if args.escuchar:
-        vistas = await escuchar(router, buses, args.escuchar)
-        if not vistas:
-            print('  nada: en el bus no circula ni una trama.')
-            return 1
-        for arb, datos in vistas:
-            print(f'  TRAMA 0x{arb:X}  datos={datos.hex()}')
-        print('\nHay tráfico: el cableado y la velocidad del bus son correctos.')
-        return 0
+    vistas = await escuchar(router, buses, args.segundos)
 
-    encontrado = False
-    for bus in buses:
-        vistas = await barrer(router, bus, ids, args.timeout)
-        if not vistas:
-            print(f'  bus {bus}: nada')
-            continue
-        encontrado = True
-        for arb, datos in vistas:
-            id_motor = proto.motor_de_id_respuesta(arb)
-            quien = f'motor {id_motor}' if id_motor is not None else 'ID desconocido'
-            print(f'  bus {bus}: RESPUESTA 0x{arb:X} ({quien}) datos={datos.hex()}')
-
-    if not encontrado:
-        print(f'\nNadie contestó a {args.bitrate // 1000} kbps. '
-              f'Probar otra velocidad:')
-        print('  ' + '  '.join(f'--bitrate {b}' for b in BITRATES
-                               if b != args.bitrate))
-        print('\nSi ninguna velocidad da nada, el problema es físico:')
-        print('  - el driver del motor no está energizado (24-48 V, no los 5 V del pi3hat)')
-        print('  - CAN_H/CAN_L cruzados, o sin los 120 ohm de terminación')
-        print('  - el motor está en otro conector JST del que se está barriendo')
+    if not vistas:
+        print(f'Nadie emitió nada a {args.bitrate // 1000} kbps.')
+        print('\nProbar otra velocidad:')
+        print('  ' + '  '.join(f'--bitrate {b}' for b in BITRATES if b != args.bitrate))
+        print('\nSi a ninguna velocidad aparece nada, es físico o de configuración:')
+        print('  - el driver no está alimentado (15-60 V por el XT30, no por USB)')
+        print('  - CAN_H/CAN_L cruzados en el conector del motor')
+        print('  - CAN deshabilitado en el driver: comprobar por USB con odrivetool')
+        print('    odrv0.config.enable_can_a y odrv0.can.config.baud_rate')
         return 1
+
+    nodos = {}
+    for arb, datos in vistas:
+        nodo = proto.nodo_de_id(arb)
+        nodos.setdefault(nodo, []).append((arb, datos))
+
+    print(f'{len(vistas)} tramas de {len(nodos)} nodo(s). Una muestra de cada tipo:\n')
+    for nodo in sorted(n for n in nodos if n is not None):
+        vistos = {}
+        for arb, datos in nodos[nodo]:
+            vistos.setdefault(proto.cmd_de_id(arb), (arb, datos))
+        for _, (arb, datos) in sorted(vistos.items()):
+            print(describir(arb, datos))
+
+    print('\nHay tráfico: el cableado y la velocidad del bus son correctos.')
+    print(f'node_id encontrados: {sorted(n for n in nodos if n is not None)}')
     return 0
 
 
@@ -164,15 +148,12 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--bitrate', type=int, default=500000,
-                   help='velocidad del bus en bit/s (default: 500000, el de fábrica del GIM6010-8)')
+                   help='velocidad del bus en bit/s (default: 500000, el de fábrica '
+                        'del GIM6010-8)')
     p.add_argument('--buses', type=int, nargs='+', metavar='N',
-                   help=f'buses a barrer (default: {BUSES})')
-    p.add_argument('--id-min', type=int, default=1, help='primer ID (default: 1)')
-    p.add_argument('--id-max', type=int, default=8, help='último ID (default: 8)')
-    p.add_argument('--escuchar', type=float, metavar='SEG',
-                   help='escuchar SEG segundos sin transmitir, en vez de barrer')
-    p.add_argument('--timeout', type=float, default=1.0,
-                   help='techo de tiempo por ciclo, en segundos (default: 1.0)')
+                   help=f'buses a escuchar (default: {BUSES})')
+    p.add_argument('--segundos', type=float, default=5.0,
+                   help='cuánto escuchar (default: 5)')
     args = p.parse_args()
     sys.exit(asyncio.run(main_async(args)))
 
