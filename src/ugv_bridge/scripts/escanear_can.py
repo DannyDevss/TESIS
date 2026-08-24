@@ -37,7 +37,7 @@ from ugv_bridge import protocolo_can as proto  # noqa: E402
 BUSES = [1, 2, 3, 4, 5]
 
 # Velocidades habituales en drivers RMD/SteadyWin.
-BITRATES = [1000000, 500000, 250000, 125000]
+BITRATES = [500000, 1000000, 250000, 125000]
 
 # Tramas por ciclo. Ver la nota sobre bus-off en la cabecera.
 LOTE = 4
@@ -122,8 +122,8 @@ def main():
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument('--bitrate', type=int, default=1000000,
-                   help='velocidad del bus en bit/s (default: 1000000)')
+    p.add_argument('--bitrate', type=int, default=500000,
+                   help='velocidad del bus en bit/s (default: 500000, el de fábrica del GIM6010-8)')
     p.add_argument('--buses', type=int, nargs='+', metavar='N',
                    help=f'buses a barrer (default: {BUSES})')
     p.add_argument('--id-min', type=int, default=1, help='primer ID (default: 1)')

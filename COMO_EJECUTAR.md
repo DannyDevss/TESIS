@@ -218,6 +218,32 @@ compilar_real      # motores REALES por los buses CAN del pi3hat + IMU real
 Los dos encienden el EKF y el puente Foxglove. Aceptan argumentos extra, que se
 pasan tal cual al launch: `compilar_simu frecuencia_hz:=200.0`.
 
+#### Cableado CAN al pi3hat
+
+Conectores **JST PH-3** (JC1..JC5, uno por bus), según la
+[referencia de mjbots](https://github.com/mjbots/pi3hat/blob/master/docs/reference.md):
+
+| Pin | Señal |
+|-----|-------|
+| 1   | CAN_H |
+| 2   | CAN_L |
+| 3   | GND   |
+
+- La **terminación de 120 ohm ya viene soldada** en los cinco puertos del pi3hat:
+  no hay que agregar resistencias de ese lado. Entre pin 1 y pin 2, con todo
+  desconectado, se miden ~120 ohm (~60 si el driver del motor también termina).
+- Para saber cuál extremo es el pin 1 sin adivinar: el pin 3 da continuidad con
+  la masa de la Pi (chasis del conector Ethernet, o un GND del header de 40). El
+  extremo opuesto es el pin 1.
+- Conectar también el **GND**: con dos hilos el bus funciona solo si las masas ya
+  se tocan por la alimentación. Si el driver va con fuente aparte, sin referencia
+  común el CAN falla.
+- Velocidad de fábrica del **GIM6010-8: 500 kbps** — es la que fija
+  `BITRATE_CAN` en `pi3hat_backend.py`.
+
+Si no contesta nadie, `scripts/escanear_can.py` barre buses, velocidades e IDs y
+muestra cualquier trama que llegue.
+
 #### Probar con UN motor en el banco
 
 Antes de lanzar nada, comprobar que el motor contesta en el bus (trama de

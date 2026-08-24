@@ -104,7 +104,10 @@ def obtener_loop():
 
 
 # Velocidad de los buses CAN de los motores SteadyWin (CAN 2.0A clásico).
-BITRATE_CAN = 1000000
+# 500 kbps es el valor de fábrica de la interfaz CAN del GIM6010-8. Si algún día
+# se reconfiguran los drivers a otra velocidad, hay que cambiarlo AQUÍ: los ocho
+# motores y la placa tienen que ir a la misma.
+BITRATE_CAN = 500000
 
 
 def config_can_clasico(buses):
