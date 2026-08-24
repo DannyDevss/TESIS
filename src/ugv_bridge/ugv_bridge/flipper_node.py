@@ -41,6 +41,7 @@ Para RL determinista, subir a 200 Hz y afinar QoS/prioridad de CPU.
 import math
 
 import rclpy
+from rclpy.exceptions import ParameterUninitializedException
 from rclpy.node import Node
 from sensor_msgs.msg import JointState, Imu
 from std_msgs.msg import Float64MultiArray
@@ -128,9 +129,7 @@ class FlipperNode(Node):
                 self.get_parameter('imu_montaje_yaw').value,
             ),
             mapa_buses=mapa_buses,
-            # Sin el parámetro (o vacío) -> None -> los 8 motores.
-            motores_presentes=list(
-                self.get_parameter('motores_presentes').value or []) or None,
+            motores_presentes=self._motores_presentes(),
         )
         self._fallo_avisado = False
 
@@ -159,6 +158,21 @@ class FlipperNode(Node):
 
     # ------------------------------------------------------------------ #
     # Entrada de comandos
+    def _motores_presentes(self):
+        """IDs cableados de verdad, o None si están los 8.
+
+        `motores_presentes` se declara por TIPO y sin valor por defecto (de una
+        lista vacía rclpy deduciría BYTE_ARRAY y rechazaría los enteros que manda
+        el launch). El precio es que, si nadie lo pasa —por ejemplo con
+        `ros2 run ugv_bridge flipper_node` a pelo—, `get_parameter` NO devuelve
+        vacío: lanza ParameterUninitializedException.
+        """
+        try:
+            valor = self.get_parameter('motores_presentes').value
+        except ParameterUninitializedException:
+            return None
+        return list(valor) or None
+
     # ------------------------------------------------------------------ #
     def on_cmd_tracks(self, msg: Float64MultiArray):
         for mid, val in zip(IDS_ORUGAS, msg.data):
