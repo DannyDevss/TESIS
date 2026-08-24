@@ -60,7 +60,7 @@ Por defecto moteus_pi3hat deja los buses configurados para motores moteus:
 CAN-FD con bitrate switch, 1 Mbps de arbitraje y 5 Mbps de datos. Los SteadyWin
 hablan CAN 2.0A clásico a 1 Mbps y descartan las tramas FD como error de forma,
 así que no contestan NUNCA — dando el mismo síntoma que un cable suelto. Ver
-`kwargs_can_clasico()`, que apaga FD/BRS antes de abrir la placa.
+`config_can_clasico()`, que apaga FD/BRS antes de abrir la placa.
 """
 import asyncio
 import math
@@ -107,51 +107,38 @@ def obtener_loop():
 BITRATE_CAN = 1000000
 
 
-def kwargs_can_clasico(buses):
-    """Argumentos de Pi3HatRouter para hablar CAN 2.0 CLÁSICO a 1 Mbps.
+def config_can_clasico(buses):
+    """{bus: CanConfiguration} para hablar CAN 2.0 CLÁSICO a 1 Mbps.
 
     POR QUÉ HACE FALTA
     ------------------
-    moteus_pi3hat configura los buses PARA MOTORES MOTEUS: tramas CAN-FD con
-    bitrate switch (1 Mbps de arbitraje, 5 Mbps de datos). Los SteadyWin de esta
-    tesis son CAN 2.0A clásico: una trama FD no la entienden, la descartan como
-    error de forma y NUNCA contestan. El síntoma es exactamente "0 de 8 motores
-    responden" aunque el cableado, los IDs y la alimentación estén bien.
+    moteus_pi3hat configura los buses PARA MOTORES MOTEUS. Comprobado en la
+    placa (24/08/2026), los valores por defecto de CanConfiguration son:
 
-    El nombre del parámetro cambia entre versiones de la librería, así que se
-    inspecciona la firma en vez de suponerla, y se avisa por consola de qué se
-    pudo aplicar.
+        fdcan_frame = True        <- trama CAN-FD
+        bitrate_switch = True     <- con cambio de velocidad
+        slow_bitrate = 1000000    (arbitraje)
+        fast_bitrate = 5000000    (fase de datos)
+
+    Los SteadyWin de esta tesis son CAN 2.0A clásico a 1 Mbps: una trama FD no
+    la entienden, la descartan como error de forma y NUNCA contestan. El síntoma
+    es "0 de 8 motores responden" aunque el cableado, los IDs y la alimentación
+    estén bien.
+
+    Devuelve None si la librería no expone CanConfiguration (versión antigua).
     """
-    import inspect
-
-    params = inspect.signature(_moteus_pi3hat.Pi3HatRouter.__init__).parameters
     Config = getattr(_moteus_pi3hat, 'CanConfiguration', None)
-
-    if 'can' in params and Config is not None:
-        cfg = {}
-        for bus in sorted(buses):
-            c = Config()
-            c.slow_bitrate = BITRATE_CAN
-            c.fast_bitrate = BITRATE_CAN
-            c.fdcan_frame = False          # CAN 2.0 clásico, no FD
-            c.bitrate_switch = False       # sin fase de datos rápida
-            c.automatic_retransmission = True
-            cfg[int(bus)] = c
-        print(f'[pi3hat] Buses {sorted(buses)} en CAN 2.0 clásico a '
-              f'{BITRATE_CAN // 1000} kbps (FD y BRS apagados).')
-        return {'can': cfg}
-
-    if 'disable_brs' in params:
-        print('[pi3hat] AVISO: esta versión de moteus_pi3hat no expone '
-              'CanConfiguration. Sólo se puede apagar el bitrate switch; las '
-              'tramas siguen siendo CAN-FD y los motores RMD podrían no '
-              'responder. Actualizar la librería: pip3 install -U moteus-pi3hat')
-        return {'disable_brs': True}
-
-    print('[pi3hat] AVISO: no se pudo configurar el bus en CAN 2.0 clásico con '
-          'esta versión de moteus_pi3hat; queda en CAN-FD a 5 Mbps y los '
-          'motores SteadyWin no responderán.')
-    return {}
+    if Config is None:
+        return None
+    cfg = {}
+    for bus in sorted(buses):
+        c = Config()
+        c.slow_bitrate = BITRATE_CAN
+        c.fast_bitrate = BITRATE_CAN
+        c.fdcan_frame = False          # CAN 2.0 clásico, no FD
+        c.bitrate_switch = False       # sin fase de datos rápida
+        cfg[int(bus)] = c
+    return cfg
 
 
 def abrir_router(mapa_buses=None):
@@ -176,9 +163,30 @@ def abrir_router(mapa_buses=None):
     for id_motor, bus in (mapa_buses or {}).items():
         servo_bus_map.setdefault(int(bus), []).append(int(id_motor))
 
-    extra = kwargs_can_clasico(servo_bus_map.keys()) if servo_bus_map else {}
-    _router_cacheado = _moteus_pi3hat.Pi3HatRouter(
-        servo_bus_map=servo_bus_map, **extra)
+    # El parámetro `can` no está en la firma de Pi3HatRouter (que es
+    # *args/**kwargs) sino en la de Pi3HatDevice, a la que reenvía. Por eso no
+    # se inspecciona la firma: se intenta y, si esta versión no lo acepta, se
+    # abre sin él avisando de que los motores RMD no van a responder.
+    cfg = config_can_clasico(servo_bus_map.keys()) if servo_bus_map else None
+    if cfg is not None:
+        try:
+            _router_cacheado = _moteus_pi3hat.Pi3HatRouter(
+                servo_bus_map=servo_bus_map, can=cfg)
+            print(f'[pi3hat] Buses {sorted(cfg)} en CAN 2.0 clásico a '
+                  f'{BITRATE_CAN // 1000} kbps (FD y BRS apagados).')
+            return _router_cacheado
+        except TypeError as e:
+            print(f'[pi3hat] AVISO: esta versión de moteus_pi3hat no acepta la '
+                  f'configuración de los buses ({e}); quedan en CAN-FD a '
+                  f'5 Mbps y los motores SteadyWin no responderán. '
+                  f'Actualizar: pip3 install -U moteus-pi3hat')
+    elif servo_bus_map:
+        print('[pi3hat] AVISO: esta versión de moteus_pi3hat no expone '
+              'CanConfiguration; los buses quedan en CAN-FD a 5 Mbps y los '
+              'motores SteadyWin no responderán. '
+              'Actualizar: pip3 install -U moteus-pi3hat')
+
+    _router_cacheado = _moteus_pi3hat.Pi3HatRouter(servo_bus_map=servo_bus_map)
     return _router_cacheado
 
 

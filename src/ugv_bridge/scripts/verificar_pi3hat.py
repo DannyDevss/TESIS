@@ -167,7 +167,15 @@ async def main_async(args):
     mascara = 0
     for bus in set(mapa.values()):
         mascara |= (1 << bus)
-    resultados = await router.cycle(comandos, force_can_check=mascara)
+    # Techo de tiempo OBLIGATORIO: con force_can_check y ningún motor
+    # contestando, el ciclo se queda colgado indefinidamente (comprobado en la
+    # placa). Es el mismo techo que aplica TransportePi3Hat en el driver.
+    try:
+        resultados = await asyncio.wait_for(
+            router.cycle(comandos, force_can_check=mascara), timeout=2.0)
+    except asyncio.TimeoutError:
+        print('  El ciclo del pi3hat venció sin ninguna respuesta.')
+        resultados = []
 
     vistos = {}
     for r in resultados or []:
