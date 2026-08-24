@@ -42,6 +42,7 @@ Pi. En la Raspberry:
     ros2 run ugv_bridge pi3hat_imu --ros-args -r /imu/data:=/imu/data_raw
 """
 import os
+from typing import List
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -88,6 +89,9 @@ def generate_launch_description():
         DeclareLaunchArgument('modo_simulacion', default_value='true'),
         DeclareLaunchArgument('can_canal', default_value='vcan0'),
         DeclareLaunchArgument('imu_fuente', default_value='sintetica'),
+        # Banco de pruebas: IDs de los motores realmente cableados, separados por
+        # comas (ej. motores_presentes:=1). Vacío = los 8.
+        DeclareLaunchArgument('motores_presentes', default_value=''),
         DeclareLaunchArgument('imu_externa', default_value='false'),
         DeclareLaunchArgument('use_ekf', default_value='false'),
         DeclareLaunchArgument('use_rviz', default_value='false'),
@@ -106,6 +110,16 @@ def generate_launch_description():
                 'modo_simulacion': modo_simulacion,
                 'can_canal': can_canal,
                 'imu_fuente': LaunchConfiguration('imu_fuente'),
+                # El argumento llega como texto ("1,5"); aquí se convierte en la
+                # lista de enteros que espera el parámetro del nodo.
+                'motores_presentes': ParameterValue(
+                    PythonExpression([
+                        '[int(x) for x in "',
+                        LaunchConfiguration('motores_presentes'),
+                        '".replace(",", " ").split()]',
+                    ]),
+                    value_type=List[int],
+                ),
             }],
             remappings=[('/imu/data_raw', destino_imu)],
         ),

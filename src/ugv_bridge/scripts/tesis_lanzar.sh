@@ -16,6 +16,7 @@
 # Cualquier argumento extra se pasa tal cual al launch, asi que se puede hacer:
 #     compilar_simu frecuencia_hz:=200.0
 #     compilar_real use_foxglove:=false
+#     compilar_real motores_presentes:=1   (banco: un solo motor cableado)
 # Sin `set -u`: los setup.bash de ROS 2 referencian variables sin definir
 # (AMENT_TRACE_SETUP_FILES y compañía) y abortarian el script al sourcearlos.
 set -eo pipefail

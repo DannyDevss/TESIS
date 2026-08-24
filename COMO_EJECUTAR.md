@@ -218,6 +218,27 @@ compilar_real      # motores REALES por los buses CAN del pi3hat + IMU real
 Los dos encienden el EKF y el puente Foxglove. Aceptan argumentos extra, que se
 pasan tal cual al launch: `compilar_simu frecuencia_hz:=200.0`.
 
+#### Probar con UN motor en el banco
+
+Antes de lanzar nada, comprobar que el motor contesta en el bus (trama de
+lectura, no mueve nada):
+
+```bash
+python3 ~/TESIS/src/ugv_bridge/scripts/verificar_pi3hat.py --id 1 --bus 1
+```
+
+Si responde, lanzar hablándole SOLO a ese motor:
+
+```bash
+compilar_real motores_presentes:=1
+```
+
+Sin `motores_presentes`, el driver exige respuesta de los 8: los 7 que no están
+cableados disparan el watchdog, que declara `¡FALLO DE COMUNICACIÓN!` y fuerza
+todos los comandos a cero — el motor conectado tampoco se mueve, aunque su
+cableado esté perfecto. Con la lista, los ausentes se ignoran (siguen apareciendo
+en `/joint_states`, quietos, porque el URDF necesita las 8 juntas).
+
 Salen de `scripts/tesis_lanzar.sh` (un solo script; el nombre con el que se lo
 invoca decide el modo) y se instalan con:
 

@@ -27,6 +27,8 @@ import sys
 
 sys.path.insert(0, __file__.rsplit('/scripts/', 1)[0] + '/..')
 
+from ugv_bridge import pi3hat_backend as backend  # noqa: E402
+
 MAPA_BUSES = {1: 1, 2: 1, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 2}
 
 
@@ -45,6 +47,13 @@ async def main_async(args):
         return 1
     print(f'  moteus        : {getattr(moteus, "__version__", "?")}')
     print(f'  moteus_pi3hat : {getattr(moteus_pi3hat, "__version__", "?")}')
+
+    import inspect
+    firma = inspect.signature(moteus_pi3hat.Pi3HatRouter.__init__).parameters
+    print(f'  Pi3HatRouter acepta: {", ".join(firma)}')
+    print(f'  CanConfiguration    : '
+          f'{"SÍ" if hasattr(moteus_pi3hat, "CanConfiguration") else "NO"}'
+          '   (hace falta para apagar CAN-FD)')
 
     titulo('2. ID DE ARBITRAJE CAN (crítico para el protocolo RMD)')
     # Prueba DIRECTA: se arma la trama igual que TransportePi3Hat y se le pide a
@@ -75,11 +84,22 @@ async def main_async(args):
 
     titulo('3. APERTURA DE LA PLACA')
     mapa = MAPA_BUSES if args.motores else {}
+    if args.id:
+        # Banco de pruebas con UN motor: sondear sólo ese ID evita confundir
+        # "no responde" con "no está conectado".
+        mapa = {m: b for m, b in mapa.items() if m in args.id}
+        if not mapa:
+            print(f'  Los IDs {args.id} no están en MAPA_BUSES.')
+            return 1
+    if args.bus:
+        mapa = {m: args.bus for m in mapa}
     servo_bus_map = {}
     for mid, bus in mapa.items():
         servo_bus_map.setdefault(bus, []).append(mid)
     try:
-        router = moteus_pi3hat.Pi3HatRouter(servo_bus_map=servo_bus_map)
+        # Mismo camino que el driver: abre la placa con los buses en CAN 2.0
+        # clásico a 1 Mbps, no en el CAN-FD que moteus_pi3hat pone por defecto.
+        router = backend.abrir_router(mapa)
         await router.cycle([])
     except Exception as e:
         print(f'  ERROR al abrir el pi3hat: {e}')
@@ -131,7 +151,7 @@ async def main_async(args):
         print('  Para sondear los motores:  --motores')
         return 0
 
-    titulo('6. SONDEO DE LOS 8 MOTORES (trama 0x9C, no mueve nada)')
+    titulo(f'6. SONDEO DE {len(mapa)} MOTOR(ES) (trama 0x9C, no mueve nada)')
     from ugv_bridge import protocolo_can as proto
 
     comandos = []
@@ -182,8 +202,14 @@ def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--motores', action='store_true',
-                   help='sondea los 8 motores (trama de lectura, no mueve nada)')
+                   help='sondea los motores (trama de lectura, no mueve nada)')
+    p.add_argument('--id', type=int, nargs='+', metavar='N',
+                   help='sondear sólo estos IDs (banco con un motor suelto)')
+    p.add_argument('--bus', type=int, metavar='N',
+                   help='forzar el bus del pi3hat de los IDs sondeados')
     args = p.parse_args()
+    if args.id or args.bus:      # pedir un ID concreto ya implica sondear
+        args.motores = True
     sys.exit(asyncio.run(main_async(args)))
 
 

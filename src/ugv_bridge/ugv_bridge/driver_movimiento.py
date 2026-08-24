@@ -120,6 +120,9 @@ class RMD_Hardware:
         imu_fuente='pi3hat_real'.
     mapa_buses : dict[int, int] | None
         {id_motor: bus del pi3hat} para modo='pi3hat'. None -> MAPA_BUSES_POR_DEFECTO.
+    motores_presentes : list[int] | None
+        IDs realmente cableados. None -> los 8. Para probar en el banco con uno
+        o dos motores sueltos sin que el watchdog declare fallo por los ausentes.
     ciclos_watchdog : int
         Ciclos consecutivos sin respuesta de un motor antes de declarar fallo de
         comunicación y forzar el paro.
@@ -133,7 +136,7 @@ class RMD_Hardware:
                  radio_oruga=RADIO_ORUGA_M, ancho_orugas=ANCHO_ORUGAS_M,
                  imu_fuente='sintetica', imu_montaje_rpy=(0.0, 0.0, 0.0),
                  mapa_buses=None, ciclos_watchdog=CICLOS_WATCHDOG,
-                 transporte=None):
+                 motores_presentes=None, transporte=None):
         if modo is None:
             modo = 'gemelo' if modo_simulacion else 'pi3hat'
         if modo not in MODOS_VALIDOS:
@@ -151,6 +154,21 @@ class RMD_Hardware:
         self.ancho_orugas = float(ancho_orugas)
         self.ids_orugas = list(IDS_ORUGAS)
         self.ids_flippers = list(IDS_FLIPPERS)
+
+        # BANCO DE PRUEBAS: motores realmente cableados. El resto sigue existiendo
+        # en /joint_states (el URDF necesita las 8 juntas) pero NO se le habla ni
+        # se le exige respuesta. Sin esto, probar con un motor suelto es imposible:
+        # los 7 ausentes nunca contestan, el watchdog declara fallo de comunicación
+        # y fuerza TODOS los comandos a cero, incluido el motor que sí está.
+        todos = self.ids_orugas + self.ids_flippers
+        if motores_presentes:
+            self.ids_presentes = [m for m in todos if m in set(motores_presentes)]
+            if not self.ids_presentes:
+                raise ValueError(
+                    f'motores_presentes={motores_presentes} no contiene ningún ID '
+                    f'válido (los IDs son {todos})')
+        else:
+            self.ids_presentes = list(todos)
 
         # Estado interno del gemelo digital: posición/velocidad por motor.
         self._pos = {mid: 0.0 for mid in self.ids_orugas + self.ids_flippers}
@@ -194,6 +212,14 @@ class RMD_Hardware:
         else:
             print('[HARDWARE] Motores REALES por los buses CAN del pi3hat')
             self._init_hardware_real()
+
+        if len(self.ids_presentes) != len(self.ids_orugas + self.ids_flippers):
+            ausentes = [m for m in self.ids_orugas + self.ids_flippers
+                        if m not in self.ids_presentes]
+            print(f'[HARDWARE] MODO BANCO: sólo se habla con '
+                  f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in self.ids_presentes)}. '
+                  f'Ausentes (ignorados por el watchdog): '
+                  f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in ausentes)}.')
 
         if self.imu_fuente == 'pi3hat_real':
             self._init_imu_real(imu_montaje_rpy)
@@ -270,14 +296,17 @@ class RMD_Hardware:
                 mid: self._ultimo_estado[mid]['posicion_rad'] for mid in self.ids_flippers}
 
         # 1. Comandar cada motor y leer su trama de estado (temp/torque/vel).
+        #    Sólo a los presentes: en modo banco los ausentes ni siquiera se
+        #    consultan, así no gastan un ciclo del bus esperándolos.
+        presentes = set(self.ids_presentes)
         peticiones = [
             (mid, proto.trama_cmd_velocidad(float(comandos_orugas.get(mid, 0.0))))
-            for mid in self.ids_orugas
+            for mid in self.ids_orugas if mid in presentes
         ]
         peticiones += [
             (mid, proto.trama_cmd_posicion(float(comandos_flippers.get(
                 mid, self._ultimo_estado[mid]['posicion_rad']))))
-            for mid in self.ids_flippers
+            for mid in self.ids_flippers if mid in presentes
         ]
         for mid, datos in self._intercambiar(peticiones).items():
             self._aplicar_respuesta_estado(mid, datos)
@@ -286,7 +315,7 @@ class RMD_Hardware:
         #    no sirve para odometría: se enrolla cada 360°).
         todos = self.ids_orugas + self.ids_flippers
         respuestas = self._intercambiar(
-            [(mid, proto.trama_leer_multivuelta()) for mid in todos])
+            [(mid, proto.trama_leer_multivuelta()) for mid in self.ids_presentes])
         for mid in todos:
             datos = respuestas.get(mid)
             resp = proto.parsear_respuesta(datos) if datos is not None else None
@@ -307,7 +336,7 @@ class RMD_Hardware:
         cero) hasta que el bus se recupere.
         """
         mudos = []
-        for mid in self.ids_orugas + self.ids_flippers:
+        for mid in self.ids_presentes:
             if respuestas.get(mid) is None:
                 self._sin_respuesta[mid] += 1
                 if self._sin_respuesta[mid] >= self.ciclos_watchdog:
@@ -323,13 +352,14 @@ class RMD_Hardware:
             self.parar_motores()
         elif not mudos and self.fallo_comunicacion:
             self.fallo_comunicacion = False
-            print('[HARDWARE] Comunicación restablecida con los 8 motores.')
+            print(f'[HARDWARE] Comunicación restablecida con '
+                  f'{len(self.ids_presentes)} motor(es).')
 
     def parar_motores(self):
-        """Manda la trama de paro a los 8 motores (best effort, sin excepciones)."""
+        """Manda la trama de paro a los motores presentes (best effort)."""
         try:
             self._intercambiar(
-                [(mid, proto.trama_paro()) for mid in self.ids_orugas + self.ids_flippers],
+                [(mid, proto.trama_paro()) for mid in self.ids_presentes],
                 timeout=0.002,
             )
         except Exception as e:

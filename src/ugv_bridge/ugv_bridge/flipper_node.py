@@ -25,6 +25,8 @@ Parámetros
   imu_fuente     (string, 'sintetica') 'sintetica' | 'pi3hat_real'. INDEPENDIENTE
                                    del modo de motor.
   mapa_buses     (int[], [1,1,1,1,2,2,2,2]) bus del pi3hat de cada motor 1..8.
+  motores_presentes (int[], [])    IDs cableados de verdad; vacío = los 8. Para
+                                   probar en el banco con un motor suelto.
   radio_oruga / ancho_orugas / imu_montaje_roll|pitch|yaw
                                    -> config/geometria_robot.yaml.
 
@@ -95,6 +97,11 @@ class FlipperNode(Node):
         self.declare_parameter('imu_fuente', 'sintetica')
         # Bus del pi3hat de cada motor, en orden de ID 1..8.
         self.declare_parameter('mapa_buses', [1, 1, 1, 1, 2, 2, 2, 2])
+        # Banco de pruebas: IDs realmente cableados. Vacío = los 8.
+        # Se declara por TIPO y sin valor por defecto: de una lista vacía rclpy
+        # deduciría BYTE_ARRAY y rechazaría los enteros que manda el launch.
+        self.declare_parameter('motores_presentes',
+                               rclpy.Parameter.Type.INTEGER_ARRAY)
         frecuencia = self.get_parameter('frecuencia_hz').value
         modo = self.get_parameter('modo').value
         modo_sim = self.get_parameter('modo_simulacion').value
@@ -121,6 +128,9 @@ class FlipperNode(Node):
                 self.get_parameter('imu_montaje_yaw').value,
             ),
             mapa_buses=mapa_buses,
+            # Sin el parámetro (o vacío) -> None -> los 8 motores.
+            motores_presentes=list(
+                self.get_parameter('motores_presentes').value or []) or None,
         )
         self._fallo_avisado = False
 
