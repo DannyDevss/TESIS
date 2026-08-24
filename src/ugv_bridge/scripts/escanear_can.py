@@ -71,6 +71,33 @@ async def barrer(router, bus, ids, timeout):
     return vistas
 
 
+async def escuchar(router, buses, segundos):
+    """Escucha SIN transmitir nada y devuelve las tramas que lleguen.
+
+    Vale la pena aparte del barrido: no toca el bus, así que no puede llevar el
+    controlador a bus-off, y delata a un driver que emita algo por su cuenta
+    (arranque, heartbeat) aunque no entienda la trama que le mandamos. Si aquí
+    aparece algo, el cableado y la velocidad son correctos y el problema es de
+    protocolo, no físico.
+    """
+    mascara = 0
+    for bus in buses:
+        mascara |= (1 << bus)
+    vistas = []
+    fin = asyncio.get_event_loop().time() + segundos
+    while asyncio.get_event_loop().time() < fin:
+        try:
+            resultados = await asyncio.wait_for(
+                router.cycle([], force_can_check=mascara), timeout=1.0)
+        except asyncio.TimeoutError:
+            continue
+        for r in resultados or []:
+            arb = getattr(r, 'arbitration_id', None)
+            if arb is not None:
+                vistas.append((arb, bytes(getattr(r, 'data', b''))))
+    return vistas
+
+
 async def main_async(args):
     ids = list(range(args.id_min, args.id_max + 1))
     buses = args.buses or BUSES
@@ -92,6 +119,17 @@ async def main_async(args):
         c.automatic_retransmission = False
     router = backend._moteus_pi3hat.Pi3HatRouter(
         servo_bus_map={bus: ids for bus in buses}, can=cfg)
+
+    if args.escuchar:
+        print(f'Escuchando {args.escuchar:.0f} s sin transmitir nada...')
+        vistas = await escuchar(router, buses, args.escuchar)
+        if not vistas:
+            print('  nada: en el bus no circula ni una trama.')
+            return 1
+        for arb, datos in vistas:
+            print(f'  TRAMA 0x{arb:X}  datos={datos.hex()}')
+        print('\nHay tráfico: el cableado y la velocidad del bus son correctos.')
+        return 0
 
     encontrado = False
     for bus in buses:
@@ -128,6 +166,8 @@ def main():
                    help=f'buses a barrer (default: {BUSES})')
     p.add_argument('--id-min', type=int, default=1, help='primer ID (default: 1)')
     p.add_argument('--id-max', type=int, default=8, help='último ID (default: 8)')
+    p.add_argument('--escuchar', type=float, metavar='SEG',
+                   help='escuchar SEG segundos sin transmitir, en vez de barrer')
     p.add_argument('--timeout', type=float, default=1.0,
                    help='techo de tiempo por ciclo, en segundos (default: 1.0)')
     args = p.parse_args()
