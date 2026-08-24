@@ -102,9 +102,13 @@ async def main_async(args):
     ids = list(range(args.id_min, args.id_max + 1))
     buses = args.buses or BUSES
 
-    print(f'Barriendo buses {buses}, IDs {args.id_min}..{args.id_max}, '
-          f'a {args.bitrate // 1000} kbps.')
-    print('Trama 0x9C (lectura de estado): no mueve nada.\n')
+    if args.escuchar:
+        print(f'Escuchando buses {buses} a {args.bitrate // 1000} kbps, '
+              f'sin transmitir.\n')
+    else:
+        print(f'Barriendo buses {buses}, IDs {args.id_min}..{args.id_max}, '
+              f'a {args.bitrate // 1000} kbps.')
+        print('Trama 0x9C (lectura de estado): no mueve nada.\n')
 
     # Todos los buses en la misma velocidad, sin reintentos automáticos.
     backend._importar()
@@ -121,7 +125,6 @@ async def main_async(args):
         servo_bus_map={bus: ids for bus in buses}, can=cfg)
 
     if args.escuchar:
-        print(f'Escuchando {args.escuchar:.0f} s sin transmitir nada...')
         vistas = await escuchar(router, buses, args.escuchar)
         if not vistas:
             print('  nada: en el bus no circula ni una trama.')
