@@ -134,17 +134,19 @@ foxglove-studio "foxglove://open?ds=foxglove-websocket&ds.url=ws%3A%2F%2Flocalho
 > El puente corre **dentro** de `rosdev`, pero distrobox comparte la red con el host,
 > así que `localhost:8765` funciona desde Foxglove instalado en el host.
 
-**Layout del proyecto:** `config/ugv_control_v2.json`. Se importa con
+**Layout del proyecto:** `config/ugv_control_v3.json`. Se importa con
 *Layouts → (menú ⋯) → Import from file…* y queda guardado en la app.
 
 > ⚠️ **Foxglove guarda su PROPIA copia del layout, con el nombre del archivo.**
 > Editar el archivo del repositorio no cambia nada de lo que ves en la app, y
 > reimportar un archivo cuyo nombre ya existe deja dos entradas parecidas entre
 > las que es facilísimo elegir la vieja: el sintoma es "lo importé y al salir de
-> Foxglove volvió el layout de antes". Por eso el archivo lleva `_v2` en el
-> nombre. Al importar, entra como layout **`ugv_control_v2`**; selecciónalo en el
-> desplegable de arriba a la derecha y **borra el `foxglove_layout` antiguo**
-> (*click derecho sobre el layout → Delete*) para no volver a confundirlos.
+> Foxglove volvió el layout de antes". Por eso el archivo lleva un número de
+> versión en el nombre, que sube cada vez que cambia el layout. Al importar,
+> entra como layout **`ugv_control_v3`**; selecciónalo en el desplegable de
+> arriba a la derecha y **borra los antiguos** (`ugv_control_v2`,
+> `foxglove_layout`) con *click derecho sobre el layout → Delete*, para no
+> volver a confundirlos.
 >
 > Si aun asi los cambios no persisten al cerrar la app, mira el aviso del plan de
 > la organizacion: con la cuenta por encima de su limite de usuarios, los layouts

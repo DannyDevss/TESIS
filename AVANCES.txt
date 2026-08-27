@@ -92,7 +92,7 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
                                (paquete robot_localization).
         view.rviz              Vista RViz con el robot fijo en base_link.
         flippers.rviz          Vista RViz del sistema completo.
-        ugv_control_v2.json    Layout de Foxglove del proyecto: vista 3D,
+        ugv_control_v3.json    Layout de Foxglove del proyecto: vista 3D,
                                graficas, y los mandos para mover los flippers
                                a mano. Se importa desde la app; ojo, Foxglove
                                guarda su propia copia (ver COMO_EJECUTAR.md).
@@ -392,7 +392,7 @@ VISUALIZACION
 
   - foxglove_bridge en el puerto 8765 (view.launch.py, pi_view.launch.py y,
     desde P6, flipper.launch.py y can_view.launch.py con use_foxglove:=true).
-  - config/ugv_control_v2.json: layout del proyecto con 8 paneles (3D, angulos
+  - config/ugv_control_v3.json: layout del proyecto con 8 paneles (3D, angulos
     de flipper, velocidad de orugas, pose del EKF, publicacion de /cmd_flippers
     y /cmd_tracks, IMU cruda y /rosout).
   - textures/: las dos texturas que los COLLADA referenciaban y que no estaban
