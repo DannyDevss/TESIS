@@ -118,6 +118,15 @@
       "advancedView": false,
       "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    5.0,\n    5.0,\n    5.0,\n    5.0\n  ]\n}"
     },
+    "Publish!t_retroceder": {
+      "topicName": "/cmd_tracks",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Retroceder",
+      "buttonTooltip": "-5 rad/s. ES PERSISTENTE: para detenerlo hay que pulsar PARAR orugas.",
+      "buttonColor": "#8a6d3b",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    -5.0,\n    -5.0,\n    -5.0,\n    -5.0\n  ]\n}"
+    },
     "Publish!t_stop": {
       "topicName": "/cmd_tracks",
       "datatype": "std_msgs/msg/Float64MultiArray",
@@ -1041,9 +1050,14 @@
               "splitPercentage": 50,
               "first": {
                 "direction": "row",
-                "splitPercentage": 50.0,
+                "splitPercentage": 33.4,
                 "first": "Publish!t_avanzar",
-                "second": "Publish!t_stop"
+                "second": {
+                  "direction": "row",
+                  "splitPercentage": 50.0,
+                  "first": "Publish!t_retroceder",
+                  "second": "Publish!t_stop"
+                }
               },
               "second": "Publish!f_libre"
             }
