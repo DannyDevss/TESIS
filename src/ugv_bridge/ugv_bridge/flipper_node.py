@@ -24,7 +24,8 @@ Parámetros
   can_canal      (string, 'vcan0') interfaz SocketCAN para modo 'can'.
   imu_fuente     (string, 'sintetica') 'sintetica' | 'pi3hat_real'. INDEPENDIENTE
                                    del modo de motor.
-  mapa_buses     (int[], [1,1,1,1,2,2,2,2]) bus del pi3hat de cada motor 1..8.
+  mapa_buses     (int[], [1,2,3,4,1,2,3,4]) bus del pi3hat de cada motor 1..8.
+                 Dos motores por bus, emparejados por esquina del robot.
   motores_presentes (int[], [])    IDs cableados de verdad; vacío = los 8. Para
                                    probar en el banco con un motor suelto.
   radio_oruga / ancho_orugas / imu_montaje_roll|pitch|yaw
@@ -97,7 +98,7 @@ class FlipperNode(Node):
         # Fuente de la IMU, independiente del modo de motor.
         self.declare_parameter('imu_fuente', 'sintetica')
         # Bus del pi3hat de cada motor, en orden de ID 1..8.
-        self.declare_parameter('mapa_buses', [1, 1, 1, 1, 2, 2, 2, 2])
+        self.declare_parameter('mapa_buses', [1, 2, 3, 4, 1, 2, 3, 4])
         # Banco de pruebas: IDs realmente cableados. Vacío = los 8.
         # Se declara por TIPO y sin valor por defecto: de una lista vacía rclpy
         # deduciría BYTE_ARRAY y rechazaría los enteros que manda el launch.

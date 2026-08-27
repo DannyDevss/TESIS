@@ -68,10 +68,15 @@ ID_A_NOMBRE = dict(zip(IDS_ORUGAS + IDS_FLIPPERS, NOMBRES_ORUGAS + NOMBRES_FLIPP
 MODOS_VALIDOS = ('gemelo', 'can', 'pi3hat')
 FUENTES_IMU_VALIDAS = ('sintetica', 'pi3hat_real')
 
-# Cableado por defecto de los motores a los buses CAN del pi3hat.
+# Cableado de los motores a los buses CAN del pi3hat: DOS MOTORES POR BUS,
+# emparejados POR ESQUINA del robot. La oruga y el flipper de una misma esquina
+# comparten bus porque ahí es donde cae el empalme del arnés, y así los cuatro
+# ramales salen idénticos y cortos.
 # TODO(hardware): confirmar contra el cableado físico antes de energizar.
-MAPA_BUSES_POR_DEFECTO = {1: 1, 2: 1, 3: 1, 4: 1,   # orugas  -> bus 1
-                          5: 2, 6: 2, 7: 2, 8: 2}   # flippers -> bus 2
+MAPA_BUSES_POR_DEFECTO = {1: 1, 5: 1,   # esquina delantera izquierda
+                          2: 2, 6: 2,   # esquina delantera derecha
+                          3: 3, 7: 3,   # esquina trasera izquierda
+                          4: 4, 8: 4}   # esquina trasera derecha
 
 # Ciclos consecutivos sin respuesta de un motor antes de declarar fallo de
 # comunicación y forzar el paro. A 100 Hz, 10 ciclos = 0.1 s.

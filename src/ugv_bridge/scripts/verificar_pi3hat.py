@@ -29,7 +29,9 @@ sys.path.insert(0, __file__.rsplit('/scripts/', 1)[0] + '/..')
 
 from ugv_bridge import pi3hat_backend as backend  # noqa: E402
 
-MAPA_BUSES = {1: 1, 2: 1, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 2}
+# Dos motores por bus, emparejados por esquina: la oruga y el flipper de la
+# misma esquina comparten bus. Igual que MAPA_BUSES_POR_DEFECTO del driver.
+MAPA_BUSES = {1: 1, 5: 1, 2: 2, 6: 2, 3: 3, 7: 3, 4: 4, 8: 4}
 
 
 def titulo(t):

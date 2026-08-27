@@ -71,9 +71,14 @@
     #   IDs 1-4 = orugas (track_fl, track_fr, track_rl, track_rr)
     #   IDs 5-8 = flippers (flipper_fl, flipper_fr, flipper_rl, flipper_rr)
     #
+    # DOS MOTORES POR BUS, emparejados por esquina (la oruga y el flipper de la
+    # misma esquina comparten bus, que es donde cae el empalme del arnés):
+    #   bus 1 -> 1 track_fl + 5 flipper_fl   bus 3 -> 3 track_rl + 7 flipper_rl
+    #   bus 2 -> 2 track_fr + 6 flipper_fr   bus 4 -> 4 track_rr + 8 flipper_rr
+    #
     # TODO(hardware): confirmar contra el cableado físico con
     #   python3 src/ugv_bridge/scripts/verificar_pi3hat.py --motores
-    mapa_buses: [1, 1, 1, 1, 2, 2, 2, 2]
+    mapa_buses: [1, 2, 3, 4, 1, 2, 3, 4]
 
     # ================================================================== #
     # MONTAJE DE LA IMU (pi3hat)

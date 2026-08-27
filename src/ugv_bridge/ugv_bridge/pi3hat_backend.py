@@ -220,7 +220,8 @@ class TransportePi3Hat:
     Parameters
     ----------
     mapa_buses : dict[int, int]
-        {id_motor: numero_de_bus}. Ej. orugas 1-4 en el bus 1, flippers 5-8 en el 2.
+        {id_motor: numero_de_bus}. Ej. dos motores por bus emparejados por
+        esquina: 1 y 5 en el bus 1, 2 y 6 en el 2, 3 y 7 en el 3, 4 y 8 en el 4.
     """
 
     def __init__(self, mapa_buses):

@@ -243,6 +243,36 @@ Conectores **JST PH-3** (JC1..JC5, uno por bus), según la
 - Velocidad de fábrica del **GIM6010-8: 500 kbps** — es la que fija
   `BITRATE_CAN` en `pi3hat_backend.py`.
 
+**Reparto: dos motores por bus, emparejados POR ESQUINA.** La oruga y el flipper
+de una misma esquina comparten bus, porque ahí es donde cae el empalme del arnés:
+los cuatro ramales salen idénticos y cortos. Cuatro buses en uso, el quinto libre.
+
+| Bus (JC) | node_id | Junta | Esquina |
+|---|---|---|---|
+| 1 | 1 / 5 | `track_fl` / `flipper_fl` | delantera izquierda |
+| 2 | 2 / 6 | `track_fr` / `flipper_fr` | delantera derecha |
+| 3 | 3 / 7 | `track_rl` / `flipper_rl` | trasera izquierda |
+| 4 | 4 / 8 | `track_rr` / `flipper_rr` | trasera derecha |
+
+La fuente de verdad es `mapa_buses` en `config/geometria_robot.yaml`, en orden de
+ID 1..8: `[1, 2, 3, 4, 1, 2, 3, 4]`. El mismo reparto está replicado en
+`MAPA_BUSES_POR_DEFECTO` (`driver_movimiento.py`, para usar la clase sin ROS) y en
+`MAPA_BUSES` de `verificar_pi3hat.py`. Si cambia el cableado, cambian los tres.
+
+**El empalme es una Y, y eso cambia la terminación.** Cada bus queda con tres
+nodos: el pi3hat y los dos motores de la esquina.
+
+- El pi3hat **ya termina** su extremo (120 ohm soldados en los cinco puertos).
+- En el otro extremo debe terminar **UN solo motor**, no los dos. El segundo
+  cuelga como stub del empalme y va SIN terminación.
+- Ese stub, corto: por debajo de ~30 cm a 500 kbps. Por eso conviene empalmar en
+  la esquina y no en la Pi.
+- Comprobación con todo conectado y sin alimentar: entre CAN_H y CAN_L de cada
+  bus deben salir **~60 ohm**. Si salen ~40, hay una terminación de más (los dos
+  motores terminando); si salen ~120, falta la del extremo lejano.
+- El GND del JST PH-3 va empalmado igual que CAN_H/CAN_L: los dos motores tienen
+  que compartir referencia con la Pi.
+
 #### El protocolo es ODrive, no RMD
 
 El driver del GIM6010-8 (CyberBeast BL72) es compatible ODrive, y su protocolo
@@ -267,6 +297,91 @@ regla udev de `/etc/udev/rules.d/91-odrive.rules`).
 
 Si no contesta nadie, `scripts/escanear_can.py` barre buses, velocidades e IDs y
 muestra cualquier trama que llegue.
+
+#### Configurar los 8 motores por USB (una sola vez, antes de montarlos)
+
+El `node_id` **no se asigna al arrancar ni se negocia en el bus**: vive en la
+flash del driver y hay que grabarlo a mano, motor por motor, antes de montar el
+arnés. `compilar_real` sólo compila y lanza; da por hecho que cada motor ya
+responde a su ID. Y los IDs no son libres: el reparto de arriba está fijado en el
+código (`IDS_ORUGAS`, `IDS_FLIPPERS`, `ID_A_NOMBRE`).
+
+**Antes de empezar (una vez):** `odrivetool` instalado
+(`~/.venvs/odrive/bin/odrivetool`), la regla udev
+`/etc/udev/rules.d/91-odrive.rules`, una fuente de 15-60 V con XT30 y etiquetas.
+El USB es sólo consola: la etapa de potencia se alimenta por el XT30.
+
+> **Un solo driver conectado a la vez.** Todos vienen con el mismo `node_id` de
+> fábrica; si juntas dos, se pisan en el bus y `odrivetool` te da `odrv0`/`odrv1`
+> sin decirte cuál es cuál.
+
+Por cada motor:
+
+1. Aliméntalo por el XT30 y conéctalo al PC por USB. Nada de CAN todavía.
+2. Abre `~/.venvs/odrive/bin/odrivetool`. Debe aparecer `odrv0`, firmware 0.6.5.
+3. Anota cómo viene: `odrv0.axis0.config.can.node_id`, `odrv0.config.enable_can_a`
+   (casi seguro `False`), `odrv0.can.config.baud_rate`.
+4. Escribe la configuración del bus:
+
+   ```python
+   odrv0.axis0.config.can.node_id = N        # N = el de la tabla de buses
+   odrv0.config.enable_can_a = True          # viene APAGADO de fábrica
+   odrv0.can.config.baud_rate = 500000       # igual en los 8 y en BITRATE_CAN
+   ```
+
+5. Ponle límites conservadores, **sobre todo a los flippers**, que empujan contra
+   topes mecánicos. El software no los toca: `_armar_motores()` sólo manda
+   `CLEAR_ERRORS`, `SET_CONTROLLER_MODE` y `SET_AXIS_STATE`; `CMD_SET_LIMITS`
+   está implementado en `protocolo_can.py` pero nadie lo llama, así que los
+   límites se quedan en lo que tenga la flash.
+
+   ```python
+   odrv0.axis0.config.motor.current_soft_max = ...
+   odrv0.axis0.controller.config.vel_limit = ...
+   ```
+
+6. `odrv0.save_configuration()`. El driver se reinicia y la sesión se cae: es
+   normal, no es un fallo.
+7. Reconecta y **vuelve a leer** `node_id`, `enable_can_a` y `baud_rate`. Este
+   paso es el que evita descubrir en la Pi que el `save` no cuajó.
+8. Comprueba que arma sin recalibrar: pide `AXIS_STATE_CLOSED_LOOP_CONTROL` y
+   mira que llegue a estado 8 sin lanzar una calibración. Si cada arranque quiere
+   recalibrar, el robot no podrá armarse solo en campo.
+9. **Etiqueta el motor** con su número y su junta (`3 / track_rl`). El número
+   tiene que quedar escrito en el hardware.
+
+Dos cosas más que conviene resolver mientras están en el banco:
+
+- **Medir la reducción.** `RELACION_REDUCCION = 8.0` en `protocolo_can.py` es
+  lectura de manual, no medición, y de ella depende toda la odometría. Con el eje
+  en IDLE, gira el eje de **salida** exactamente una vuelta a mano y mira cuánto
+  cambia `odrv0.axis0.encoder.pos_estimate`: si cambia 8.0, el valor es correcto;
+  si cambia 1.0, el encoder ya mide en la salida y hay que poner 1.0. Basta con
+  hacerlo en un motor.
+- **El cero de los flippers.** El código no aplica ningún offset: el 0 rad que
+  manda ROS es el 0 del encoder. Si el encoder no es absoluto, el cero será donde
+  estuviera el flipper al energizar, y una consigna de 0 lo mandará a una postura
+  arbitraria. Fija el cero con el flipper en reposo y confirma que sobrevive a un
+  ciclo de apagado.
+
+Con los ocho grabados y el arnés montado, la verificación es escuchar el bus sin
+transmitir nada (los ODrive emiten heartbeat y encoder de fábrica):
+
+```bash
+python3 ~/TESIS/src/ugv_bridge/scripts/verificar_pi3hat.py --motores
+```
+
+Tienen que salir los ocho, cada uno en su bus. Si no contesta nadie, antes de
+sospechar del cableado: `python3 src/ugv_bridge/scripts/escanear_can.py
+--bitrate 500000` (y prueba otros bitrates), que descarta velocidad mal puesta o
+un `enable_can_a` que se quedó atrás.
+
+En el primer arranque real, con las ruedas en el aire, busca en la salida
+`[HARDWARE] N motor(es) armados en lazo cerrado`. Sin esa línea los ejes están en
+IDLE: aceptan las consignas y no se mueven, sin dar ningún error. Y verifica la
+correspondencia junta-motor antes de bajar el robot al suelo — un ID
+intercambiado entre `track_fl` y `track_fr` no lo detecta nada, el robot
+simplemente gira al revés.
 
 #### Probar con UN motor en el banco
 
