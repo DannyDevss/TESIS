@@ -55,7 +55,12 @@ def generate_launch_description():
 
         # Sistema completo (flipper_node + odometría + robot_state_publisher...)
         # con el driver en modo CAN. flipper_node tolera arrancar antes que el
-        # emulador: solo acumula timeouts hasta que este responda.
+        # emulador: acumula timeouts hasta que este responda y, si la secuencia
+        # de armado salió antes de que el emulador abriera su socket (el kernel
+        # la tira, no hay buffer para un socket que no existe), la reintenta al
+        # ver por el heartbeat que los ejes siguen fuera de lazo cerrado.
+        # Sin ese reintento los 8 motores se quedaban en IDLE para siempre:
+        # aceptaban /cmd_flippers y no se movían, sin dar un solo error.
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(pkg_share, 'launch', 'flipper.launch.py')),

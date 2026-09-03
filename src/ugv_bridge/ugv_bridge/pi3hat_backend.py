@@ -222,9 +222,18 @@ class TransportePi3Hat:
     mapa_buses : dict[int, int]
         {id_motor: numero_de_bus}. Ej. dos motores por bus emparejados por
         esquina: 1 y 5 en el bus 1, 2 y 6 en el 2, 3 y 7 en el 3, 4 y 8 en el 4.
+    ids_presentes : list[int] | None
+        Motores realmente cableados (banco de pruebas). None -> todos los del
+        mapa. Sólo se sondean los buses donde hay alguno: en un banco con los
+        motores 1 y 5 (misma esquina, bus 1) no tiene sentido pedirle tramas a
+        los buses 2, 3 y 4, que están vacíos.
+
+        La placa SÍ se abre con el mapa COMPLETO: `abrir_router` es quien pone
+        los buses en CAN 2.0 clásico a 500 kbps, y eso conviene dejarlo hecho en
+        los cuatro aunque hoy sólo se use uno.
     """
 
-    def __init__(self, mapa_buses):
+    def __init__(self, mapa_buses, ids_presentes=None):
         _importar()
         self.mapa_buses = {int(k): int(v) for k, v in mapa_buses.items()}
         self.router = abrir_router(self.mapa_buses)
@@ -232,9 +241,12 @@ class TransportePi3Hat:
         self.timeouts = 0
         self.ciclos_vencidos = 0   # ciclos que se cortaron por el techo de tiempo
         # Máscara de buses a revisar por respuestas entrantes en cada ciclo.
+        presentes = (set(self.mapa_buses) if ids_presentes is None
+                     else {int(m) for m in ids_presentes})
         self._mascara_buses = 0
-        for bus in set(self.mapa_buses.values()):
-            self._mascara_buses |= (1 << bus)
+        for id_motor, bus in self.mapa_buses.items():
+            if id_motor in presentes:
+                self._mascara_buses |= (1 << bus)
 
     def intercambiar(self, peticiones, timeout=0.004):
         """Manda todas las tramas en UN ciclo del pi3hat y recoge lo que llegue.

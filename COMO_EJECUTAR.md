@@ -450,33 +450,86 @@ sospechar del cableado: `python3 src/ugv_bridge/scripts/escanear_can.py
 --bitrate 500000` (y prueba otros bitrates), que descarta velocidad mal puesta o
 un `enable_can_a` que se quedó atrás.
 
-En el primer arranque real, con las ruedas en el aire, busca en la salida
-`[HARDWARE] N motor(es) armados en lazo cerrado`. Sin esa línea los ejes están en
-IDLE: aceptan las consignas y no se mueven, sin dar ningún error. Y verifica la
-correspondencia junta-motor antes de bajar el robot al suelo — un ID
-intercambiado entre `track_fl` y `track_fr` no lo detecta nada, el robot
+Y verifica la correspondencia junta-motor antes de bajar el robot al suelo — un
+ID intercambiado entre `track_fl` y `track_fr` no lo detecta nada, el robot
 simplemente gira al revés.
 
-#### Probar con UN motor en el banco
+##### "Mando el comando, llega, y el robot no se mueve" (ejes en IDLE)
 
-Antes de lanzar nada, comprobar que el motor contesta en el bus (trama de
-lectura, no mueve nada):
+Es el fallo silencioso de ODrive y no se parece a un fallo: el eje **acepta** la
+consigna, no se mueve, no devuelve error y sigue emitiendo su trama de encoder
+cada 10 ms, así que el watchdog de comunicación lo ve perfectamente vivo. Da
+igual que la orden venga del panel Publish de Foxglove, de los paneles Teleop o
+de la política: `/cmd_flippers` sale, `flipper_node` la manda al bus y ahí muere.
 
-```bash
-python3 ~/TESIS/src/ugv_bridge/scripts/verificar_pi3hat.py --id 1 --bus 1
+`flipper_node` lo vigila por el **heartbeat** y lo reintenta solo cada 0,5 s.
+Cómo se ve:
+
+```
+[HARDWARE] Fuera de lazo cerrado (aceptan órdenes y no se mueven): 5(flipper_fl). Reintentando armado.
+[HARDWARE] Secuencia de armado enviada a 5(flipper_fl).
 ```
 
-Si responde, lanzar hablándole SOLO a ese motor:
+y, si la cosa persiste más de un segundo, un `WARN` en `/rosout` — o sea visible
+desde el panel **RosOut** de Foxglove sin mirar la terminal de la Pi:
 
-```bash
-compilar_real motores_presentes:=1
+```
+Motores FUERA DE LAZO CERRADO: flipper_fl. Aceptan las órdenes y no se mueven...
 ```
 
-Sin `motores_presentes`, el driver exige respuesta de los 8: los 7 que no están
+Si el aviso NO se va solo, el rearmado no está llegando al motor:
+
+- ¿está energizado por XT30? El USB no alimenta la etapa de potencia;
+- `odrv0.config.enable_can_a` y `odrv0.can.config.baud_rate = 500000`, grabados
+  con `odrv0.save_configuration()` (viene de fábrica en `False`);
+- el `node_id` del motor, contra la tabla de buses;
+- en simulación, que `motor_emulator` esté corriendo: su línea de estadísticas
+  cada 5 s dice `armados=8/8`. Si dice `armados=0/8`, ningún eje está armado.
+
+#### Probar con uno o dos motores en el banco
+
+**Estado actual del banco: los motores 1 (`track_fl`, oruga) y 5
+(`flipper_fl`).** Son la esquina delantera izquierda, y por el emparejamiento por
+esquina del arnés los dos van al **bus 1** (`mapa_buses` en
+`config/geometria_robot.yaml`). Es la pareja mínima que ejercita los dos modos de
+control a la vez: la oruga por VELOCIDAD y el flipper por POSICIÓN.
+
+Antes de lanzar nada, comprobar que contestan en el bus (trama de lectura, no
+mueve nada; `--id` acepta varios):
+
+```bash
+python3 ~/TESIS/src/ugv_bridge/scripts/verificar_pi3hat.py --id 1 5 --bus 1
+```
+
+Si responden, lanzar hablándole SÓLO a esos motores:
+
+```bash
+compilar_real motores_presentes:=1,5
+```
+
+Sin `motores_presentes`, el driver exige respuesta de los 8: los que no están
 cableados disparan el watchdog, que declara `¡FALLO DE COMUNICACIÓN!` y fuerza
-todos los comandos a cero — el motor conectado tampoco se mueve, aunque su
+todos los comandos a cero — los motores conectados tampoco se mueven, aunque su
 cableado esté perfecto. Con la lista, los ausentes se ignoran (siguen apareciendo
-en `/joint_states`, quietos, porque el URDF necesita las 8 juntas).
+en `/joint_states`, quietos, porque el URDF necesita las 8 juntas), y sólo se
+sondean los buses donde hay algo.
+
+Qué mirar en Foxglove con estos dos:
+
+| Panel | Serie | Motor |
+|---|---|---|
+| Plot *Velocidad de orugas* | `/joint_states.velocity[0]` | 1 (`track_fl`) |
+| Plot *Ángulos de flippers* | `/joint_states.position[4]` | 5 (`flipper_fl`) |
+
+Los botones **Avanzar / PARAR orugas** mueven el 1; **Los 4 a 45°** y los paneles
+Teleop mueven el 5. Los demás motores salen planos en 0, que es lo esperado.
+
+> **El robot 3D gira solo y no está roto.** `track_odometry_node` calcula el
+> rumbo como la diferencia entre el lado izquierdo y el derecho, y en el banco
+> sólo gira el izquierdo (`track_fl`): la odometría concluye que el robot rota,
+> el EKF se lo cree y el modelo da vueltas en el panel 3D. Para verificar los
+> motores, fíate de los Plot y de los Gauge, no de la pose. Con las cuatro orugas
+> cableadas desaparece solo.
 
 Salen de `scripts/tesis_lanzar.sh` (un solo script; el nombre con el que se lo
 invoca decide el modo) y se instalan con:

@@ -13,7 +13,8 @@ import math
 import time
 
 from ugv_bridge import protocolo_can as proto
-from ugv_bridge.driver_movimiento import RMD_Hardware, IDS_ORUGAS, IDS_FLIPPERS
+from ugv_bridge.driver_movimiento import (
+    RMD_Hardware, IDS_ORUGAS, IDS_FLIPPERS, PERIODO_REARMADO_S)
 from ugv_bridge.motor_emulator import MotorEmulado, atender
 
 
@@ -27,16 +28,20 @@ class TransporteMemoria:
     encoder y el heartbeat de cada motor, le hayan mandado algo o no.
     """
 
-    def __init__(self, dt=0.01, mudos=()):
+    def __init__(self, dt=0.01, mudos=(), sordos=()):
         self.motores = {mid: MotorEmulado(mid) for mid in IDS_ORUGAS + IDS_FLIPPERS}
         self.dt = dt
         self.mudos = set(mudos)
+        # `sordos`: motores que NO reciben lo que se les manda pero SÍ emiten.
+        # Es el arranque real: el emulador (o el motor) todavía no escuchaba
+        # cuando salió la secuencia de armado, así que esas tramas se perdieron.
+        self.sordos = set(sordos)
         self.timeouts = 0
         self.cerrado = False
 
     def intercambiar(self, peticiones, timeout=0.004):
         for node_id, cmd_id, datos in peticiones:
-            if node_id in self.mudos:
+            if node_id in self.mudos or node_id in self.sordos:
                 continue
             comando = proto.parsear_comando(cmd_id, bytes(datos))
             assert comando is not None, \
@@ -62,7 +67,8 @@ class TransporteMemoria:
 
 def construir(**kwargs):
     """RMD_Hardware en modo 'pi3hat' con el transporte en memoria inyectado."""
-    transporte = TransporteMemoria(mudos=kwargs.pop('mudos', ()))
+    transporte = TransporteMemoria(mudos=kwargs.pop('mudos', ()),
+                                   sordos=kwargs.pop('sordos', ()))
     robot = RMD_Hardware(modo='pi3hat', transporte=transporte, **kwargs)
     return robot, transporte
 
@@ -182,7 +188,12 @@ def test_el_driver_arma_los_ejes_al_arrancar():
 
 
 def test_un_eje_en_idle_ignora_las_consignas():
-    """El emulador debe reproducir el fallo silencioso del hardware."""
+    """El emulador debe reproducir el fallo silencioso del hardware.
+
+    Se mira DENTRO de la ventana de rearmado (PERIODO_REARMADO_S): pasado ese
+    tiempo el driver lo arma solo, y de eso se ocupa
+    test_el_driver_rearma_un_eje_que_se_cayo_a_idle.
+    """
     robot, transporte = construir()
     transporte.motores[1].poner_estado(proto.ESTADO_IDLE)
 
@@ -214,6 +225,81 @@ def test_el_watchdog_rearma_al_recuperarse():
     for mid, motor in transporte.motores.items():
         assert motor.estado_eje == proto.ESTADO_CLOSED_LOOP, \
             f'el motor {mid} se quedó sin rearmar tras el fallo'
+
+
+def test_el_driver_rearma_un_eje_que_se_cayo_a_idle():
+    """El fallo silencioso: un eje se cae a IDLE y nadie lo vuelve a armar.
+
+    Reproduce el síntoma real: se manda /cmd_flippers, la orden LLEGA al motor,
+    el motor no se mueve y no hay ningún error, porque en ODrive un eje en IDLE
+    acepta las consignas sin quejarse y sigue emitiendo su encoder cada 10 ms
+    (así que el watchdog de comunicación lo ve perfectamente vivo).
+    """
+    robot, transporte = construir()
+    # El motor 5 (flipper_fl) se cae a IDLE por su cuenta: un error de ODrive,
+    # o simplemente que la secuencia de armado del arranque no le llegó.
+    transporte.motores[5].poner_estado(proto.ESTADO_IDLE)
+
+    objetivo = 0.6
+    flippers = {mid: objetivo for mid in IDS_FLIPPERS}
+
+    # Antes de que venza el periodo de rearmado sigue clavado, y —esto es lo
+    # importante— el watchdog de comunicación NO se entera de nada: el eje en
+    # IDLE emite su encoder igual que uno sano.
+    estado = ciclar(robot, flippers=flippers, n=30)
+    assert abs(estado[5]['posicion_rad']) < 1e-6
+    assert 5 in robot.motores_desarmados
+    assert not robot.fallo_comunicacion
+
+    # Pasado PERIODO_REARMADO_S el driver insiste, el eje vuelve a lazo cerrado
+    # y persigue la consigna que ya tenía pendiente.
+    time.sleep(PERIODO_REARMADO_S)
+    estado = ciclar(robot, flippers=flippers, n=60)
+    assert transporte.motores[5].estado_eje == proto.ESTADO_CLOSED_LOOP
+    assert robot.motores_desarmados == []
+    assert math.isclose(estado[5]['posicion_rad'], objetivo, abs_tol=0.05), \
+        f'el flipper rearmado no siguió la consigna: {estado[5]["posicion_rad"]}'
+
+
+def test_el_armado_del_arranque_puede_perderse_y_se_recupera():
+    """Los motores no escuchaban cuando arrancó el nodo (el caso de vcan0).
+
+    `can_sim.launch.py` levanta motor_emulator y flipper_node a la vez: si el
+    emulador aún no ha abierto su socket, el kernel TIRA las tramas de armado y
+    los 8 ejes se quedan en IDLE para siempre.
+    """
+    robot, transporte = construir(sordos=IDS_ORUGAS + IDS_FLIPPERS)
+    for mid, motor in transporte.motores.items():
+        assert motor.estado_eje == proto.ESTADO_IDLE, \
+            f'el motor {mid} no debería haber oído el armado'
+
+    ciclar(robot, n=5)
+    assert sorted(robot.motores_desarmados) == sorted(IDS_ORUGAS + IDS_FLIPPERS)
+
+    # Los motores empiezan a escuchar; el driver reintenta y todos se arman.
+    transporte.sordos.clear()
+    time.sleep(PERIODO_REARMADO_S)
+    ciclar(robot, orugas={mid: 2.0 for mid in IDS_ORUGAS}, n=20)
+
+    for mid, motor in transporte.motores.items():
+        assert motor.estado_eje == proto.ESTADO_CLOSED_LOOP, \
+            f'el motor {mid} se quedó sin rearmar'
+    assert robot.motores_desarmados == []
+
+
+def test_rearmar_no_borra_la_consigna_de_los_motores_ya_armados():
+    """Al rearmar uno, a los demás no se les manda nada y no pierden su orden."""
+    robot, transporte = construir()
+    objetivo = 0.4
+    ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=60)
+
+    transporte.motores[8].poner_estado(proto.ESTADO_IDLE)
+    time.sleep(PERIODO_REARMADO_S)
+    estado = ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=60)
+
+    for mid in IDS_FLIPPERS:
+        assert math.isclose(estado[mid]['posicion_rad'], objetivo, abs_tol=0.05), \
+            f'el flipper {mid} perdió su consigna al rearmar el 8'
 
 
 # ====================================================================== #

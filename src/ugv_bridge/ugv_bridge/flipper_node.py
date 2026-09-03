@@ -133,10 +133,32 @@ class FlipperNode(Node):
             motores_presentes=self._motores_presentes(),
         )
         self._fallo_avisado = False
+        # Ciclos seguidos con algún eje fuera de lazo cerrado. Al arrancar
+        # siempre hay unos pocos (hasta el primer heartbeat, que llega cada
+        # 100 ms), así que sólo se avisa si la cosa PERSISTE.
+        self._ciclos_desarmado = 0
+        self._desarme_avisado = False
+        self._ciclos_para_avisar_desarme = max(1, int(frecuencia))
 
         # Últimos comandos recibidos (por ID de motor). Arranque seguro: quieto.
+        #
+        # Las orugas arrancan en 0 rad/s, que es "quieto" de verdad.
+        #
+        # Los flippers arrancan VACÍOS, y eso NO es lo mismo que 0.0. El comando
+        # de un flipper es una POSICIÓN: mandar 0.0 no es "quieto", es "vete al
+        # cero del encoder", y el motor sale disparado hasta allí en cuanto se
+        # arma en lazo cerrado. Con la reducción de 8:1 eso es un golpe seco, y
+        # ocurría ANTES de que teleop_flippers llegara a publicar nada (ese nodo
+        # sí se siembra con la pose real de /joint_states, pero para entonces el
+        # cero ya iba camino del bus).
+        #
+        # Dejando el dict vacío, los dos backends caen en su valor por defecto,
+        # que es "quédate donde estás":
+        #   driver_movimiento._estado_via_bus -> _ultimo_estado[mid]['posicion_rad']
+        #   driver_movimiento._simular_estado -> self._pos[mid]
+        # A partir del primer /cmd_flippers manda la consigna, como siempre.
         self.cmd_orugas = {mid: 0.0 for mid in IDS_ORUGAS}
-        self.cmd_flippers = {mid: 0.0 for mid in IDS_FLIPPERS}
+        self.cmd_flippers = {}
 
         self.js_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.imu_pub = self.create_publisher(Imu, '/imu/data_raw', 10)
@@ -193,6 +215,7 @@ class FlipperNode(Node):
         self.publicar_joint_state(estado, stamp)
         self.publicar_imu(imu, stamp)
         self.revisar_comunicacion()
+        self.revisar_armado()
 
     def revisar_comunicacion(self):
         """Eleva a log de ROS el watchdog del driver (visible en Foxglove/rqt)."""
@@ -204,6 +227,33 @@ class FlipperNode(Node):
         elif not self.robot.fallo_comunicacion and self._fallo_avisado:
             self._fallo_avisado = False
             self.get_logger().info('Comunicación con los motores restablecida.')
+
+    def revisar_armado(self):
+        """Avisa si algún eje se quedó fuera de lazo cerrado.
+
+        Es el fallo silencioso de ODrive: el eje acepta la consigna, no se mueve
+        y no devuelve error, así que sin este aviso el síntoma es "mando
+        /cmd_flippers y no pasa nada". El driver ya reintenta armarlo solo; esto
+        es para que se VEA (panel RosOut de Foxglove, o rqt).
+        """
+        desarmados = getattr(self.robot, 'motores_desarmados', [])
+        if desarmados:
+            self._ciclos_desarmado += 1
+        else:
+            self._ciclos_desarmado = 0
+
+        if (self._ciclos_desarmado >= self._ciclos_para_avisar_desarme
+                and not self._desarme_avisado):
+            self._desarme_avisado = True
+            nombres = ', '.join(ID_A_NOMBRE.get(m, str(m)) for m in desarmados)
+            self.get_logger().warn(
+                f'Motores FUERA DE LAZO CERRADO: {nombres}. Aceptan las órdenes '
+                f'y no se mueven (fallo silencioso de ODrive). Reintentando '
+                f'armado; si no se arregla: ¿energizados? ¿enable_can_a y '
+                f'baud_rate bien puestos? ¿motor_emulator corriendo?')
+        elif not desarmados and self._desarme_avisado:
+            self._desarme_avisado = False
+            self.get_logger().info('Todos los ejes en lazo cerrado.')
 
     def publicar_joint_state(self, estado, stamp):
         js = JointState()

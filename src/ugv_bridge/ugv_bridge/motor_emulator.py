@@ -70,10 +70,15 @@ class MotorEmulado:
             self.vel = 0.0
 
     def poner_modo(self, control_mode, input_mode):
+        # Sólo un CAMBIO de modo descarta la consigna anterior (era de otras
+        # unidades). Reescribir el mismo modo no la toca: el driver reenvía la
+        # secuencia de armado cuando un eje se cae a IDLE, y si eso borrara la
+        # consigna, rearmar un flipper lo dejaría clavado donde estaba.
+        cambio = control_mode != self.control_mode
         self.control_mode = control_mode
         self.input_mode = input_mode
-        # Cambiar de modo descarta la consigna anterior, que era de otras unidades.
-        self.objetivo = self.pos if control_mode == proto.CONTROL_POSICION else 0.0
+        if cambio:
+            self.objetivo = self.pos if control_mode == proto.CONTROL_POSICION else 0.0
 
     def parar(self):
         self.objetivo = 0.0

@@ -82,6 +82,11 @@ MAPA_BUSES_POR_DEFECTO = {1: 1, 5: 1,   # esquina delantera izquierda
 # comunicación y forzar el paro. A 100 Hz, 10 ciclos = 0.1 s.
 CICLOS_WATCHDOG = 10
 
+# Cada cuánto se reintenta armar un eje que el heartbeat reporta FUERA de lazo
+# cerrado. El heartbeat llega cada 100 ms, así que medio segundo son cinco
+# oportunidades de oírlo antes de volver a insistir.
+PERIODO_REARMADO_S = 0.5
+
 # --- Modelo de actitud de la IMU sintética (gemelo/can) ---
 # La IMU real vive en el pi3hat; en 'gemelo'/'can' se sintetiza a partir del
 # estado de los motores para que roll/pitch/yaw reflejen de verdad el movimiento.
@@ -205,6 +210,15 @@ class RMD_Hardware:
         self._sin_respuesta = {mid: 0 for mid in self.ids_orugas + self.ids_flippers}
         self.fallo_comunicacion = False
 
+        # Vigilancia del ARMADO (ver _vigilar_armado). Lista de motores que el
+        # heartbeat reporta fuera de lazo cerrado: aceptan las consignas y no se
+        # mueven. En modo 'gemelo' no hay ejes que armar y se queda vacía; con
+        # bus empieza con TODOS, porque hasta el primer heartbeat no consta que
+        # ninguno esté armado.
+        self.motores_desarmados = (
+            list(self.ids_presentes) if self.modo in ('can', 'pi3hat') else [])
+        self._t_ultimo_rearmado = 0.0
+
         # Transporte del pi3hat (sólo modo='pi3hat'; en 'can' se usa el socket).
         self._transporte = None
         # Lector de la IMU física (None si imu_fuente='sintetica').
@@ -313,7 +327,7 @@ class RMD_Hardware:
         self.timeouts_can += sum(1 for m in recibido.values() if not m)
         return recibido
 
-    def _armar_motores(self):
+    def _armar_motores(self, ids=None):
         """Deja cada motor sin errores, en su modo de control y en LAZO CERRADO.
 
         Es OBLIGATORIO con ODrive y no lo era con el protocolo anterior: un eje en
@@ -323,13 +337,21 @@ class RMD_Hardware:
 
         Orugas en control de VELOCIDAD (passthrough) y flippers en POSICIÓN (con
         filtro de entrada, que suaviza el salto cuando llega una consigna nueva).
+
+        `ids` limita a qué motores se le manda la secuencia. Lo usa
+        `_vigilar_armado` para insistir SÓLO con los que siguen en IDLE, sin
+        tocar el modo de control de los que ya están trabajando.
         """
         if self.modo not in ('can', 'pi3hat'):
             return
+        objetivo = list(self.ids_presentes) if ids is None else list(ids)
+        if not objetivo:
+            return
 
+        self._t_ultimo_rearmado = time.monotonic()
         orugas = set(self.ids_orugas)
         peticiones = []
-        for mid in self.ids_presentes:
+        for mid in objetivo:
             if mid in orugas:
                 control, entrada = proto.CONTROL_VELOCIDAD, proto.ENTRADA_PASSTHROUGH
             else:
@@ -343,8 +365,8 @@ class RMD_Hardware:
             ]
         try:
             self._intercambiar(peticiones, timeout=0.005)
-            print(f'[HARDWARE] {len(self.ids_presentes)} motor(es) armados '
-                  f'en lazo cerrado.')
+            print(f'[HARDWARE] Secuencia de armado enviada a '
+                  f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in objetivo)}.')
         except Exception as e:
             print(f'[HARDWARE] No se pudieron armar los motores: {e}')
 
@@ -384,8 +406,58 @@ class RMD_Hardware:
             estado[mid] = dict(self._ultimo_estado[mid])
 
         self._vigilar_comunicacion(recibido)
+        self._vigilar_armado()
         self._avisar_timeouts()
         return estado
+
+    def _vigilar_armado(self):
+        """Vigila que los ejes sigan en LAZO CERRADO, y rearma los que no.
+
+        POR QUÉ HACE FALTA
+        ------------------
+        Armar los ejes era un disparo ÚNICO y a ciegas en el constructor: se
+        mandaba la secuencia y se daba por hecho que había llegado. Con ODrive
+        eso no basta, porque un eje en IDLE acepta las consignas y no se mueve
+        SIN dar ningún error, y además sigue emitiendo su trama de encoder cada
+        10 ms — o sea que el watchdog de comunicación lo ve perfectamente vivo y
+        nunca se entera. El síntoma era exactamente "mando /cmd_flippers desde
+        Foxglove, la orden llega, y el robot no hace nada, sin un solo error".
+
+        Pasaba en los dos mundos:
+
+          - vcan0: `can_sim.launch.py` arranca `motor_emulator` y `flipper_node`
+            a la vez. Si el emulador todavía no ha abierto su socket, el kernel
+            TIRA las tramas de armado (no hay buffer para un socket que no
+            existe) y los 8 motores se quedan en IDLE para siempre. Se reconoce
+            en la línea de estadísticas del emulador: `armados=0/8`.
+          - pi3hat: si los motores no están energizados cuando arranca el nodo,
+            o si un eje se cae a IDLE más tarde por un error (sobrecorriente,
+            encoder, temperatura), nadie lo vuelve a armar nunca.
+
+        LA SEÑAL DE VERDAD ES EL HEARTBEAT
+        ----------------------------------
+        `_aplicar_mensajes` ya guardaba `estado_eje` de cada heartbeat en
+        `_ultimo_estado`... y nadie lo leía jamás. Aquí se usa: cualquier motor
+        cuyo último heartbeat NO diga CLOSED_LOOP se rearma, como mucho una vez
+        cada `PERIODO_REARMADO_S`. Al que ya está armado no se le manda nada, así
+        que su consigna de posición no se toca.
+
+        Durante un fallo de comunicación no se rearma: ahí los ejes están en IDLE
+        A PROPÓSITO (paro de emergencia) y de eso se encarga `_vigilar_comunicacion`
+        al recuperarse.
+        """
+        desarmados = [mid for mid in self.ids_presentes
+                      if self._ultimo_estado[mid]['estado_eje'] != proto.ESTADO_CLOSED_LOOP]
+        self.motores_desarmados = desarmados
+        if not desarmados or self.fallo_comunicacion:
+            return
+
+        if time.monotonic() - self._t_ultimo_rearmado < PERIODO_REARMADO_S:
+            return
+        nombres = ', '.join(f'{m}({ID_A_NOMBRE[m]})' for m in desarmados)
+        print(f'[HARDWARE] Fuera de lazo cerrado (aceptan órdenes y no se mueven): '
+              f'{nombres}. Reintentando armado.')
+        self._armar_motores(desarmados)
 
     def _vigilar_comunicacion(self, recibido):
         """Watchdog de seguridad: detecta motores que dejaron de emitir.
@@ -498,7 +570,7 @@ class RMD_Hardware:
         """
         from ugv_bridge.pi3hat_backend import TransportePi3Hat
 
-        self._transporte = TransportePi3Hat(self.mapa_buses)
+        self._transporte = TransportePi3Hat(self.mapa_buses, self.ids_presentes)
         por_bus = {}
         for mid, bus in sorted(self.mapa_buses.items()):
             por_bus.setdefault(bus, []).append(f'{mid}({ID_A_NOMBRE.get(mid, "?")})')
