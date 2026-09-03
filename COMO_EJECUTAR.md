@@ -298,6 +298,80 @@ regla udev de `/etc/udev/rules.d/91-odrive.rules`).
 Si no contesta nadie, `scripts/escanear_can.py` barre buses, velocidades e IDs y
 muestra cualquier trama que llegue.
 
+#### El Motor Wizard bajo Wine (visor opcional, sólo en el PC)
+
+El manual (§3.1.2) ofrece dos programas de PC: el **Motor Wizard** de SteadyWin y
+`odrivetool`. **La configuración de la tesis se hace con `odrivetool`** (apartado
+siguiente): corre nativo, no depende de Wine y es lo que documenta el resto de
+esta guía. El Wizard es un visor cómodo — estado, tensión, y pestañas de par,
+velocidad y posición — pero es un `.exe` de 32 bits, sólo habla USB motor a
+motor, y no toca el bus CAN. No sirve en la Raspberry (es ARM) ni dentro de
+rosdev (no hay Wine ni acceso al USB del host).
+
+Instalación, una sola vez:
+
+```bash
+curl -L -o /tmp/motorwizard.exe https://bl.cyberbeast.cn/actuator/steadywin_motorwizard.exe
+WINEPREFIX=~/.local/share/wineprefixes/motorwizard wineboot -i
+WINEPREFIX=~/.local/share/wineprefixes/motorwizard wine /tmp/motorwizard.exe \
+    /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+```
+
+Queda en `~/.local/share/wineprefixes/motorwizard`, en un prefijo aparte para no
+mezclarlo con el `~/.wine` de siempre. Después se abre con el comando que instala
+`scripts/instalar_comandos.sh`:
+
+```bash
+motorwizard
+```
+
+> **El paso de Zadig del manual no aplica en Linux.** Zadig es el instalador del
+> driver USB de Windows (`libusb` para el Wizard, `WinUSB` para `odrivetool`, y
+> hay que ir cambiándolo al saltar de un programa al otro). Aquí el permiso lo da
+> la regla udev `/etc/udev/rules.d/91-odrive.rules`, la misma para los dos, y no
+> hay nada que reasignar.
+
+Ruido de arranque que **no** es un fallo:
+
+- `MESA-EGL: ... failed to create dri2 screen`: es la GL de la NVIDIA de este
+  equipo, cae a software y la ventana sale igual.
+- `[ERROR:...direct_manipulation.cc] ... failed`: Wine no implementa el API de
+  táctil/lápiz que pide Flutter. Inofensivo.
+- Sin motor alimentado y conectado por Type-C, la interfaz abre pero **no muestra
+  una lectura de tensión válida** (el manual lo dice en §3.1.3). El lanzador
+  avisa antes de abrir si no ve el `1209:0d32` en el USB.
+
+Y dos fallos de verdad que salieron en la primera corrida, los dos ya resueltos:
+
+- `PathNotFoundException: ... MotorWizard\datalog`. El Wizard **lista** su
+  carpeta de registros al arrancar pero no la crea. `motorwizard.sh` la crea
+  antes de lanzar; dentro del prefijo `Documents` es un enlace a `~/Documentos`,
+  así que los registros quedan en `~/Documentos/MotorWizard/datalog`.
+- `FormatException: Invalid radix-10 number ... 0.5` (`motor.dart:309`). La app
+  guarda `NULLDATAID = "0.5"` en sus preferencias y luego la lee con
+  `int.parse`. Importa porque el `forEach` que revienta **deja sin cargar todos
+  los parámetros posteriores** de la lista (`RS`, `LS`, `VoltageConstant`,
+  `TorqueConstant`, `Rshunt`, `AmplificationGain`). Se arregla poniendo un entero
+  en ese campo, una sola vez:
+
+  ```bash
+  PREF=~/.local/share/wineprefixes/motorwizard/drive_c/users/$USER/AppData/Roaming/CyberBeast/电机精灵/shared_preferences.json
+  cp "$PREF" "$PREF.bak"
+  sed -i 's/"flutter.NULLDATAID":"0.5"/"flutter.NULLDATAID":"0"/' "$PREF"
+  ```
+
+  Con el motor delante conviene confirmar que esos valores salen ahora bien; si
+  algo se descuadra, el `.bak` deja las preferencias como estaban.
+
+Y el orden de conexión importa: **alimenta por XT30 con la fuente apagada,
+enciende, y sólo entonces conecta el Type-C.** El USB es consola: no alimenta la
+etapa de potencia ni mueve el motor.
+
+Lo que queda por verificar con hardware delante es si el `libusb-1.0.dll` de
+Windows llega al motor a través de Wine (va por su `winusb` hacia el libusb de
+Linux). Si el Wizard no lista el dispositivo, no hay mucho que rascar en Wine:
+`odrivetool` hace todo lo necesario y sí funciona.
+
 #### Configurar los 8 motores por USB (una sola vez, antes de montarlos)
 
 El `node_id` **no se asigna al arrancar ni se negocia en el bus**: vive en la
@@ -410,6 +484,9 @@ invoca decide el modo) y se instalan con:
 ```bash
 bash src/ugv_bridge/scripts/instalar_comandos.sh
 ```
+
+Ese mismo script deja además `motorwizard` (el visor USB bajo Wine), pero sólo en
+un PC x86_64: en la Raspberry ni lo intenta.
 
 El equivalente a mano, por si hace falta cambiar algo:
 
