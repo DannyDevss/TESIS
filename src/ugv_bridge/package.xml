@@ -12,6 +12,9 @@
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
+  <!-- /diagnostics: qué motores están cableados, cuáles responden y
+       cuáles siguen fuera de lazo cerrado (panel Diagnostics de Foxglove). -->
+  <depend>diagnostic_msgs</depend>
   <!-- El URDF se genera desde urdf/ugv.urdf.xacro + config/geometria_robot.yaml. -->
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_localization</exec_depend>

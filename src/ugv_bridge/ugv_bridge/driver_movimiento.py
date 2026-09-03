@@ -493,6 +493,42 @@ class RMD_Hardware:
             # El paro los dejó en IDLE: sin rearmar, ignorarían los comandos.
             self._armar_motores()
 
+    def resumen_motores(self):
+        """Foto del estado de cada motor, para diagnóstico (NO para el control).
+
+        La consume `flipper_node` para publicar /diagnostics, que es lo que se
+        ve en el panel Diagnostics de Foxglove: de un vistazo, qué motores están
+        cableados, cuáles contestan y cuáles siguen fuera de lazo cerrado.
+
+        Devuelve {id: {...}} para los OCHO motores, presentes o no: los ausentes
+        también hay que verlos, precisamente para no confundir "no está cableado"
+        con "está cableado y mudo", que son problemas muy distintos.
+
+        En modo 'gemelo' no hay bus ni ejes que armar, así que todo sale como
+        presente, respondiendo y armado: no hay nada que diagnosticar ahí.
+        """
+        hay_bus = self.modo in ('can', 'pi3hat')
+        presentes = set(self.ids_presentes)
+        resumen = {}
+        for mid in self.ids_orugas + self.ids_flippers:
+            u = self._ultimo_estado[mid]
+            presente = mid in presentes
+            resumen[mid] = {
+                'nombre': ID_A_NOMBRE[mid],
+                'tipo': 'oruga' if mid in self.ids_orugas else 'flipper',
+                'bus': self.mapa_buses.get(mid),
+                'presente': presente,
+                # "Responde" es sobre el watchdog: un motor con ciclos mudos
+                # acumulados pero todavía por debajo del umbral ya es sospechoso.
+                'responde': (not hay_bus) or (
+                    presente and self._sin_respuesta[mid] < self.ciclos_watchdog),
+                'ciclos_mudo': self._sin_respuesta[mid] if hay_bus else 0,
+                'armado': (not hay_bus) or u['estado_eje'] == proto.ESTADO_CLOSED_LOOP,
+                'estado_eje': u['estado_eje'],
+                'error_eje': u['error_eje'],
+            }
+        return resumen
+
     def parar_motores(self):
         """Paro de emergencia: consigna cero y ejes a IDLE (best effort).
 

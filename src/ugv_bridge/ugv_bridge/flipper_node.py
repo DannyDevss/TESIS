@@ -14,6 +14,9 @@ Suscribe:
 Publica:
   /joint_states (sensor_msgs/JointState)  estado de los 8 motores
   /imu/data_raw (sensor_msgs/Imu)         actitud + aceleración (cuaternión)
+  /diagnostics  (diagnostic_msgs/DiagnosticArray, 1 Hz)  una fila por motor:
+                cableado o no, si responde y si está en lazo cerrado. Se ve en
+                el panel Diagnostics de Foxglove (y en rqt_robot_monitor).
 
 Parámetros
 ----------
@@ -44,6 +47,7 @@ import math
 import rclpy
 from rclpy.exceptions import ParameterUninitializedException
 from rclpy.node import Node
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import JointState, Imu
 from std_msgs.msg import Float64MultiArray
 
@@ -139,6 +143,8 @@ class FlipperNode(Node):
         self._ciclos_desarmado = 0
         self._desarme_avisado = False
         self._ciclos_para_avisar_desarme = max(1, int(frecuencia))
+        # Último estado leído del bucle de control; lo usa el diagnóstico.
+        self.ultimo_estado = {}
 
         # Últimos comandos recibidos (por ID de motor). Arranque seguro: quieto.
         #
@@ -165,7 +171,12 @@ class FlipperNode(Node):
         self.create_subscription(Float64MultiArray, '/cmd_tracks', self.on_cmd_tracks, 10)
         self.create_subscription(Float64MultiArray, '/cmd_flippers', self.on_cmd_flippers, 10)
 
+        self.diag_pub = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
+
         self.timer = self.create_timer(1.0 / frecuencia, self.loop_control)
+        # El diagnóstico va aparte del bucle de control y MUCHO más lento: es
+        # para que lo lea una persona, no el lazo.
+        self.timer_diag = self.create_timer(1.0, self.publicar_diagnostico)
         etiqueta = {
             'gemelo': 'GEMELO DIGITAL',
             'can': f'BUS CAN "{can_canal}"',
@@ -210,6 +221,8 @@ class FlipperNode(Node):
     # ------------------------------------------------------------------ #
     def loop_control(self):
         estado = self.robot.enviar_y_leer_estado(self.cmd_orugas, self.cmd_flippers)
+        # Lo guarda para el diagnóstico, que corre en su propio timer a 1 Hz.
+        self.ultimo_estado = estado
         imu = self.robot.leer_imu()
         stamp = self.get_clock().now().to_msg()
         self.publicar_joint_state(estado, stamp)
@@ -227,6 +240,89 @@ class FlipperNode(Node):
         elif not self.robot.fallo_comunicacion and self._fallo_avisado:
             self._fallo_avisado = False
             self.get_logger().info('Comunicación con los motores restablecida.')
+
+    def publicar_diagnostico(self):
+        """Una fila por motor en /diagnostics: quién está y quién no.
+
+        Es la "ventanita" de estado del banco de pruebas. Distingue los tres
+        casos que desde fuera se parecen demasiado:
+
+          - AUSENTE  no está en `motores_presentes`: no se le habla ni se le
+                     exige nada. Sale como STALE, no como error, porque es una
+                     decisión deliberada y no una avería.
+          - MUDO     está declarado y no emite: cable, alimentación o node_id.
+          - EN IDLE  emite pero está fuera de lazo cerrado: acepta las órdenes y
+                     no se mueve. El fallo silencioso de ODrive.
+
+        Se publica a 1 Hz porque lo lee una persona en Foxglove, no el lazo de
+        control.
+        """
+        msg = DiagnosticArray()
+        msg.header.stamp = self.get_clock().now().to_msg()
+
+        resumen = self.robot.resumen_motores()
+        for mid, info in sorted(resumen.items()):
+            st = DiagnosticStatus()
+            st.hardware_id = f'motor {mid}'
+            st.name = f'motores/{info["nombre"]}'
+            if not info['presente']:
+                st.level = DiagnosticStatus.STALE
+                st.message = 'AUSENTE: no declarado en motores_presentes'
+            elif not info['responde']:
+                st.level = DiagnosticStatus.ERROR
+                st.message = 'MUDO: no emite en el bus (¿cable, alimentación, node_id?)'
+            elif not info['armado']:
+                st.level = DiagnosticStatus.WARN
+                st.message = 'FUERA DE LAZO CERRADO: acepta las órdenes y no se mueve'
+            elif info['error_eje']:
+                st.level = DiagnosticStatus.WARN
+                st.message = f'en lazo cerrado, con error 0x{info["error_eje"]:X}'
+            else:
+                st.level = DiagnosticStatus.OK
+                st.message = 'en lazo cerrado'
+
+            estado = self.ultimo_estado.get(mid, {})
+            st.values = [
+                KeyValue(key='id', value=str(mid)),
+                KeyValue(key='tipo', value=info['tipo']),
+                KeyValue(key='bus', value=str(info['bus'])),
+                KeyValue(key='cableado', value='sí' if info['presente'] else 'no'),
+                KeyValue(key='estado_eje', value=str(info['estado_eje'])),
+                KeyValue(key='error_eje', value=f'0x{info["error_eje"]:X}'),
+                KeyValue(key='ciclos_sin_emitir', value=str(info['ciclos_mudo'])),
+                KeyValue(key='posicion_rad',
+                         value=f'{estado.get("posicion_rad", 0.0):+.4f}'),
+                KeyValue(key='velocidad_rad_s',
+                         value=f'{estado.get("velocidad_rad_s", 0.0):+.4f}'),
+            ]
+            msg.status.append(st)
+
+        # Fila de resumen, para no tener que contar filas a ojo.
+        cableados = [i['nombre'] for i in resumen.values() if i['presente']]
+        problemas = [i['nombre'] for i in resumen.values()
+                     if i['presente'] and not (i['responde'] and i['armado'])]
+        total = DiagnosticStatus()
+        total.hardware_id = 'ugv'
+        total.name = 'motores/RESUMEN'
+        if self.robot.fallo_comunicacion:
+            total.level = DiagnosticStatus.ERROR
+            total.message = 'PARO DE EMERGENCIA: fallo de comunicación'
+        elif problemas:
+            total.level = DiagnosticStatus.WARN
+            total.message = f'{len(problemas)} de {len(cableados)} con problemas: ' \
+                            f'{", ".join(problemas)}'
+        else:
+            total.level = DiagnosticStatus.OK
+            total.message = f'{len(cableados)} de 8 motores cableados y moviéndose'
+        total.values = [
+            KeyValue(key='cableados', value=', '.join(cableados) or '(ninguno)'),
+            KeyValue(key='ausentes',
+                     value=', '.join(i['nombre'] for i in resumen.values()
+                                     if not i['presente']) or '(ninguno)'),
+        ]
+        msg.status.append(total)
+
+        self.diag_pub.publish(msg)
 
     def revisar_armado(self):
         """Avisa si algún eje se quedó fuera de lazo cerrado.

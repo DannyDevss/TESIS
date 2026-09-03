@@ -134,7 +134,7 @@ foxglove-studio "foxglove://open?ds=foxglove-websocket&ds.url=ws%3A%2F%2Flocalho
 > El puente corre **dentro** de `rosdev`, pero distrobox comparte la red con el host,
 > así que `localhost:8765` funciona desde Foxglove instalado en el host.
 
-**Layout del proyecto:** `config/ugv_control_v3.json`. Se importa con
+**Layout del proyecto:** `config/ugv_control_v4.json`. Se importa con
 *Layouts → (menú ⋯) → Import from file…* y queda guardado en la app.
 
 > ⚠️ **Foxglove guarda su PROPIA copia del layout, con el nombre del archivo.**
@@ -143,9 +143,9 @@ foxglove-studio "foxglove://open?ds=foxglove-websocket&ds.url=ws%3A%2F%2Flocalho
 > las que es facilísimo elegir la vieja: el sintoma es "lo importé y al salir de
 > Foxglove volvió el layout de antes". Por eso el archivo lleva un número de
 > versión en el nombre, que sube cada vez que cambia el layout. Al importar,
-> entra como layout **`ugv_control_v3`**; selecciónalo en el desplegable de
-> arriba a la derecha y **borra los antiguos** (`ugv_control_v2`,
-> `foxglove_layout`) con *click derecho sobre el layout → Delete*, para no
+> entra como layout **`ugv_control_v4`**; selecciónalo en el desplegable de
+> arriba a la derecha y **borra los antiguos** (`ugv_control_v3`,
+> `ugv_control_v2`, `foxglove_layout`) con *click derecho sobre el layout → Delete*, para no
 > volver a confundirlos.
 >
 > Si aun asi los cambios no persisten al cerrar la app, mira el aviso del plan de
@@ -158,6 +158,28 @@ Trae 8 paneles ya configurados: 3D (con **Display frame = `odom`** y el modelo d
 de ángulos de flipper y de velocidad de orugas, gráfica de la pose del EKF (para
 vigilar que Z no derive), dos paneles de publicación para `/cmd_flippers` y
 `/cmd_tracks`, la IMU cruda y `/rosout`.
+
+En la pestaña **Motores → Conectados** hay un panel *Diagnostics* sobre
+`/diagnostics`: una fila por motor, con color, que es la respuesta rápida a
+"¿cuáles están y cuáles no?". Distingue los tres casos que desde fuera se
+confunden con facilidad:
+
+| Color | Qué dice | Qué significa |
+|---|---|---|
+| gris (STALE) | `AUSENTE: no declarado en motores_presentes` | Decisión tuya al lanzar, no una avería |
+| rojo (ERROR) | `MUDO: no emite en el bus` | Cable, alimentación o `node_id` |
+| amarillo (WARN) | `FUERA DE LAZO CERRADO` | El eje acepta las órdenes y no se mueve |
+| verde (OK) | `en lazo cerrado` | Se mueve |
+
+Abajo del todo, la fila `motores/RESUMEN` dice cuántos hay cableados y cuáles dan
+problemas, para no ir contando filas. Se publica a 1 Hz.
+
+> Si el panel sale como desconocido al importar el layout, tu versión de Foxglove
+> nombra distinto el panel de diagnóstico: añádelo a mano con *Add panel →
+> Diagnostics – Summary (ROS)* y apúntalo a `/diagnostics`. El tópico es estándar
+> (`diagnostic_msgs/DiagnosticArray`), así que también se ve con
+> `ros2 run rqt_robot_monitor rqt_robot_monitor` o, en crudo,
+> `ros2 topic echo /diagnostics`.
 
 Los paneles de publicación funcionan porque el puente expone la capability
 `clientPublish` (activa por defecto). Recuerda que la velocidad de orugas es
@@ -462,8 +484,9 @@ cada 10 ms, así que el watchdog de comunicación lo ve perfectamente vivo. Da
 igual que la orden venga del panel Publish de Foxglove, de los paneles Teleop o
 de la política: `/cmd_flippers` sale, `flipper_node` la manda al bus y ahí muere.
 
-`flipper_node` lo vigila por el **heartbeat** y lo reintenta solo cada 0,5 s.
-Cómo se ve:
+`flipper_node` lo vigila por el **heartbeat** y lo reintenta solo cada 0,5 s. En
+Foxglove, el motor aparece en amarillo en **Motores → Conectados**. En la
+terminal de la Pi:
 
 ```
 [HARDWARE] Fuera de lazo cerrado (aceptan órdenes y no se mueven): 5(flipper_fl). Reintentando armado.
@@ -514,7 +537,11 @@ cableado esté perfecto. Con la lista, los ausentes se ignoran (siguen aparecien
 en `/joint_states`, quietos, porque el URDF necesita las 8 juntas), y sólo se
 sondean los buses donde hay algo.
 
-Qué mirar en Foxglove con estos dos:
+Qué mirar en Foxglove con estos dos. Lo primero, la pestaña
+**Motores → Conectados**: dice de un vistazo cuáles están cableados, cuáles
+emiten y cuáles están en lazo cerrado (con `motores_presentes:=1,5` los otros
+seis salen en gris como AUSENTES, que es lo correcto y no una avería). Después,
+para ver que se mueven:
 
 | Panel | Serie | Motor |
 |---|---|---|

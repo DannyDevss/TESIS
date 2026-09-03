@@ -814,6 +814,10 @@
       "activeTabIdx": 0,
       "tabs": [
         {
+          "title": "Conectados",
+          "layout": "DiagnosticSummary!motores"
+        },
+        {
           "title": "Orugas",
           "layout": {
             "direction": "row",
@@ -1064,6 +1068,12 @@
           }
         }
       ]
+    },
+    "DiagnosticSummary!motores": {
+      "topicToRender": "/diagnostics",
+      "sortByLevel": true,
+      "pinnedIds": [],
+      "hardwareIdFilter": ""
     }
   },
   "globalVariables": {},
