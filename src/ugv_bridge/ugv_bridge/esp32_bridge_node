@@ -1,0 +1,87 @@
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
+from sensor_msgs.msg import BatteryState
+from std_msgs.msg import Bool
+import serial
+import json
+
+class ESP32BridgeNode(Node):
+    def __init__(self):
+        super().__init__('esp32_bridge_node')
+        
+        # 1. Configuración del Puerto Serial
+        self.serial_port = '/dev/ttyUSB0'  # Ajustar según tu Raspberry Pi
+        self.baud_rate = 115200
+        try:
+            self.ser = serial.Serial(self.serial_port, self.baud_rate, timeout=0.01)
+            self.get_logger().info(f"Conectado al ESP32-S3 en {self.serial_port}")
+        except serial.SerialException as e:
+            self.get_logger().error(f"Error conectando al puerto serial: {e}")
+            raise SystemExit
+
+        # 2. Perfil QoS (Quality of Service) - Crítico para telemetría
+        qos_sensor = QoSProfile(
+            depth=10,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT
+        )
+
+        # 3. Publicador de Telemetría (Batería)
+        self.battery_pub = self.create_publisher(BatteryState, '/battery_state', qos_sensor)
+        
+        # 4. Suscriptores de Comandos (Luces y Buzzer)
+        self.light_sub = self.create_subscription(Bool, '/cmd_light', self.light_callback, 10)
+        self.buzzer_sub = self.create_subscription(Bool, '/cmd_buzzer', self.buzzer_callback, 10)
+
+        # 5. Bucle de Lectura Asíncrona (100 Hz)
+        self.timer = self.create_timer(0.01, self.read_serial_data)
+
+    def light_callback(self, msg):
+        """Atrapa comandos de luz de ROS 2 y los envía al ESP32 por Serial"""
+        command = {"light": 1 if msg.data else 0}
+        self.ser.write((json.dumps(command) + '\n').encode('utf-8'))
+
+    def buzzer_callback(self, msg):
+        """Atrapa comandos de buzzer de ROS 2 y los envía al ESP32 por Serial"""
+        command = {"buzzer": 1 if msg.data else 0}
+        self.ser.write((json.dumps(command) + '\n').encode('utf-8'))
+
+    def read_serial_data(self):
+        """Lee la telemetría del ESP32 sin bloquear el procesador principal"""
+        if self.ser.in_waiting > 0:
+            try:
+                line = self.ser.readline().decode('utf-8').strip()
+                data = json.loads(line)
+                
+                # Procesar Batería si está en el JSON
+                if 'v_adc' in data:
+                    # El ESP32 envía el voltaje crudo (ej. 2.87V). 
+                    # Multiplicamos por 19 (factor del divisor de tensión 180k/10k)
+                    voltaje_real = data['v_adc'] * 19.0  
+                    
+                    batt_msg = BatteryState()
+                    batt_msg.voltage = voltaje_real
+                    batt_msg.percentage = min(max((voltaje_real - 39.0) / (54.6 - 39.0), 0.0), 1.0)
+                    batt_msg.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_DISCHARGING
+                    
+                    self.battery_pub.publish(batt_msg)
+
+            except json.JSONDecodeError:
+                self.get_logger().warn("Trama Serial corrupta descartada")
+            except Exception as e:
+                self.get_logger().error(f"Error procesando datos: {e}")
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ESP32BridgeNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.ser.close()
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
