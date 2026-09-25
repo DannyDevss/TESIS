@@ -24,6 +24,8 @@
   <exec_depend>ros2launch</exec_depend>
   <!-- Modo 'can' del driver + motor_emulator (SocketCAN/vcan0). -->
   <exec_depend>python3-can</exec_depend>
+  <!-- esp32_bridge_node: telemetria/comandos con el ESP32 por puerto serie -->
+  <exec_depend>python3-serial</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
