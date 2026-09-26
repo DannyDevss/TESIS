@@ -1,0 +1,917 @@
+================================================================================
+AVANCES DEL PROYECTO - UGV DE RESCATE CON ORUGAS Y FLIPPERS
+Workspace ROS 2 Jazzy
+Ultima actualizacion: 12 de agosto de 2026
+Rama de trabajo: feature/parametrizacion-geometria (ultimo commit: P6)
+================================================================================
+
+
+================================================================================
+1. DESCRIPCION GENERAL
+================================================================================
+
+1.1 DE QUE TRATA EL PROYECTO
+----------------------------
+
+Este repositorio contiene el software de control de un vehiculo terrestre no
+tripulado (UGV) de rescate, construido sobre ROS 2 Jazzy. El robot tiene dos
+orugas principales y cuatro flippers (orugas auxiliares articuladas, una en cada
+esquina) que le permiten superar escombros, escaleras y desniveles tipicos de un
+escenario de busqueda y rescate.
+
+El objetivo principal del software es doble:
+
+  a) Ser el puente entre ROS 2 y el hardware real: 8 motores SteadyWin
+     (GIM6010-8 / GDS68) sobre bus CAN, mas la IMU integrada en la placa
+     mjbots pi3hat, montada sobre una Raspberry Pi.
+
+  b) Entregar a la capa de decision (teleoperacion o una politica de aprendizaje
+     por refuerzo) una estimacion limpia y fiable del estado del robot: posicion,
+     orientacion en 3D y estado de cada articulacion.
+
+Asignacion de los 8 motores:
+
+    IDs 1 a 4  ->  ORUGAS   (se comandan por VELOCIDAD, en rad/s)
+                   track_fl, track_fr, track_rl, track_rr
+    IDs 5 a 8  ->  FLIPPERS (se comandan por POSICION, en radianes)
+                   flipper_fl, flipper_fr, flipper_rl, flipper_rr
+
+Los flippers son juntas de tipo "continuous": giran 360 grados sin topes
+mecanicos, lo que hace posible que choquen entre si. De ahi la necesidad del
+guardian cinematico (ver seccion 2).
+
+SITUACION DE HARDWARE AL DIA DE HOY: la placa pi3hat ya esta montada y su IMU
+funciona y esta validada. Los 8 motores AUN NO HAN LLEGADO. Todo el desarrollo se
+esta validando contra un emulador de motores que responde tramas CAN reales sobre
+una interfaz virtual (vcan0). La meta explicita de diseno es que, cuando lleguen
+los motores, se conecten sin retrabajo.
+
+
+1.2 ARQUITECTURA GENERAL
+------------------------
+
+El repositorio es un workspace de colcon. La carpeta src/ contiene 6 paquetes,
+agrupados en dos "tracks" o lineas de trabajo que hoy son independientes:
+
+  TRACK A - HARDWARE Y LOCOMOCION (el principal)
+  ----------------------------------------------
+    ugv_bridge   Paquete central. Puente ROS <-> motores y IMU, odometria de
+                 orugas, fusion sensorial (EKF), modelo del robot (URDF),
+                 guardian de colisiones, emulador de motores y todos los launch.
+
+  TRACK B - NAVEGACION 2D Y APRENDIZAJE POR REFUERZO
+  ---------------------------------------------------
+    ugv_core     Entorno de simulacion 2D (RobotEnv) con API compatible con
+                 Gymnasium, mas los "cerebros" de decision (HeuristicBrain y
+                 RLBrain). No depende de ROS ni de Qt: se puede entrenar
+                 headless.
+    ugv_sim      Envuelve RobotEnv como nodo ROS: publica /scan, /odom y TF, y
+                 escucha /cmd_vel.
+    ugv_policy   Nodo de politica: lee /scan, decide con el cerebro activo y
+                 publica /cmd_vel.
+    ugv_gcs      Estacion de control en tierra minima: ventana Qt (PySide6) con
+                 un mini-mapa 2D alimentado por /odom y /scan.
+
+    ugv_msgs     Paquete de mensajes propios. ESTA DESACTIVADO (tiene un archivo
+                 COLCON_IGNORE) y no contiene ninguna definicion .msg todavia.
+
+Los dos tracks NO se ejecutan juntos hoy: ambos publican /odom y el TF
+odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
+
+
+1.3 ESTRUCTURA DEL PAQUETE PRINCIPAL (ugv_bridge)
+--------------------------------------------------
+
+    ugv_bridge/
+      config/
+        geometria_robot.yaml   UNICA FUENTE DE VERDAD de las dimensiones fisicas
+                               del robot y del cableado de los motores a los
+                               buses CAN. Es el archivo a editar cuando lleguen
+                               las medidas reales del chasis.
+        ekf.yaml               Configuracion del filtro de Kalman extendido
+                               (paquete robot_localization).
+        view.rviz              Vista RViz con el robot fijo en base_link.
+        flippers.rviz          Vista RViz del sistema completo.
+        ugv_control_v3.json    Layout de Foxglove del proyecto: vista 3D,
+                               graficas, y los mandos para mover los flippers
+                               a mano. Se importa desde la app; ojo, Foxglove
+                               guarda su propia copia (ver COMO_EJECUTAR.md).
+
+      urdf/
+        ugv.urdf.xacro         Plantilla del modelo. Lee geometria_robot.yaml con
+                               xacro.load_yaml. Los 4 flippers son UNA macro
+                               instanciada 4 veces.
+        ugv.urdf               ARTEFACTO GENERADO a partir del .xacro. No editar
+                               a mano. Existe para Foxglove y herramientas que no
+                               procesan xacro.
+
+      meshes/                  Modelos 3D: chassis.dae, flipper.dae, belt.dae.
+
+      textures/                Texturas que los .dae piden como ../textures/*.png
+                               (chassis.png, flipper_color.png). Sin ellas
+                               Foxglove descarta la malla entera.
+
+      ugv_bridge/              Codigo Python (los nodos):
+        driver_movimiento.py   Clase RMD_Hardware: capa de abstraccion sobre el
+                               hardware de motores + IMU. Tres modos de motor y
+                               dos fuentes de IMU (detalle en 2.1).
+        flipper_node.py        Nodo del bucle de control a 100 Hz. Publica
+                               /joint_states e /imu/data_raw.
+        protocolo_can.py       Empaquetado y desempaquetado de las tramas CAN del
+                               protocolo RMD. Lo usan tanto el driver como el
+                               emulador: unica fuente del protocolo.
+        motor_emulator.py      Emula los 8 motores al otro lado del bus. Proceso
+                               independiente, sin ROS.
+        pi3hat_backend.py      Todo lo que depende de la libreria moteus_pi3hat:
+                               transporte CAN por la placa y lector de la IMU.
+        track_odometry_node.py Odometria de orugas: /joint_states -> /odom
+                               (cinematica diferencial skid-steer).
+        kinematic_guardian.py  Filtro de seguridad que impide que los flippers
+                               choquen entre si.
+        pi3hat_imu_node.py     Nodo suelto de prueba de la IMU fisica.
+        can_monitor.py         Monitor grafico del trafico del bus CAN.
+        gui_a_comandos.py      Puente: sliders de joint_state_publisher_gui hacia
+                               /cmd_flippers.
+        teleop_flippers.py     Mover los flippers a mano desde los paneles Teleop
+                               de Foxglove: integra la velocidad que manda el
+                               panel mientras se mantiene pulsado y publica el
+                               angulo en /cmd_flippers. Existe porque ningun
+                               panel de Foxglove puede publicar desde un slider.
+
+      launch/
+        view.launch.py         Posar el robot con sliders. Sin locomocion.
+        flipper.launch.py      Sistema completo: driver + odometria +
+                               robot_state_publisher (+ EKF, RViz y puente
+                               Foxglove opcionales). Es el que se lanza en la
+                               Raspberry para correr con IMU fisica.
+        can_sim.launch.py      Emulador de motores + el sistema completo en modo
+                               CAN. Es el launch de uso diario hoy.
+        can_view.launch.py     Sliders + visor (Foxglove por defecto, RViz
+                               opcional) sobre el bus CAN real.
+        can_studio.launch.py   can_sim + monitor grafico del bus.
+        pi_view.launch.py      Version headless para correr en la Raspberry Pi.
+
+      scripts/
+        setup_vcan.sh          Crea y levanta la interfaz virtual vcan0.
+        generar_urdf.sh        Regenera ugv.urdf desde el .xacro y el YAML.
+        verificar_pi3hat.py    Diagnostico de la placa, a correr en la Raspberry
+                               ANTES de energizar los motores. Comprueba solo,
+                               y sin motores, con que ID de arbitraje sale la
+                               trama al bus.
+        tesis_lanzar.sh        Arranque de la tesis en la Raspberry. UN solo
+                               script: el nombre con el que se lo invoca decide
+                               el modo (compilar_simu / compilar_real).
+        instalar_comandos.sh   Deja esos dos comandos en ~/.local/bin.
+
+      test/
+        test_driver_bus.py     10 pruebas del ciclo de bus con los motores
+                               emulados conectados en memoria.
+        test_copyright.py, test_flake8.py, test_pep257.py  (boilerplate de ROS)
+
+
+1.4 TECNOLOGIAS USADAS
+-----------------------
+
+    ROS 2 Jazzy Jalisco       framework base
+    Python 3.12               lenguaje de todos los nodos
+    xacro                     generacion del URDF desde el YAML de geometria
+    robot_state_publisher     publica el TF interno del robot desde el URDF
+    robot_localization        filtro de Kalman extendido (EKF)
+    tf2_ros                   arbol de transformadas
+    python-can (SocketCAN)    bus CAN real y virtual (vcan0)
+    moteus_pi3hat             acceso a la placa pi3hat (buses CAN + IMU)
+    foxglove_bridge           visualizacion remota (puerto 8765)
+    RViz 2                    visualizacion local
+    PySide6 (Qt)              interfaz de la estacion de control
+    Gymnasium / numpy         entorno de aprendizaje por refuerzo (opcional)
+    stable-baselines3         carga del modelo PPO entrenado (opcional)
+    pytest                    pruebas automatizadas
+
+Entorno de compilacion: contenedor distrobox llamado "ros2" (Ubuntu 24.04 con
+ROS 2 Jazzy). El entorno de micromamba NO sirve: le faltan robot_localization,
+foxglove_bridge, rviz2, joint_state_publisher_gui, xacro y python-can.
+
+    distrobox enter ros2
+    source /opt/ros/jazzy/setup.bash
+    colcon build --symlink-install
+    source install/setup.bash
+
+
+1.5 ARQUITECTURA DE DATOS (flujo de topicos y TF)
+--------------------------------------------------
+
+    politica RL / teleoperacion
+        |  /cmd_tracks (4 velocidades)   /cmd_flippers (4 posiciones)
+        v
+    flipper_node  -->  RMD_Hardware  -->  gemelo digital | bus CAN | pi3hat
+        |
+        +--> /joint_states  (estado de los 8 motores)
+        |        |
+        |        +--> track_odometry_node --> /odom --+
+        |        |                                    |
+        |        +--> robot_state_publisher           +--> EKF --> /odometry/filtered
+        |             (TF base_link -> flippers)      |            y TF odom -> base_link
+        |                                             |
+        +--> /imu/data_raw (orientacion + aceleracion)-+
+
+Las dos cadenas de TF son complementarias y no deben pisarse:
+
+    odom --[EKF]--> base_link --[robot_state_publisher]--> flippers, imu_link
+
+Este punto es el que hacia que el modelo 3D se viera "plano" en Foxglove:
+robot_state_publisher solo dibuja la geometria interna del robot, nunca mueve
+base_link dentro del mundo. Quien lo mueve es el EKF.
+
+
+================================================================================
+2. ESTADO ACTUAL / AVANCES REALIZADOS
+================================================================================
+
+2.1 FUNCIONALIDADES IMPLEMENTADAS Y FUNCIONANDO
+------------------------------------------------
+
+DRIVER DE MOTORES (driver_movimiento.py + protocolo_can.py)
+
+  - Clase RMD_Hardware con TRES modos de motor:
+        modo='gemelo'  modelo cinematico en memoria, sin bus ni hardware.
+        modo='can'     tramas CAN reales por SocketCAN (vcan0 con el emulador,
+                       o can0 con un adaptador fisico).
+        modo='pi3hat'  motores reales por los buses CAN de la placa pi3hat.
+  - Los modos 'can' y 'pi3hat' COMPARTEN el ciclo de comunicacion completo: solo
+    cambia el transporte que mueve los bytes. Consecuencia practica importante:
+    lo que hoy se valida contra el emulador es literalmente el mismo codigo que
+    correra contra los motores reales.
+  - Implementacion completa del protocolo RMD V3 (IDs 0x140+id / 0x240+id,
+    comandos 0xA2 velocidad, 0xA4 posicion, 0x92 multivuelta, 0x9C estado,
+    0x81 paro, 0x80 apagado), en un solo archivo compartido con el emulador.
+  - Lectura de posicion multivuelta, necesaria para la odometria (la posicion de
+    una vuelta se enrolla cada 360 grados y no sirve).
+
+  IMPORTANTE: los motores SteadyWin hablan protocolo RMD, NO el protocolo moteus.
+  Por eso la placa pi3hat se usa solo como TRANSPORTE CAN y las tramas las sigue
+  armando protocolo_can.py. Usar moteus.Controller.set_position() habria generado
+  tramas que estos motores ignoran.
+
+WATCHDOG DE SEGURIDAD
+
+  - Contador por motor de ciclos consecutivos sin respuesta. Al superar el umbral
+    (10 ciclos por defecto, o sea 0.1 s a 100 Hz) se envia trama de paro a los 8
+    motores y se fuerzan todos los comandos a cero hasta que el bus se recupere.
+  - Recuperacion automatica, con aviso en el log de ROS al entrar y al salir del
+    fallo.
+  - Motivo: un motor que deja de responder con una velocidad ya aceptada seguiria
+    girando indefinidamente. Es proteccion fisica real.
+  - Al cerrar el nodo se detienen los motores antes de soltar el bus.
+
+FUENTE DE IMU DESACOPLADA DEL MODO DE MOTOR
+
+  - Parametro imu_fuente independiente, con dos valores:
+        'sintetica'    IMU modelada a partir del estado de los motores.
+        'pi3hat_real'  IMU fisica de la placa.
+  - Se combina con cualquier modo de motor. La combinacion que corresponde a la
+    situacion actual (placa montada, motores no llegados) es:
+
+        ros2 launch ugv_bridge can_sim.launch.py imu_fuente:=pi3hat_real
+
+  - Con la IMU real se publica el cuaternion DIRECTO, sin pasar por angulos de
+    Euler: esa conversion degenera cerca de pitch = +/- 90 grados, o sea con el
+    robot apoyado de canto, que en rescate es un caso perfectamente posible.
+  - La rotacion de montaje de la placa es un parametro del YAML
+    (imu_montaje_roll/pitch/yaw), no un numero en el codigo.
+
+IMU SINTETICA COHERENTE
+
+  - No es ruido suelto: el rumbo (yaw) se integra del giro skid-steer de las
+    orugas, de modo que coincide con la odometria; el cabeceo y el alabeo
+    responden a la asimetria de los flippers. Asi el pipeline completo (EKF,
+    RViz, Foxglove, GCS) ve una actitud que refleja el movimiento real.
+
+EMULADOR DE MOTORES (motor_emulator.py)
+
+  - Emula los 8 motores al otro lado del bus, con modelo fisico por motor
+    (lazo de velocidad y lazo de posicion de primer orden) y respuestas de
+    temperatura, torque, velocidad y posicion.
+  - Proceso independiente sin ROS. Se puede depurar el trafico con "candump
+    vcan0" o con el monitor grafico can_monitor.
+
+GEOMETRIA PARAMETRIZADA (una sola fuente de verdad)
+
+  - config/geometria_robot.yaml concentra TODAS las dimensiones fisicas:
+    posicion de los ejes de los motores de flipper, largo del flipper, radio de
+    las ruedas, ancho y offset lateral, dimensiones y masa del chasis, radio y
+    separacion de las orugas, montaje de la IMU y mapa de motores a buses CAN.
+  - Lo consumen sin duplicar un solo numero:
+        ugv.urdf.xacro         (via xacro.load_yaml)
+        kinematic_guardian     (via declare_parameter)
+        track_odometry_node    (radio y ancho de orugas)
+        flipper_node / driver  (IMU sintetica y montaje de la IMU)
+  - Los launch procesan el .xacro en caliente, asi que el modelo 3D no puede
+    quedar desfasado del YAML.
+  - Para actualizar cuando lleguen las medidas reales: editar el YAML, correr
+    "bash src/ugv_bridge/scripts/generar_urdf.sh" y recompilar.
+
+GUARDIAN CINEMATICO (kinematic_guardian.py)
+
+  - Escucha /joint_states_raw (lo que el operador o la IA PIDEN) y publica en
+    /joint_states solo lo que es geometricamente seguro. Si un comando haria
+    chocar el flipper delantero con el trasero del mismo lado, congela ese lado
+    en la ultima pose segura conocida.
+  - Dos pruebas geometricas: interseccion de segmentos (choque frontal) y
+    distancia minima entre segmentos (roce de los cuerpos). Los flippers se
+    modelan como capsulas de radio igual al radio de las ruedas.
+  - Desde la parametrizacion, el umbral es (2 * radio_rueda)^2 en vez de una
+    constante, o sea derivado de la misma geometria que dibuja el URDF.
+
+ODOMETRIA DE ORUGAS (track_odometry_node.py)
+
+  - Convierte /joint_states a nav_msgs/Odometry con modelo skid-steer:
+        v = (v_izq + v_der) / 2          w = (v_der - v_izq) / ancho_orugas
+  - Publica /odom con covarianzas realistas (las orugas patinan, asi que se
+    confia poco en ella; el EKF la corrige con la IMU).
+  - Emite el TF odom -> base_link SOLO cuando el EKF esta apagado. El launch lo
+    ajusta automaticamente.
+
+FUSION SENSORIAL EKF (config/ekf.yaml + robot_localization)
+
+  - Fusiona la velocidad lineal y angular de las orugas con la orientacion 3D
+    completa de la IMU. two_d_mode en false: estima roll y pitch, necesario para
+    terreno irregular.
+  - Publica /odometry/filtered y el TF odom -> base_link. Este TF es lo que hace
+    que el modelo 3D completo se incline en Foxglove y RViz, no solo los
+    flippers por separado.
+  - Validado end-to-end en gemelo digital:
+        reposo                    -> odom->base_link en el origen, RPY ~0
+        flippers delanteros a 1.0 -> pitch -34.4 grados, posicion sin cambios
+        + avanzando               -> x = 1.21 m, z = +0.83 m
+                                     (1.47 * sin(34.4 grados) = 0.83, coherente)
+        /tf                       -> un unico emisor de odom -> base_link
+        arranque completo         -> sin warnings ni errores
+
+MODELO DEL ROBOT (URDF)
+
+  - base_link con malla del chasis y caja de colision, 4 flippers con
+    colision de "ovalo rectangular" (caja central mas una rueda en cada
+    extremo), imu_link y chassis_inertial_link.
+  - Los 4 flippers se generan desde una sola macro de xacro.
+  - Sin warnings de kdl_parser al arrancar robot_state_publisher.
+
+IMU FISICA DEL pi3hat - VERIFICADA CONTRA LA PLACA (12 de agosto de 2026)
+
+  Primera corrida del sistema con hardware real. Con los motores todavia
+  simulados, la IMU de la placa alimenta el EKF y este inclina el modelo 3D.
+  En la Raspberry hay un comando para cada combinacion:
+
+        compilar_simu     motores simulados (gemelo digital) + IMU fisica real
+        compilar_real     motores reales por el pi3hat       + IMU fisica real
+
+  Los dos compilan y lanzan con EKF y puente Foxglove, y antes matan los nodos
+  huerfanos de la corrida anterior (que si no dejan tomado el lock del pi3hat).
+  El equivalente a mano:
+
+        ros2 launch ugv_bridge flipper.launch.py modo:=gemelo \
+            imu_fuente:=pi3hat_real use_ekf:=true use_foxglove:=true
+
+  Lo que quedo comprobado, corriendo TODO en la Raspberry:
+    - La libreria moteus_pi3hat abre la placa y LectorImuPi3Hat lee actitud real
+      (roll, pitch y yaw siguiendo el movimiento de la mano).
+    - /imu/data_raw publica a ~50-70 Hz y /joint_states a 100 Hz.
+    - El EKF emite odom -> base_link con la orientacion medida, que es la cadena
+      que faltaba para que el chasis se incline y no solo los flippers.
+    - imu_fuente es de verdad independiente del modo de motor: 'gemelo' con
+      IMU real funciona.
+
+  El offset de montaje de 180 grados en roll quedo CONFIRMADO y corregido (ver
+  2.2). El pitch sigue pendiente de confirmar con el robot nivelado.
+
+  Nota de despliegue: la IMU se lee por SPI, asi que solo puede abrirla un
+  proceso que corra EN la Raspberry, y el grafo ROS no se puede repartir entre
+  el PC y la Pi (ver 2.4). Con IMU real, todo se lanza en la Pi y el PC solo
+  abre Foxglove contra ws://robotdeteccion.local:8765.
+
+VISUALIZACION
+
+  - foxglove_bridge en el puerto 8765 (view.launch.py, pi_view.launch.py y,
+    desde P6, flipper.launch.py y can_view.launch.py con use_foxglove:=true).
+  - config/ugv_control_v3.json: layout del proyecto con 8 paneles (3D, angulos
+    de flipper, velocidad de orugas, pose del EKF, publicacion de /cmd_flippers
+    y /cmd_tracks, IMU cruda y /rosout).
+  - textures/: las dos texturas que los COLLADA referenciaban y que no estaban
+    en el repositorio. Sin ellas Foxglove descarta la malla entera.
+  - RViz con dos configuraciones: view.rviz (robot fijo, para posarlo con
+    sliders) y flippers.rviz (sistema completo).
+  - Monitor grafico del bus CAN (can_monitor) con panel por motor y log crudo.
+
+TRACK DE NAVEGACION 2D Y RL
+
+  - RobotEnv: entorno de arena 500x500 cm con obstaculos, colisiones, 5
+    telemetros a -90, -45, 0, +45 y +90 grados, recompensa por avanzar sin
+    chocar y penalizacion fuerte por colisionar. API compatible con Gymnasium
+    (entrenable directo con stable-baselines3) y funcional tambien sin gymnasium
+    instalado.
+  - HeuristicBrain: patrulla evitando muros. Funciona hoy.
+  - RLBrain: carga un modelo PPO desde archivo. Sin modelo, va recto (no-op
+    seguro).
+  - sim_node, policy_node y gcs_node operativos como nodos ROS.
+
+PRUEBAS AUTOMATIZADAS
+
+  - test/test_driver_bus.py: 10 pruebas que conectan los motores emulados en
+    memoria al driver, usando el MISMO modelo de motor y las MISMAS funciones de
+    protocolo que motor_emulator. Es decir, se ejercitan bytes de verdad, no un
+    mock del protocolo. Cubren:
+        ida y vuelta del comando de velocidad a las orugas
+        convergencia del comando de posicion de los flippers
+        posicion multivuelta que no se enrolla
+        watchdog detectando un motor mudo y forzando el paro
+        watchdog recuperandose solo
+        paro de los motores al cerrar
+        IMU sintetica siguiendo el movimiento
+        acelerometro nivelado leyendo (0, 0, +9.81)
+        convenciones de signo de actitud segun REP-103
+        validacion temprana de un imu_fuente invalido
+  - Estado: 10 de 10 pasan.
+
+DOCUMENTACION
+
+  - README.md              vision general, paquetes y arquitectura.
+  - COMO_EJECUTAR.md       runbook detallado, incluida la seccion de por que el
+                           modelo se veia plano en Foxglove y como comprobarlo.
+  - DEFENSA_ROS2.txt       preguntas y respuestas de ROS 2 para la defensa.
+  - BITACORA_2026-07-11.txt bitacora de construccion del track de flippers.
+
+
+2.2 PARTES PARCIALMENTE HECHAS O EN PROCESO
+--------------------------------------------
+
+MODO 'pi3hat' - CAMINO DE BUS YA EJERCITADO CONTRA LA PLACA, FALTAN LOS MOTORES
+
+  El codigo esta completo (apertura de la placa, mapa de buses, ciclo de
+  comunicacion, watchdog, cierre limpio). El 12 de agosto de 2026 se ejercito
+  contra la placa REAL, con los motores todavia ausentes, y eso destapo tres
+  fallos que estaban esperando al dia del estreno (ver 2.3, puntos 11 a 13).
+  Corregidos esos, hoy el modo 'pi3hat' arranca, cicla el bus a ritmo estable y
+  degrada como debe cuando nadie contesta: publica /joint_states y el watchdog
+  dispara el paro de emergencia.
+
+  Lo que sigue SIN verificar es lo que necesita motores de verdad:
+    - que el ID que aparece en el bus sea el esperado (0x141 y no otro),
+    - las escalas y el orden de bytes del protocolo (ver 2.4),
+    - el cableado real de cada motor a su bus,
+    - la frecuencia alcanzable con los 8 motores respondiendo. Con el bus mudo
+      el bucle cae a ~18 Hz por los dos timeouts de 25 ms por iteracion; con
+      motores que contestan deberia subir mucho, pero hay que medirlo.
+
+  El punto concreto sin verificar es UNO SOLO y esta aislado en una funcion:
+  como compone la libreria el ID de arbitraje CAN a partir de source y
+  destination (pi3hat_backend._partir_id_arbitraje). Se asume:
+
+        arbitration_id = (source << 8) | destination
+        de modo que para RMD 0x141 -> source = 0x01, destination = 0x41
+
+  Para confirmarlo existe scripts/verificar_pi3hat.py, que se corre en la
+  Raspberry antes de energizar nada y reporta la API real de la libreria.
+
+ACELERACION LINEAL DE LA IMU REAL
+
+  Falta confirmar experimentalmente si el firmware del pi3hat expone aceleracion
+  lineal cruda o solo el cuaternion de orientacion. El codigo lo resuelve por
+  introspeccion en la primera lectura y lo recuerda; si no hay dato crudo,
+  proyecta la gravedad segun la orientacion, igual que el modelo sintetico. Las
+  dos rutas estan escritas, pero solo la del fallback esta probada.
+
+OFFSET DE MONTAJE DE LA IMU - ROLL RESUELTO, PITCH PENDIENTE
+
+  ROLL: confirmado y corregido el 12 de agosto de 2026. Con el sistema corriendo
+  en la Raspberry, el TF odom -> base_link daba roll cercano a -179.9 grados, es
+  decir el modelo 3D de cabeza. imu_montaje_roll paso a 3.14159265 en el YAML y
+  el mismo TF pasa a dar roll cercano a 0.07 grados.
+
+  PITCH: pendiente. En esa misma corrida el pitch se mantenia entre 22 y 29
+  grados. Falta determinar si la placa estaba fisicamente inclinada o si es un
+  segundo offset de montaje. Procedimiento: con el robot NIVELADO y quieto,
+  /imu/data_raw debe dar roll y pitch cercanos a cero; lo que sobre, va a
+  imu_montaje_pitch.
+
+  Ojo: todo esto hay que rehacerlo cuando el pi3hat quede en su posicion
+  DEFINITIVA del chasis.
+
+MODO 'can' SOBRE vcan0 - PENDIENTE DE PRUEBA DE REGRESION
+
+  El ciclo de comunicacion se reestructuro para que 'can' y 'pi3hat' compartan
+  codigo. La logica quedo cubierta por las 10 pruebas automatizadas, pero falta
+  la prueba de regresion sobre la interfaz vcan0 real con motor_emulator, porque
+  crear esa interfaz requiere permisos de root:
+
+        sudo bash src/ugv_bridge/scripts/setup_vcan.sh
+
+  (La interfaz no persiste entre reinicios del PC.)
+
+COVARIANZAS DEL EKF
+
+  Estan puestas y son razonables, pero son estimaciones, no medidas. Marcadas con
+  TODO(caracterizar) en el codigo. Habria que medir el error real de la odometria
+  recorriendo una distancia conocida sobre el terreno de trabajo, y el ruido de
+  la IMU en reposo.
+
+TENSORES DE INERCIA DEL URDF
+
+  Los valores de masa e inercia del chasis y los flippers son estimaciones
+  puestas a mano, marcadas con TODO(CAD). Hoy no afectan nada porque no hay
+  simulacion dinamica (Gazebo), pero habria que reemplazarlos por los del modelo
+  CAD real antes de cualquier simulacion fisica.
+
+PAQUETE ugv_msgs
+
+  Existe el esqueleto (package.xml y CMakeLists.txt) pero esta DESACTIVADO con un
+  archivo COLCON_IGNORE y no contiene ninguna definicion .msg. Hoy todo se
+  comunica con mensajes estandar de ROS.
+
+ESTACION DE CONTROL (ugv_gcs)
+
+  Funciona como esqueleto: dibuja un mini-mapa 2D con la pose y el barrido de
+  telemetros. Esta explicitamente pensado como base sobre la que enchufar la GUI
+  completa, que todavia no esta.
+
+INTEGRACION RL
+
+  RLBrain esta escrito y carga modelos PPO, pero no hay ningun modelo entrenado
+  en este repositorio; el entrenamiento vive en el repositorio hermano
+  TesisT60doc. Sin modelo, el cerebro va recto.
+
+
+2.3 BUGS CONOCIDOS Y RESUELTOS RECIENTEMENTE
+---------------------------------------------
+
+Estos ya estan corregidos, pero se dejan documentados porque explican decisiones
+del codigo actual:
+
+  1. GEOMETRIA DUPLICADA Y DESINCRONIZADA. El largo del flipper valia 0.265 en
+     kinematic_guardian y 0.26 en el URDF. El guardian protegia contra una
+     geometria distinta a la dibujada. Resuelto con el YAML unico; unificado
+     en 0.26.
+
+  2. COVARIANZAS EN CERO. flipper_node y track_odometry_node publicaban todas las
+     covarianzas en cero. Para robot_localization una varianza nula significa
+     "medicion perfecta" (internamente la satura a 1e-9), asi que el filtro
+     seguia ciegamente una odometria que patina, que es justo lo que se queria
+     corregir fusionandola con la IMU. Esta era la causa real de que el EKF no
+     funcionara, no la falta del nodo de odometria.
+
+  3. pi3hat_imu_node PUBLICABA COVARIANZA -1. En ROS eso significa "este dato no
+     existe", con lo cual robot_localization DESCARTABA la orientacion y jamas
+     habria inclinado el modelo 3D.
+
+  4. ACELERACION LINEAL DESESTABILIZANDO EL EKF. Con ax y ay en la fusion, el
+     robot se hundia aproximadamente 1 metro en Z mientras avanzaba en linea
+     recta. El acelerometro de este robot, quieto o a velocidad casi constante,
+     solo ve la gravedad; cualquier desajuste transitorio entre la orientacion
+     estimada y la real deja un residuo que el filtro integra a velocidad y de
+     ahi a posicion, sin ninguna medicion que lo corrija. Se saco de la fusion.
+
+  5. DOS INVERSIONES DE SIGNO EN EL MODELO SINTETICO.
+     a) El acelerometro devolvia los ejes X e Y con el signo cambiado. Un
+        acelerometro mide FUERZA ESPECIFICA, no el vector gravedad: nivelado da
+        (0, 0, +9.81). La Z estaba bien, y por eso en reposo no se notaba.
+     b) Subir los flippers delanteros daba pitch positivo. En REP-103 el eje Y
+        apunta a la IZQUIERDA, asi que pitch positivo es morro ABAJO (al reves de
+        la convencion aeronautica). Ninguna de las dos se notaba con la IMU
+        sintetica sola, pero habrian aparecido como una contradiccion al cambiar
+        a imu_fuente:=pi3hat_real.
+
+  6. ENTRY POINTS ROTOS EN setup.py. Se registraban dos modulos inexistentes
+     (gui_a_vcan y dummy_rl_controller) y NO se registraban gui_a_comandos ni
+     can_monitor, que si existen y son invocados por can_view.launch.py y
+     can_studio.launch.py: esos dos launch estaban rotos.
+
+  7. WARNING DE kdl_parser en cada arranque de robot_state_publisher, porque
+     base_link tenia inercia y KDL no admite inercia en el link raiz. Resuelto
+     moviendo masa e inercia a un chassis_inertial_link hijo. NO se uso el truco
+     habitual del dummy_link como raiz, porque eso dejaria base_link con dos
+     padres (dummy_link y el odom -> base_link del EKF) y el arbol TF quedaria
+     invalido.
+
+  8. LAS CAPABILITIES DE python3 BORRAN LD_LIBRARY_PATH (en la Raspberry). A
+     /usr/bin/python3.12 se le pusieron capabilities para hablar con el pi3hat
+     sin root (cap_dac_override, cap_sys_rawio). Efecto colateral: glibc trata a
+     python3 como binario de EJECUCION SEGURA y le borra LD_LIBRARY_PATH. Como
+     ros2 run y ros2 launch son scripts de Python, todo nodo lanzado por ahi
+     hereda la variable vacia. Sintoma: robot_state_publisher moria con
+     "cannot open shared object file: liburdfdom_model.so.4.0" sobre un archivo
+     que existia y con permisos correctos, mientras que el MISMO binario
+     ejecutado a mano funcionaba. Resuelto agregando
+     /opt/ros/jazzy/lib/aarch64-linux-gnu a /etc/ld.so.conf.d/ros2-jazzy.conf
+     (el archivo ya existia con solo /opt/ros/jazzy/lib) y corriendo ldconfig.
+
+  9. NODOS HUERFANOS DEJANDO TOMADO EL LOCK DEL pi3hat. Cuando un launch falla a
+     medias (por ejemplo por una dependencia que falta), los nodos que alcanzaron
+     a arrancar SOBREVIVEN. Como la placa admite un solo dueño del bus SPI, el
+     siguiente intento muere con "pi3hat: could not acquire lock, is another
+     process running?", que parece un problema de la placa y no lo es. Antes de
+     relanzar: pkill -9 -f "lib/ugv_bridge/".
+
+ 10. DEPENDENCIAS DECLARADAS PERO NO INSTALADAS EN LA RASPBERRY. Faltaban
+     ros-jazzy-xacro y ros-jazzy-robot-localization, ambas en el package.xml.
+     Sin xacro el launch ni siquiera construye la descripcion del robot; sin
+     robot_localization no hay EKF y por lo tanto el chasis no se inclina.
+
+Los tres siguientes son del modo 'pi3hat' y se encontraron el 12 de agosto de
+2026 ejercitando el bus contra la placa REAL, con los motores aun sin llegar.
+Los tres habrian aparecido el dia del estreno, disfrazados de "los motores no
+responden" o de "se colgo el robot":
+
+ 11. TODAS LAS TRAMAS SALIAN CON ID 0x0. El backend repartia el ID del protocolo
+     RMD en los campos source/destination de moteus, asumiendo que la libreria
+     lo recomponia como (source << 8) | destination. En la version instalada, una
+     Command con raw=True NO compone nada: emite command.arbitration_id tal cual,
+     y ese campo vale 0 por defecto. Comprobado pidiendole a la propia libreria
+     que convirtiera la trama: salia con arbitration_id = 0x0. Ningun motor
+     habria contestado jamas. Ahora se asigna el ID completo y directo.
+
+ 12. EL BUS SE ELEGIA CON UN CAMPO EQUIVOCADO. Al pasar el numero de bus en
+     `channel`, la libreria reventaba en el primer ciclo con "'int' object has
+     no attribute 'parent'": ahi espera un objeto de dispositivo. El campo
+     correcto es `bus`, que la libreria resuelve por su cuenta.
+
+ 13. UN BUS MUDO COLGABA EL BUCLE DE CONTROL PARA SIEMPRE. Con force_can_check y
+     ningun motor contestando, el ciclo del pi3hat no volvia NUNCA (mas de 5
+     minutos medidos en una sola llamada). Consecuencia: no se publicaba
+     /joint_states, el watchdog no llegaba a contar y no habia paro de
+     emergencia; el nodo parecia vivo pero estaba congelado. Un solo motor sin
+     energizar bastaba. Resuelto con un techo de tiempo por ciclo
+     (TIMEOUT_CICLO_MIN_S = 25 ms): al vencer se devuelve "sin respuestas", que
+     es justo lo que el watchdog sabe manejar. Verificado que la placa se
+     recupera ciclo tras ciclo tras cancelar la corrutina.
+
+
+2.4 LIMITACIONES ACTUALES
+--------------------------
+
+  1. LOS DOS TRACKS NO CONVIVEN. ugv_sim (navegacion 2D) publica /odom y el TF
+     odom -> base_link, exactamente igual que track_odometry_node y el EKF del
+     track de hardware. Si se lanzan juntos, base_link queda con dos padres y el
+     arbol TF se vuelve invalido. Hoy se ejecutan por separado a proposito.
+
+  2. LOS DOS MUNDOS NO COMPARTEN ESCALA NI MODELO. RobotEnv trabaja en
+     centimetros, con un robot circular de 12 cm de radio en una arena plana de
+     5x5 m, sin flippers. El track de hardware trabaja en metros con el robot real
+     de orugas y flippers. La politica de RL decide sobre /cmd_vel; el hardware
+     escucha /cmd_tracks y /cmd_flippers. Falta el nodo que traduzca entre ambos.
+
+  3. UN SOLO DUENO DE LA PLACA pi3hat. El bus SPI admite un unico proceso. Si
+     corren a la vez flipper_node con imu_fuente:=pi3hat_real y el nodo suelto
+     pi3hat_imu_node, el segundo en arrancar fallara. Son alternativos. Ojo
+     tambien con los nodos huerfanos de un launch fallido (ver 2.3, punto 9).
+
+  4. EL GRAFO ROS NO SE PUEDE REPARTIR ENTRE EL PC Y LA RASPBERRY. Se intento el
+     esquema hibrido (IMU real publicando desde la Pi, resto del sistema en el
+     PC) y no funciono: el multicast de discovery de DDS no cruza la wifi
+     (comprobado con ros2 multicast send/receive) y el descubrimiento unicast por
+     ROS_STATIC_PEERS tampoco engancho. Ademas el ufw del PC descarta el trafico
+     DDS entrante. Por eso, con IMU real, TODO corre en la Raspberry y el PC solo
+     abre Foxglove contra el puente. El argumento imu_externa de flipper.launch.py
+     quedo implementado para el dia que esto se resuelva: desvia la IMU sintetica
+     a /imu/sintetica en vez de apagarla, dejando /imu/data_raw libre para la
+     real y permitiendo comparar las dos.
+
+  5. EL GUARDIAN DE COLISIONES NO ESTA EN EL CAMINO DE LOS COMANDOS. Esto
+     importa MUCHO cuando lleguen los motores. kinematic_guardian filtra
+     /joint_states_raw -> /joint_states, es decir la POSE QUE SE DIBUJA, y solo
+     lo lanzan view.launch.py y pi_view.launch.py. Los comandos reales viajan
+     por otro camino: /cmd_flippers -> flipper_node -> motores, y ahi el
+     guardian no aparece. flipper.launch.py, que es el que mueve hardware, ni
+     siquiera lo levanta. Ademas on_cmd_flippers acepta cualquier valor sin
+     limitar. Resultado: hoy nada impide mandar una pose que haga chocar el
+     flipper delantero con el trasero del mismo lado. Antes de energizar los
+     motores hay que decidir si el guardian se mueve al camino de comandos
+     (/cmd_flippers_raw -> /cmd_flippers) o si flipper_node aplica los limites.
+
+  6. LA IMU SINTETICA ES UN MODELO DEMOSTRATIVO. El cabeceo y el alabeo se
+     derivan de la asimetria de los flippers con una ganancia fija y saturacion
+     en 0.6 rad. Sirve para que el pipeline vea una actitud coherente, pero no
+     modela el contacto real con el terreno.
+
+  7. LA ODOMETRIA DE ORUGAS PATINA POR DISENO. En un robot de orugas el
+     deslizamiento es grande, sobre todo al girar. De ahi las covarianzas altas.
+     Sin una referencia absoluta (GPS, SLAM, marcadores) la pose derivara sin
+     limite en trayectos largos.
+
+  8. YAW SIN REFERENCIA ABSOLUTA. No hay magnetometro fiable en uso, asi que el
+     rumbo deriva. El EKF lo suaviza pero no lo corrige.
+
+  9. EL PROTOCOLO CAN NO SE HA CONTRASTADO CON EL MANUAL OFICIAL. protocolo_can.py
+     implementa el protocolo RMD V3 estandar, que es el que clonan estos drivers,
+     pero las escalas, el orden de bytes y los IDs de respuesta llevan un
+     TODO(manual) pendiente de verificar contra la documentacion de SteadyWin.
+ 10. CALIDAD DE CODIGO HEREDADA. flake8 reporta 216 hallazgos en el repositorio
+     (mayormente docstrings faltantes, espacios en blanco al final de linea y
+     orden de imports). El codigo nuevo esta limpio, pero el linter no esta
+     integrado en CI y las pruebas de ament (test_flake8, test_pep257) fallarian
+     si se ejecutaran.
+ 11. FALTAN DEPENDENCIAS DECLARADAS. ugv_gcs usa nav_msgs y PySide6 sin
+     declararlos en su package.xml; ugv_policy usa numpy sin declararlo. Funciona
+     porque estan instalados, pero rosdep no los instalaria en una maquina nueva.
+ 12. LA INTERFAZ vcan0 NO PERSISTE entre reinicios del PC y requiere root para
+     crearse, asi que hay que ejecutar setup_vcan.sh en cada arranque antes de
+     usar el modo 'can'.
+ 13. FALTA docs/TROUBLESHOOTING_PI3HAT.md. Se referencia en las notas de trabajo
+     (permisos de sistema del pi3hat ya resueltos) pero no esta commiteado en el
+     repositorio.
+
+
+================================================================================
+3. PROXIMOS PASOS / TRABAJO FUTURO
+================================================================================
+
+3.1 TAREAS PENDIENTES INMEDIATAS (antes de que lleguen los motores)
+--------------------------------------------------------------------
+
+  1. Correr la prueba de regresion del modo 'can' sobre vcan0 con el emulador,
+     para cerrar el refactor del ciclo de bus:
+         sudo bash src/ugv_bridge/scripts/setup_vcan.sh
+         ros2 launch ugv_bridge can_sim.launch.py use_ekf:=true
+
+  2. Correr scripts/verificar_pi3hat.py en la Raspberry Pi. De las tres cosas que
+     confirma, una ya quedo despejada el 12 de agosto: la libreria moteus_pi3hat
+     abre la placa y la IMU se lee. Siguen abiertas las otras dos: si la IMU
+     entrega aceleracion cruda, y como se compone el ID de arbitraje CAN.
+
+  3. Fijar imu_montaje_pitch. El roll ya quedo resuelto (3.14159265, placa
+     montada invertida). Falta medir el pitch con el robot NIVELADO y quieto:
+     en la corrida del 12 de agosto se mantenia entre 22 y 29 grados y no se
+     pudo distinguir si era inclinacion fisica u offset de montaje. Rehacerlo
+     igualmente cuando el pi3hat quede en su posicion definitiva.
+
+  4. Validar en Foxglove que el modelo 3D se inclina al mover el robot fisico.
+     El TF odom -> base_link YA refleja la orientacion real medida (verificado
+     con tf2_echo el 12 de agosto); lo que falta es la confirmacion visual en el
+     panel 3D, con Display frame = odom.
+
+  5. Contrastar protocolo_can.py con el manual oficial de SteadyWin: escalas de
+     velocidad y posicion, orden de bytes, IDs de respuesta y constante de torque
+     KT_NM_POR_A (hoy vale 1.0, que es un valor de relleno).
+
+  6. Commitear docs/TROUBLESHOOTING_PI3HAT.md. Ya hay material concreto que hoy
+     solo vive en COMO_EJECUTAR.md y en la seccion 2.3 de este documento: los
+     permisos SPI, las capabilities de python3 que borran LD_LIBRARY_PATH y su
+     arreglo en ld.so.conf.d, los nodos huerfanos que dejan tomado el lock de la
+     placa, y las dependencias que faltaban en la Raspberry (ros-jazzy-xacro y
+     ros-jazzy-robot-localization).
+
+  7. Fusionar la rama feature/parametrizacion-geometria a main tras revision.
+
+
+3.2 TAREAS AL LLEGAR LOS MOTORES
+---------------------------------
+
+  0. ANTES DE ENERGIZAR NADA: poner el guardian de colisiones en el camino de
+     los COMANDOS, o limitar los angulos en flipper_node. Hoy no hay nada que
+     impida mandar una pose que estrelle el flipper delantero contra el trasero
+     (ver 2.4, punto 5). Es la unica tarea de esta lista que puede romper
+     hardware si se saltea, y por eso va primero.
+
+  1. Confirmar el cableado real de los 8 motores a los buses del pi3hat y
+     ajustar mapa_buses en config/geometria_robot.yaml. El default asumido es
+     orugas en el bus 1 y flippers en el bus 2.
+
+  2. Configurar los IDs 1 a 8 en cada driver de motor antes de conectarlos todos
+     al mismo bus.
+
+  3. Sondear los 8 motores con "verificar_pi3hat.py --motores" (usa una trama de
+     solo lectura, no mueve nada) antes de comandar movimiento. El script ya
+     comprueba solo, y sin motores, con que ID de arbitraje sale la trama al bus.
+
+  3b. Medir la frecuencia real del bucle con los 8 motores respondiendo. Con el
+     bus mudo son ~18 Hz (dos timeouts de 25 ms por iteracion); con motores
+     deberia acercarse a los 100 Hz nominales. Si no llega, revisar el punto 6
+     de 3.4 (dos intercambios por ciclo) antes que subir la frecuencia.
+
+  4. Medir el radio efectivo de las orugas y la separacion real entre ellas, y
+     actualizar radio_oruga y ancho_orugas en el YAML. Son los dos parametros de
+     los que depende toda la odometria.
+
+  5. Tomar las medidas reales del chasis y los flippers y volcarlas al YAML.
+     Despues: bash scripts/generar_urdf.sh && colcon build.
+
+  6. Caracterizar el ruido real y ajustar las covarianzas del EKF y de la IMU.
+
+  7. Calibrar los limites de corriente y torque de los motores, y anadir
+     proteccion por sobretemperatura (el protocolo ya lee la temperatura de cada
+     motor, pero nadie actua sobre ese dato todavia).
+
+  8. Definir y probar el comportamiento en caso de perdida de comunicacion con la
+     estacion de control, no solo con los motores.
+
+
+3.3 FEATURES PLANEADAS
+-----------------------
+
+  1. PUENTE ENTRE LOS DOS TRACKS. Un nodo que traduzca /cmd_vel (lo que produce
+     la politica de RL) a /cmd_tracks y /cmd_flippers (lo que consume el
+     hardware), aplicando cinematica diferencial inversa. Es la pieza que falta
+     para que la IA pueda conducir el robot real.
+
+  2. UNIFICAR EL ENTORNO DE SIMULACION. Hacer que RobotEnv trabaje en metros y
+     con la geometria real del robot (leida del mismo geometria_robot.yaml), en
+     vez de un robot circular de 12 cm en una arena de centimetros.
+
+  3. FLIPPERS EN LA POLITICA DE RL. Hoy el espacio de acciones es discreto de
+     tamano 3 (izquierda, recto, derecha) y no controla los flippers, que son
+     precisamente lo que distingue a este robot. Ampliar observacion (anadir
+     actitud y posicion de flippers) y espacio de acciones.
+
+  4. SLAM O REFERENCIA ABSOLUTA para corregir la deriva de la odometria. Con un
+     LiDAR real, slam_toolbox encajaria directamente sobre el /scan que ya se
+     publica.
+
+  5. GUI COMPLETA DE LA ESTACION DE CONTROL, sobre el esqueleto de ugv_gcs:
+     video, telemetria de los 8 motores, estado de la IMU, mando de flippers y
+     alarmas del watchdog.
+
+  6. ACTIVAR ugv_msgs con mensajes propios para telemetria compacta de los 8
+     motores (hoy se usa JointState, que no lleva temperatura ni corriente).
+
+  7. GRABACION DE ROSBAGS de las pruebas para el analisis de la tesis.
+
+  8. SENSORES EXTRA QUE YA ESTAN MODELADOS EN RobotEnv PERO NO EXPUESTOS A ROS:
+     sense_audio, sense_thermal y lidar_scan existen en el entorno pero sim_node
+     solo publica los 5 telemetros. Son utiles para la tarea de rescate.
+
+
+3.4 MEJORAS TECNICAS SUGERIDAS
+-------------------------------
+
+REFACTORS
+
+  1. Meter kinematic_guardian en la cadena de flipper.launch.py. Hoy el guardian
+     solo corre en view.launch.py y pi_view.launch.py; en el sistema completo
+     flipper_node publica /joint_states directo y NO pasa por el filtro de
+     seguridad. Habria que remapear la salida del driver a /joint_states_raw y
+     dejar que el guardian publique /joint_states, de modo que la proteccion
+     contra choques de flippers valga tambien con el hardware real.
+
+  2. Unificar los topicos de IMU. Hoy conviven /imu/data (nodo suelto de prueba)
+     e /imu/data_raw (driver). Documentado, pero es una fuente de confusion.
+
+  3. Extraer el transporte SocketCAN a una clase con la misma interfaz que
+     TransportePi3Hat. Hoy el modo 'can' se despacha con un if dentro del driver;
+     con las dos clases simetricas, el driver quedaria sin ramas por modo.
+
+  4. Sacar los parametros del modelo de IMU sintetica (GANANCIA_PITCH,
+     GANANCIA_ROLL, INCLINACION_MAX) a parametros ROS, para poder ajustarlos sin
+     recompilar.
+
+OPTIMIZACIONES
+
+  5. El bucle de control corre a 100 Hz. Para RL determinista conviene subir a
+     200 Hz y afinar QoS y prioridad de CPU del proceso.
+
+  6. El ciclo actual hace DOS intercambios por iteracion (comandar y leer
+     multivuelta). Evaluar si el protocolo permite obtener la posicion
+     multivuelta en la misma respuesta del comando, lo que reduciria a la mitad
+     el trafico del bus.
+
+  7. En modo 'can' la comunicacion es pregunta-respuesta motor por motor, o sea 16
+     esperas por ciclo. Con hardware real sobre un adaptador CAN fisico esto
+     podria no alcanzar los 100 Hz; medir y, si hace falta, pasar a envio en
+     rafaga con recoleccion posterior.
+
+TESTS FALTANTES
+
+  8. No hay ninguna prueba de kinematic_guardian. Es codigo de SEGURIDAD y es el
+     mas facil de probar: es geometria pura, sin ROS ni hardware. Deberia haber
+     casos de flippers cruzados, flippers rozando, poses seguras en los limites y
+     verificacion de que se congela la ultima pose segura.
+
+  9. No hay pruebas de protocolo_can.py. Un test de ida y vuelta (empaquetar y
+     desempaquetar cada tipo de trama, comprobando que el valor sobrevive) daria
+     mucha seguridad de cara al hardware real.
+
+ 10. No hay pruebas de track_odometry_node: avanzar recto, girar en el sitio y
+     comprobar la pose integrada resultante.
+
+ 11. No hay pruebas de integracion de los launch (comprobar que cada uno arranca
+     y publica los topicos esperados).
+
+ 12. Integrar pytest en un CI de GitHub Actions, para que las 10 pruebas
+     existentes se ejecuten en cada push.
+
+CALIDAD Y MANTENIMIENTO
+
+ 13. Completar los metadatos de los package.xml: description, license y
+     maintainer siguen con "TODO" en varios paquetes.
+
+ 14. Declarar las dependencias que faltan: nav_msgs y PySide6 en ugv_gcs, numpy
+     en ugv_policy.
+
+ 15. Decidir que hacer con ugv_msgs: definir los mensajes propios o eliminar el
+     paquete. Un paquete con COLCON_IGNORE y sin contenido solo genera dudas.
+
+ 16. Anadir un archivo LICENSE al repositorio.
+
+ 17. Limpiar progresivamente los 216 hallazgos de flake8 y activar las pruebas de
+     ament_flake8 y ament_pep257 en CI, aunque sea por paquete.
+
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

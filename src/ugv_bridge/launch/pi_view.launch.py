@@ -9,15 +9,21 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.substitutions import Command
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('ugv_bridge')
-    urdf_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf')
 
-    with open(urdf_path, 'r') as f:
-        robot_description = f.read()
+    # Geometría: única fuente de verdad (URDF + guardián de colisiones + IMU).
+    geometria_yaml = os.path.join(pkg_share, 'config', 'geometria_robot.yaml')
+    xacro_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf.xacro')
+    robot_description = ParameterValue(
+        Command(['xacro ', xacro_path, ' geometria:=', geometria_yaml]),
+        value_type=str,
+    )
 
     return LaunchDescription([
         Node(
@@ -42,11 +48,13 @@ def generate_launch_description():
             executable='kinematic_guardian',
             name='kinematic_guardian',
             output='screen',
+            parameters=[geometria_yaml],
         ),
         Node(
             package='ugv_bridge',
             executable='pi3hat_imu',
             name='pi3hat_imu_node',
             output='screen',
+            parameters=[geometria_yaml],
         ),
     ])

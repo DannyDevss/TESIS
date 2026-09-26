@@ -15,9 +15,14 @@ corregir. Por eso este nodo publica sólo el mensaje, **no** el TF odom->base_li
 (ese lo emite el EKF cuando está activo; ver `config/ekf.yaml`).
 
 Parámetros:
-    wheel_radius  (double, 0.05) radio efectivo de la oruga/rueda motriz (m).
-    track_width   (double, 0.30) separación entre orugas izq/der (m).
+    radio_oruga   (double, 0.05) radio efectivo de la oruga/rueda motriz (m).
+    ancho_orugas  (double, 0.30) separación entre orugas izq/der (m).
     publish_tf    (bool, false)  si true, emite TF odom->base_link (usar SÓLO sin EKF).
+
+Los dos primeros salen de config/geometria_robot.yaml (única fuente de verdad de
+la geometría, compartida con el URDF y el guardián de colisiones). Antes se
+llamaban wheel_radius/track_width; se renombraron para que coincidan con las
+claves del YAML y no haya dos nombres para el mismo número.
 """
 import math
 
@@ -32,6 +37,22 @@ from tf2_ros import TransformBroadcaster
 ORUGAS_IZQ = ['track_fl', 'track_rl']
 ORUGAS_DER = ['track_fr', 'track_rr']
 
+# Covarianzas de la odometría de orugas.
+#
+# NO pueden quedar en cero: robot_localization interpreta una varianza nula como
+# "medición perfecta" (internamente la satura a 1e-9), y el EKF pasa a seguir
+# ciegamente una odometría que PATINA, que es justo lo que se quería corregir
+# fusionándola con la IMU.
+#
+# Los valores reflejan que unas orugas resbalan bastante: se confía poco en ellas.
+# TODO(caracterizar): medir el error real recorriendo una distancia conocida sobre
+# el terreno de trabajo y ajustar.
+VAR_VEL_LINEAL = 0.05      # (m/s)^2   ~0.22 m/s de sigma
+VAR_VEL_ANGULAR = 0.10     # (rad/s)^2 ~0.32 rad/s de sigma
+VAR_POSE_XY = 0.10         # m^2       la pose integrada deriva sin límite
+VAR_POSE_YAW = 0.20        # rad^2
+VAR_NO_OBSERVADO = 1e6     # z, roll, pitch: este nodo no los estima
+
 
 def yaw_to_quat(yaw):
     q = Quaternion()
@@ -44,11 +65,11 @@ class TrackOdometryNode(Node):
     def __init__(self):
         super().__init__('track_odometry_node')
 
-        self.declare_parameter('wheel_radius', 0.05)
-        self.declare_parameter('track_width', 0.30)
+        self.declare_parameter('radio_oruga', 0.05)
+        self.declare_parameter('ancho_orugas', 0.30)
         self.declare_parameter('publish_tf', False)
-        self.r = self.get_parameter('wheel_radius').value
-        self.track_width = self.get_parameter('track_width').value
+        self.r = self.get_parameter('radio_oruga').value
+        self.track_width = self.get_parameter('ancho_orugas').value
         self.publish_tf = self.get_parameter('publish_tf').value
 
         # Pose integrada (frame odom).
@@ -103,6 +124,22 @@ class TrackOdometryNode(Node):
         odom.pose.pose.orientation = yaw_to_quat(self.yaw)
         odom.twist.twist.linear.x = v
         odom.twist.twist.angular.z = w
+
+        # Diagonales de las 6x6 (orden x, y, z, roll, pitch, yaw), fila-mayor.
+        odom.pose.covariance[0] = VAR_POSE_XY        # x
+        odom.pose.covariance[7] = VAR_POSE_XY        # y
+        odom.pose.covariance[14] = VAR_NO_OBSERVADO  # z
+        odom.pose.covariance[21] = VAR_NO_OBSERVADO  # roll
+        odom.pose.covariance[28] = VAR_NO_OBSERVADO  # pitch
+        odom.pose.covariance[35] = VAR_POSE_YAW      # yaw
+
+        odom.twist.covariance[0] = VAR_VEL_LINEAL     # vx
+        odom.twist.covariance[7] = VAR_NO_OBSERVADO   # vy (skid-steer: no hay)
+        odom.twist.covariance[14] = VAR_NO_OBSERVADO  # vz
+        odom.twist.covariance[21] = VAR_NO_OBSERVADO  # vroll
+        odom.twist.covariance[28] = VAR_NO_OBSERVADO  # vpitch
+        odom.twist.covariance[35] = VAR_VEL_ANGULAR   # vyaw
+
         self.odom_pub.publish(odom)
 
         if self.tf is not None:

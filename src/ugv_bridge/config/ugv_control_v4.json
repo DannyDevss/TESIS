@@ -1,0 +1,1105 @@
+{
+  "configById": {
+    "3D!ugv3d": {
+      "layers": {
+        "5cc727aa-815b-4f5d-b1fd-7ef8f44446d4": {
+          "instanceId": "5cc727aa-815b-4f5d-b1fd-7ef8f44446d4",
+          "layerId": "foxglove.Grid",
+          "label": "Suelo",
+          "visible": true,
+          "frameLocked": true,
+          "order": 1,
+          "size": 10,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "cameraState": {
+        "perspective": true,
+        "distance": 2.2,
+        "phi": 68,
+        "thetaOffset": -145,
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.05,
+        "far": 5000
+      },
+      "followMode": "follow-none",
+      "followTf": "odom",
+      "fixedFrame": "odom",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/robot_description": {
+          "visible": true,
+          "fallbackColor": "#bfc4cc"
+        }
+      },
+      "synchronize": false,
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "Publish!f_plano": {
+      "topicName": "/cmd_flippers",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Plano  0°",
+      "buttonTooltip": "Los 4 flippers alineados con el chasis.",
+      "buttonColor": "#4a5058",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    0.0,\n    0.0,\n    0.0,\n    0.0\n  ]\n}"
+    },
+    "Publish!f_45": {
+      "topicName": "/cmd_flippers",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Los 4 a 45°",
+      "buttonTooltip": "0.785 rad en los cuatro flippers.",
+      "buttonColor": "#3f7d54",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    0.785,\n    0.785,\n    0.785,\n    0.785\n  ]\n}"
+    },
+    "Publish!f_morro": {
+      "topicName": "/cmd_flippers",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Morro arriba",
+      "buttonTooltip": "Delanteros a 90°. El chasis cabecea con pitch NEGATIVO (REP-103).",
+      "buttonColor": "#2f6f9f",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    1.5708,\n    1.5708,\n    0.0,\n    0.0\n  ]\n}"
+    },
+    "Publish!f_plegado": {
+      "topicName": "/cmd_flippers",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Plegado  -180°",
+      "buttonTooltip": "Los 4 replegados. Es la pose en que arranca la GUI de sliders.",
+      "buttonColor": "#7a5230",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    -3.1416,\n    -3.1416,\n    -3.1416,\n    -3.1416\n  ]\n}"
+    },
+    "Publish!t_avanzar": {
+      "topicName": "/cmd_tracks",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Avanzar",
+      "buttonTooltip": "5 rad/s (~0.25 m/s con r=0.05 m). ES PERSISTENTE.",
+      "buttonColor": "#3f7d54",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    5.0,\n    5.0,\n    5.0,\n    5.0\n  ]\n}"
+    },
+    "Publish!t_retroceder": {
+      "topicName": "/cmd_tracks",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Retroceder",
+      "buttonTooltip": "-5 rad/s. ES PERSISTENTE: para detenerlo hay que pulsar PARAR orugas.",
+      "buttonColor": "#8a6d3b",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    -5.0,\n    -5.0,\n    -5.0,\n    -5.0\n  ]\n}"
+    },
+    "Publish!t_stop": {
+      "topicName": "/cmd_tracks",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "PARAR orugas",
+      "buttonTooltip": "La velocidad NO se resetea sola: hay que mandar ceros.",
+      "buttonColor": "#b03a3a",
+      "advancedView": false,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    0.0,\n    0.0,\n    0.0,\n    0.0\n  ]\n}"
+    },
+    "Publish!f_libre": {
+      "topicName": "/cmd_flippers",
+      "datatype": "std_msgs/msg/Float64MultiArray",
+      "buttonText": "Enviar flippers",
+      "buttonTooltip": "Valor libre en radianes, orden fl, fr, rl, rr.",
+      "buttonColor": "#5865f2",
+      "advancedView": true,
+      "value": "{\n  \"layout\": {\n    \"dim\": [],\n    \"data_offset\": 0\n  },\n  \"data\": [\n    0.0,\n    0.0,\n    0.0,\n    0.0\n  ]\n}"
+    },
+    "Plot!flippers": {
+      "title": "Ángulos de flippers (rad)",
+      "paths": [
+        {
+          "value": "/joint_states.position[4]",
+          "label": "fl",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/joint_states.position[5]",
+          "label": "fr",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/joint_states.position[6]",
+          "label": "rl",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/joint_states.position[7]",
+          "label": "rr",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "Plot!orugas": {
+      "title": "Velocidad de orugas (rad/s)",
+      "paths": [
+        {
+          "value": "/joint_states.velocity[0]",
+          "label": "fl",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/joint_states.velocity[1]",
+          "label": "fr",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/joint_states.velocity[2]",
+          "label": "rl",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/joint_states.velocity[3]",
+          "label": "rr",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30,
+      "sidebarDimension": 240
+    },
+    "Plot!pose_ekf": {
+      "title": "Pose del EKF — vigilar que Z no derive",
+      "paths": [
+        {
+          "value": "/odometry/filtered.pose.pose.position.x",
+          "label": "x (m)",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/odometry/filtered.pose.pose.position.y",
+          "label": "y (m)",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/odometry/filtered.pose.pose.position.z",
+          "label": "z (m)",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 60,
+      "sidebarDimension": 240
+    },
+    "RawMessages!imu": {
+      "topicPath": "/imu/data_raw",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "expansion": "all"
+    },
+    "RosOut!rosout": {
+      "topicToRender": "/rosout",
+      "searchTerms": [],
+      "minLogLevel": 1
+    },
+    "Gauge!track_fl_position": {
+      "path": "/joint_states.position[0]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!track_fl_velocity": {
+      "path": "/joint_states.velocity[0]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!track_fl_effort": {
+      "path": "/joint_states.effort[0]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!track_fl": {
+      "panels": [
+        {
+          "panelId": "Gauge!track_fl_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_fl_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_fl_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "track_fl"
+    },
+    "Gauge!track_fr_position": {
+      "path": "/joint_states.position[1]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!track_fr_velocity": {
+      "path": "/joint_states.velocity[1]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!track_fr_effort": {
+      "path": "/joint_states.effort[1]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!track_fr": {
+      "panels": [
+        {
+          "panelId": "Gauge!track_fr_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_fr_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_fr_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "track_fr"
+    },
+    "Gauge!track_rl_position": {
+      "path": "/joint_states.position[2]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!track_rl_velocity": {
+      "path": "/joint_states.velocity[2]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!track_rl_effort": {
+      "path": "/joint_states.effort[2]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!track_rl": {
+      "panels": [
+        {
+          "panelId": "Gauge!track_rl_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_rl_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_rl_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "track_rl"
+    },
+    "Gauge!track_rr_position": {
+      "path": "/joint_states.position[3]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!track_rr_velocity": {
+      "path": "/joint_states.velocity[3]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!track_rr_effort": {
+      "path": "/joint_states.effort[3]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!track_rr": {
+      "panels": [
+        {
+          "panelId": "Gauge!track_rr_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_rr_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!track_rr_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "track_rr"
+    },
+    "Gauge!flipper_fl_position": {
+      "path": "/joint_states.position[4]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!flipper_fl_velocity": {
+      "path": "/joint_states.velocity[4]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!flipper_fl_effort": {
+      "path": "/joint_states.effort[4]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!flipper_fl": {
+      "panels": [
+        {
+          "panelId": "Gauge!flipper_fl_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_fl_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_fl_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "flipper_fl"
+    },
+    "Gauge!flipper_fr_position": {
+      "path": "/joint_states.position[5]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!flipper_fr_velocity": {
+      "path": "/joint_states.velocity[5]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!flipper_fr_effort": {
+      "path": "/joint_states.effort[5]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!flipper_fr": {
+      "panels": [
+        {
+          "panelId": "Gauge!flipper_fr_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_fr_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_fr_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "flipper_fr"
+    },
+    "Gauge!flipper_rl_position": {
+      "path": "/joint_states.position[6]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!flipper_rl_velocity": {
+      "path": "/joint_states.velocity[6]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!flipper_rl_effort": {
+      "path": "/joint_states.effort[6]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!flipper_rl": {
+      "panels": [
+        {
+          "panelId": "Gauge!flipper_rl_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_rl_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_rl_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "flipper_rl"
+    },
+    "Gauge!flipper_rr_position": {
+      "path": "/joint_states.position[7]",
+      "style": "dial",
+      "minValue": -3.1416,
+      "maxValue": 3.1416,
+      "tickInterval": 0.5,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Posición (rad)"
+    },
+    "Gauge!flipper_rr_velocity": {
+      "path": "/joint_states.velocity[7]",
+      "style": "dial",
+      "minValue": -10.0,
+      "maxValue": 10.0,
+      "tickInterval": 2.0,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Velocidad (rad/s)"
+    },
+    "Gauge!flipper_rr_effort": {
+      "path": "/joint_states.effort[7]",
+      "style": "dial",
+      "minValue": -1.0,
+      "maxValue": 1.0,
+      "tickInterval": 0.25,
+      "showTicks": false,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "Esfuerzo (Nm)"
+    },
+    "Stack!flipper_rr": {
+      "panels": [
+        {
+          "panelId": "Gauge!flipper_rr_position",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_rr_velocity",
+          "size": 0.3333333333333333
+        },
+        {
+          "panelId": "Gauge!flipper_rr_effort",
+          "size": 0.3333333333333333
+        }
+      ],
+      "foxglovePanelTitle": "flipper_rr"
+    },
+    "Tab!motores": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "Conectados",
+          "layout": "DiagnosticSummary!motores"
+        },
+        {
+          "title": "Orugas",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 50.0,
+            "first": {
+              "direction": "row",
+              "splitPercentage": 50.0,
+              "first": "Stack!track_fl",
+              "second": "Stack!track_fr"
+            },
+            "second": {
+              "direction": "row",
+              "splitPercentage": 50.0,
+              "first": "Stack!track_rl",
+              "second": "Stack!track_rr"
+            }
+          }
+        },
+        {
+          "title": "Flippers",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 50.0,
+            "first": {
+              "direction": "row",
+              "splitPercentage": 50.0,
+              "first": "Stack!flipper_fl",
+              "second": "Stack!flipper_fr"
+            },
+            "second": {
+              "direction": "row",
+              "splitPercentage": 50.0,
+              "first": "Stack!flipper_rl",
+              "second": "Stack!flipper_rr"
+            }
+          }
+        },
+        {
+          "title": "Estado",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 40,
+            "first": "Plot!pose_ekf",
+            "second": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": "RawMessages!imu",
+              "second": "RosOut!rosout"
+            }
+          }
+        }
+      ]
+    },
+    "Teleop!fl_fl": {
+      "topic": "/teleop/flipper_fl",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "fl · delantero izq.   ↑ sube  ↓ baja  (← → fino)"
+    },
+    "Teleop!fl_fr": {
+      "topic": "/teleop/flipper_fr",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "fr · delantero der.   ↑ sube  ↓ baja  (← → fino)"
+    },
+    "Teleop!fl_rl": {
+      "topic": "/teleop/flipper_rl",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "rl · trasero izq.     ↑ sube  ↓ baja  (← → fino)"
+    },
+    "Teleop!fl_rr": {
+      "topic": "/teleop/flipper_rr",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "rr · trasero der.     ↑ sube  ↓ baja  (← → fino)"
+    },
+    "Teleop!fl_todos": {
+      "topic": "/teleop/flippers",
+      "publishRate": 8,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1.0
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1.0
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": 0.25
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": -0.25
+      },
+      "stopButton": {
+        "field": "linear-x",
+        "value": 0.0
+      },
+      "autoSendStopOnRelease": true,
+      "foxglovePanelTitle": "LOS CUATRO A LA VEZ   ↑ suben  ↓ bajan"
+    },
+    "Tab!control": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "Mover a mano",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 70,
+            "first": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 50,
+                "first": "Teleop!fl_fl",
+                "second": "Teleop!fl_fr"
+              },
+              "second": {
+                "direction": "row",
+                "splitPercentage": 50,
+                "first": "Teleop!fl_rl",
+                "second": "Teleop!fl_rr"
+              }
+            },
+            "second": "Teleop!fl_todos"
+          }
+        },
+        {
+          "title": "Poses fijas",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 40,
+            "first": {
+              "direction": "row",
+              "splitPercentage": 50.0,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 50.0,
+                "first": "Publish!f_plano",
+                "second": "Publish!f_45"
+              },
+              "second": {
+                "direction": "row",
+                "splitPercentage": 50.0,
+                "first": "Publish!f_morro",
+                "second": "Publish!f_plegado"
+              }
+            },
+            "second": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 33.4,
+                "first": "Publish!t_avanzar",
+                "second": {
+                  "direction": "row",
+                  "splitPercentage": 50.0,
+                  "first": "Publish!t_retroceder",
+                  "second": "Publish!t_stop"
+                }
+              },
+              "second": "Publish!f_libre"
+            }
+          }
+        }
+      ]
+    },
+    "DiagnosticSummary!motores": {
+      "topicToRender": "/diagnostics",
+      "sortByLevel": true,
+      "pinnedIds": [],
+      "hardwareIdFilter": ""
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 56,
+    "first": {
+      "direction": "column",
+      "splitPercentage": 60,
+      "first": "3D!ugv3d",
+      "second": {
+        "direction": "row",
+        "splitPercentage": 50,
+        "first": "Plot!flippers",
+        "second": "Plot!orugas"
+      }
+    },
+    "second": {
+      "direction": "column",
+      "splitPercentage": 46,
+      "first": "Tab!control",
+      "second": "Tab!motores"
+    }
+  }
+}

@@ -12,6 +12,11 @@
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
+  <!-- /diagnostics: qué motores están cableados, cuáles responden y
+       cuáles siguen fuera de lazo cerrado (panel Diagnostics de Foxglove). -->
+  <depend>diagnostic_msgs</depend>
+  <!-- El URDF se genera desde urdf/ugv.urdf.xacro + config/geometria_robot.yaml. -->
+  <exec_depend>xacro</exec_depend>
   <exec_depend>robot_localization</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>joint_state_publisher_gui</exec_depend>
@@ -19,6 +24,8 @@
   <exec_depend>ros2launch</exec_depend>
   <!-- Modo 'can' del driver + motor_emulator (SocketCAN/vcan0). -->
   <exec_depend>python3-can</exec_depend>
+  <!-- esp32_bridge_node: telemetria/comandos con el ESP32 por puerto serie -->
+  <exec_depend>python3-serial</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

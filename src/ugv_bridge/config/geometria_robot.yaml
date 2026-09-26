@@ -1,0 +1,98 @@
+# geometria_robot.yaml — ÚNICA FUENTE DE VERDAD de las dimensiones físicas del UGV.
+#
+# Cuando lleguen las medidas reales del chasis y los flippers, se edita SOLO este
+# archivo. Lo consumen, sin duplicar ningún número:
+#
+#   urdf/ugv.urdf.xacro     -> vía xacro.load_yaml() (modelo 3D, colisiones, TF)
+#   kinematic_guardian      -> vía declare_parameter (prevención de colisiones)
+#   track_odometry_node     -> radio/ancho de orugas (cinemática diferencial)
+#   flipper_node/driver     -> radio/ancho de orugas (IMU sintética) + montaje IMU
+#
+# Tras editarlo, refrescar el URDF plano (el que usan Foxglove y las herramientas
+# que no procesan xacro):
+#
+#     bash src/ugv_bridge/scripts/generar_urdf.sh
+#
+# Los launch procesan el .xacro en caliente, así que para ellos basta con guardar.
+#
+# La clave "/**" es el comodín de ROS 2: hace que CUALQUIER nodo al que se le pase
+# este archivo reciba estos parámetros. Cada nodo declara solo los que usa; los
+# demás se ignoran. Es lo que permite que un único archivo sirva a xacro y a ROS.
+/**:
+  ros__parameters:
+
+    # ================================================================== #
+    # CHASIS
+    # ================================================================== #
+    chasis_largo: 0.60          # X (m), caja de colisión del cuerpo
+    chasis_ancho: 0.36          # Y (m)
+    chasis_alto: 0.20           # Z (m)
+    chasis_masa: 20.0           # kg
+    chasis_visual_offset_z: -0.04   # ajuste del mesh chassis.dae respecto a base_link
+
+    # ================================================================== #
+    # FLIPPERS
+    # ================================================================== #
+    # Posición del EJE del motor de cada flipper respecto a base_link.
+    # Los signos los pone el URDF/guardián: delanteros +X, traseros -X;
+    # izquierdos +Y, derechos -Y.
+    distancia_motor_x: 0.23     # |X| del eje del motor (m)
+    distancia_motor_y: 0.195    # |Y| del eje del motor (m)
+    distancia_motor_z: -0.03    # Z del eje del motor (m, negativo = bajo base_link)
+
+    # Largo del flipper = distancia entre el eje del motor y el eje de la rueda
+    # de la punta. Es el brazo que usa el guardián de colisiones y el largo de la
+    # caja de colisión del URDF (antes 0.265 en el guardián y 0.26 en el URDF:
+    # inconsistencia real, ahora unificada en un solo número).
+    largo_flipper: 0.26
+    radio_rueda_flipper: 0.09   # radio de las ruedas de ambos extremos (m)
+    ancho_flipper: 0.055        # espesor de la oruga del flipper (Y, m)
+    offset_lateral_flipper: 0.015   # separación lateral del flipper respecto al eje del motor
+    flipper_masa: 0.5           # kg
+
+    # NOTA: el "alto de colisión" (0.18 en el código antiguo) NO se lista aquí a
+    # propósito: es exactamente 2 * radio_rueda_flipper. Derivarlo elimina otra
+    # oportunidad de desincronización. El guardián usa (2*radio)^2 como umbral,
+    # que es la suma de radios de las dos cápsulas — geométricamente correcto.
+
+    # ================================================================== #
+    # ORUGAS PRINCIPALES
+    # ================================================================== #
+    radio_oruga: 0.05           # radio efectivo de la rueda motriz (m)
+    ancho_orugas: 0.30          # separación entre orugas izquierda y derecha (m)
+
+    # ================================================================== #
+    # CABLEADO DE LOS MOTORES A LOS BUSES CAN DEL pi3hat
+    # ================================================================== #
+    # No es geometría, pero vive aquí para mantener la promesa de "un solo
+    # archivo que editar" cuando cambie el hardware.
+    #
+    # Bus del pi3hat de cada motor, EN ORDEN DE ID 1..8:
+    #   IDs 1-4 = orugas (track_fl, track_fr, track_rl, track_rr)
+    #   IDs 5-8 = flippers (flipper_fl, flipper_fr, flipper_rl, flipper_rr)
+    #
+    # DOS MOTORES POR BUS, emparejados por esquina (la oruga y el flipper de la
+    # misma esquina comparten bus, que es donde cae el empalme del arnés):
+    #   bus 1 -> 1 track_fl + 5 flipper_fl   bus 3 -> 3 track_rl + 7 flipper_rl
+    #   bus 2 -> 2 track_fr + 6 flipper_fr   bus 4 -> 4 track_rr + 8 flipper_rr
+    #
+    # TODO(hardware): confirmar contra el cableado físico con
+    #   python3 src/ugv_bridge/scripts/verificar_pi3hat.py --motores
+    mapa_buses: [1, 2, 3, 4, 1, 2, 3, 4]
+
+    # ================================================================== #
+    # MONTAJE DE LA IMU (pi3hat)
+    # ================================================================== #
+    # Rotación de la placa pi3hat respecto a base_link (rad). Se aplica a la
+    # lectura de la IMU real para llevarla al marco del robot (REP-103:
+    # X adelante, Y izquierda, Z arriba).
+    #
+    # Offset de ~180° en roll CONFIRMADO con la placa montada (2026-08-12): con el
+    # sistema corriendo en la Raspberry, el EKF daba roll≈-179.9° en odom->base_link,
+    # o sea el modelo 3D de cabeza. La placa está montada invertida y esta rotación
+    # lo compensa.
+    # Sigue pendiente confirmarlo con el pi3hat en su posición DEFINITIVA del
+    # chasis: con el robot nivelado, /imu/data_raw debe dar roll≈0, pitch≈0.
+    imu_montaje_roll: 3.14159265
+    imu_montaje_pitch: 0.0
+    imu_montaje_yaw: 0.0
