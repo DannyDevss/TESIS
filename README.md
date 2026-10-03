@@ -17,7 +17,6 @@ de escritorio y entrenamiento RL) vive en el repo hermano
 | **ugv_core** | Entorno del robot (`robot_env`) compartido con la simulación | — |
 | **ugv_sim** | Simulación 2D: publica `/scan`, `/odom`, TF; escucha `/cmd_vel` | `sim_node` |
 | **ugv_policy** | Cerebro de decisión (heurística / política RL) → `/cmd_vel` | `policy_node` |
-| **ugv_gcs** | Estación de control en tierra (GCS) mínima, mini-mapa 2D | `gcs_node` |
 | **ugv_msgs** | Mensajes propios (desactivado con `COLCON_IGNORE`) | — |
 
 ## Arquitectura del track de flippers (`ugv_bridge`)
