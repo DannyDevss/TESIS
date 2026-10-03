@@ -1,14 +1,17 @@
-# TesisT60 — Workspace ROS 2 del UGV de rescate
+# TESIS — Workspace ROS 2 del UGV de rescate (RMD)
 
 Workspace de **ROS 2 Jazzy** para un vehículo terrestre no tripulado (UGV) de
 rescate con **orugas y flippers articulados**. Incluye el puente con el hardware
 de motores, la odometría, la fusión sensorial (EKF), el modelo del robot (URDF)
 y una simulación de navegación 2D con política de aprendizaje por refuerzo (RL).
 
-La documentación de la tesis (memoria, presentación, guion de defensa, simulación
-de escritorio y entrenamiento RL) vive en el repo hermano
-[TesisT60doc](https://github.com/ThanquolElGris/TesisT60doc).
-
+**NOTA 03-10-2026** Para ejecutar nuevos programas:
+```
+cd ~/TESIS && git checkout PRINCIPAL
+git apply /ruta/solo-foxglove.patch
+colcon build --packages-select ugv_bridge && source install/setup.bash
+ros2 launch ugv_bridge can_studio.launch.py
+```
 ## Paquetes (`src/`)
 
 | Paquete | Rol | Ejecutables |
