@@ -1,3 +1,5 @@
+<!-- ENCABEZADO DEL PROYECTO -->
+
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
@@ -6,26 +8,31 @@
   <description>TODO: Package description</description>
   <maintainer email="benja@todo.todo">benja</maintainer>
   <license>TODO: License declaration</license>
-
-  <depend>rclpy</depend>
-  <depend>sensor_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>std_msgs</depend>
-  <depend>nav_msgs</depend>
-  <!-- /diagnostics: qué motores están cableados, cuáles responden y
-       cuáles siguen fuera de lazo cerrado (panel Diagnostics de Foxglove). -->
-  <depend>diagnostic_msgs</depend>
+  
+<!-- FIN DE ENCABEZADO -->
+  
+  <!-- DEPENDENCIAS -->
+  
+  <depend>rclpy</depend>                    <!-- Dependencia para correr códigos python dentro de ROS -->
+  <depend>sensor_msgs</depend>              <!-- Dependencia para CAN a formato msgs -->
+  <depend>geometry_msgs</depend>            <!-- Dependencia que define estrucutura de datos 3D y cuaterniones -->
+  <depend>std_msgs</depend>                 <!-- Dependencia estándar de mensajes simples I/O -->
+  <depend>nav_msgs</depend>                 <!-- Dependencia para estimación de movimiento y mapeo -->
+  <depend>diagnostic_msgs</depend>          <!-- /diagnostics: qué motores están cableados, cuáles responden y
+                                             cuáles siguen fuera de lazo cerrado (panel Diagnostics de Foxglove). -->
+  <!-- FIN DE DEPENDENCIAS -->
+  
   <!-- El URDF se genera desde urdf/ugv.urdf.xacro + config/geometria_robot.yaml. -->
-  <exec_depend>xacro</exec_depend>
-  <exec_depend>robot_localization</exec_depend>
-  <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>joint_state_publisher_gui</exec_depend>
-  <exec_depend>rviz2</exec_depend>
-  <exec_depend>ros2launch</exec_depend>
-  <!-- Modo 'can' del driver + motor_emulator (SocketCAN/vcan0). -->
-  <exec_depend>python3-can</exec_depend>
-  <!-- esp32_bridge_node: telemetria/comandos con el ESP32 por puerto serie -->
-  <exec_depend>python3-serial</exec_depend>
+  
+  <exec_depend>xacro</exec_depend>                     <!-- Preprocesador de archivos XML para conocer la orientación 
+                                                        de cada pieza del robot-->
+  <exec_depend>robot_localization</exec_depend>        <!-- Llama EKF ayudando para conocer posición exacta ante 
+                                                        patinaje y deslizamientos -->
+  <exec_depend>robot_state_publisher</exec_depend>     <!-- Publica lo preprocesado por xacro para verlo en entornos 3D -->
+  <exec_depend>joint_state_publisher_gui</exec_depend> <!-- Depurador de cinemática para visualización 3D -->
+  <exec_depend>ros2launch</exec_depend>                <!--
+  <exec_depend>python3-can</exec_depend>               <!-- Modo 'can' del driver + motor_emulator (SocketCAN/vcan0). --> 
+  <exec_depend>python3-serial</exec_depend>            <!-- esp32_bridge_node: telemetria/comandos con el ESP32 por puerto serie -->
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
