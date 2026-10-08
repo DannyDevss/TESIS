@@ -241,6 +241,8 @@ class PoliticaFlippers(Node):
         self.create_subscription(
             Float64MultiArray, '/cmd_tracks', self.on_cmd_tracks, 10)
         self.create_subscription(Bool, '/politica/activa', self.on_activa, 10)
+        self.create_subscription(
+            Float64MultiArray, '/cmd_flippers', self.on_cmd_flippers, 10)
 
         self.create_timer(self.dt, self.ciclo)
         self.create_timer(1.0, self.publicar_diagnostico)
@@ -292,6 +294,22 @@ class PoliticaFlippers(Node):
     def on_cmd_tracks(self, msg: Float64MultiArray):
         if len(msg.data) >= 4:
             self.cmd_oruga = [float(v) for v in msg.data[:4]]
+
+    def on_cmd_flippers(self, msg: Float64MultiArray):
+        """Mientras la política no comanda, la consigna es la de quien sí lo hace.
+
+        Sin esto, en modo observación la consigna se quedaba en la pose del
+        arranque y `flipper_*/error` medía la distancia a esa foto vieja en vez
+        del error de seguimiento real: la señal táctil no servía justo cuando
+        se conduce con Teleop para estudiarla. Activa, se ignora: lo que llega
+        es el eco de sus propios comandos.
+        """
+        if self.activa and self.motor is not None:
+            return
+        if len(msg.data) < contrato.ACC_DIM:
+            return
+        self.consigna = [float(v) for v in msg.data[:contrato.ACC_DIM]]
+        self.consigna_sembrada = True
 
     def on_activa(self, msg: Bool):
         nueva = bool(msg.data)

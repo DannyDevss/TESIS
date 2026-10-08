@@ -442,6 +442,14 @@ class CanMonitor(Node):
     # ------------------------------------------------------------------ #
     def cerrar(self):
         self._parar.set()
+        # Esperar al lector antes de cerrar el bus: si se cierra con el hilo
+        # dentro de recv(), python-can lanza CanOperationError (que no es
+        # OSError) y el Ctrl+C deja un traceback en la consola. ros2 launch
+        # reenvía el SIGINT, así que un segundo Ctrl+C puede caer aquí mismo.
+        try:
+            self._hilo.join(timeout=1.0)
+        except KeyboardInterrupt:
+            pass
         try:
             self.bus.shutdown()
         except Exception:

@@ -72,9 +72,12 @@ class TeleopFlippers(Node):
         self.velocidad_pedida = {n: 0.0 for n in FLIPPERS}
         self.t_ultimo_cmd = {n: 0.0 for n in FLIPPERS}
         self.hay_pose = False
+        self.moviendo = False
 
         self.pub = self.create_publisher(Float64MultiArray, '/cmd_flippers', 10)
         self.create_subscription(JointState, '/joint_states', self.on_joint_states, 10)
+        self.create_subscription(
+            Float64MultiArray, '/cmd_flippers', self.on_cmd_flippers, 10)
 
         for n in FLIPPERS:
             self.create_subscription(
@@ -114,6 +117,22 @@ class TeleopFlippers(Node):
             grados = {n: round(math.degrees(self.objetivo[n]), 1) for n in FLIPPERS}
             self.get_logger().info(f'Pose inicial tomada de /joint_states: {grados} grados')
 
+    def on_cmd_flippers(self, msg: Float64MultiArray):
+        """Sigue la última consigna de /cmd_flippers, la publique quien la publique.
+
+        No es el único que manda en los flippers: politica_flippers también
+        publica ahí. Como este nodo publica los CUATRO valores aunque solo se
+        mueva uno, si se quedara con su objetivo viejo, el primer toque de un
+        botón devolvería de golpe los otros tres a donde estaban antes de que
+        la política los moviera. Mientras se está moviendo se ignora: lo que
+        llega entonces es el eco de sus propios mensajes, que va un paso atrás.
+        """
+        if self.moviendo or len(msg.data) < len(FLIPPERS):
+            return
+        for i, n in enumerate(FLIPPERS):
+            self.objetivo[n] = float(msg.data[i])
+        self.hay_pose = True
+
     def on_teleop(self, msg: Twist, nombres):
         ahora = time.monotonic()
         for n in nombres:
@@ -137,6 +156,7 @@ class TeleopFlippers(Node):
                 continue
             self.objetivo[n] += v * self.velocidad * self.dt
             movio = True
+        self.moviendo = movio
 
         # Se publica SOLO cuando algo cambió: flipper_node retiene el último
         # comando, así que repetirlo a 30 Hz sería ruido en el bus para nada.
