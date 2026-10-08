@@ -27,6 +27,7 @@ Parámetros:
     imprimir      (bool, true)   eco de roll/pitch/yaw en la terminal.
 """
 import math
+import signal
 
 import rclpy
 from rclpy.node import Node
@@ -120,6 +121,9 @@ def main(args=None):
     except KeyboardInterrupt:
         print('\nTest finalizado.')
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.lector.cerrar()
         node.destroy_node()
         if rclpy.ok():

@@ -5,6 +5,8 @@ from sensor_msgs.msg import BatteryState
 from std_msgs.msg import Bool
 import serial
 import json
+import signal
+
 
 class ESP32BridgeNode(Node):
     def __init__(self):
@@ -79,6 +81,9 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.ser.close()
         node.destroy_node()
         rclpy.shutdown()

@@ -37,6 +37,8 @@ Publica:
 Los sliders de las orugas (track_*) se ignoran: son juntas de velocidad y un slider
 de posición no tiene sentido para comandarlas (usar /cmd_tracks como siempre).
 """
+import signal
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -76,6 +78,9 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

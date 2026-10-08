@@ -43,6 +43,7 @@ parámetro aparte, hoy se puede correr con motores emulados e IMU física real:
 Para RL determinista, subir a 200 Hz y afinar QoS/prioridad de CPU.
 """
 import math
+import signal
 
 import rclpy
 from rclpy.exceptions import ParameterUninitializedException
@@ -400,6 +401,9 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.robot.cerrar()
         node.destroy_node()
         if rclpy.ok():

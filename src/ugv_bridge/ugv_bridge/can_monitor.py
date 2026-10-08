@@ -82,6 +82,7 @@ Requisitos: python3-can y la interfaz arriba (`scripts/setup_vcan.sh` para vcan0
 import argparse
 import collections
 import math
+import signal
 import sys
 import threading
 import time
@@ -444,12 +445,8 @@ class CanMonitor(Node):
         self._parar.set()
         # Esperar al lector antes de cerrar el bus: si se cierra con el hilo
         # dentro de recv(), python-can lanza CanOperationError (que no es
-        # OSError) y el Ctrl+C deja un traceback en la consola. ros2 launch
-        # reenvía el SIGINT, así que un segundo Ctrl+C puede caer aquí mismo.
-        try:
-            self._hilo.join(timeout=1.0)
-        except KeyboardInterrupt:
-            pass
+        # OSError) y el Ctrl+C deja un traceback en la consola.
+        self._hilo.join(timeout=1.0)
         try:
             self.bus.shutdown()
         except Exception:
@@ -477,6 +474,9 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         nodo.cerrar()
         nodo.destroy_node()
         if rclpy.ok():

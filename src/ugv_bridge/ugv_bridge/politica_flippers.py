@@ -95,6 +95,7 @@ En la Raspberry:  pip3 install onnxruntime
 import json
 import math
 import os
+import signal
 
 import numpy as np
 import rclpy
@@ -424,6 +425,9 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         nodo.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

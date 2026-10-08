@@ -25,6 +25,7 @@ llamaban wheel_radius/track_width; se renombraron para que coincidan con las
 claves del YAML y no haya dos nombres para el mismo número.
 """
 import math
+import signal
 
 import rclpy
 from rclpy.node import Node
@@ -161,6 +162,9 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

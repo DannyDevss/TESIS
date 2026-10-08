@@ -40,6 +40,7 @@ PARÁMETROS
                            sin parar.
 """
 import math
+import signal
 import time
 
 import rclpy
@@ -174,6 +175,9 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         nodo.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

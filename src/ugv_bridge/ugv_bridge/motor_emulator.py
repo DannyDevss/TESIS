@@ -31,6 +31,7 @@ Depurar el tráfico desde otra terminal:  candump vcan0
 """
 import argparse
 import random
+import signal
 import sys
 import time
 
@@ -227,6 +228,9 @@ def main(argv=None):
     except KeyboardInterrupt:
         print('\n[EMULADOR] Cerrando bus.')
     finally:
+        # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
+        # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         bus.shutdown()
 
 
