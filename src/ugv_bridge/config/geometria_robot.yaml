@@ -4,7 +4,6 @@
 # archivo. Lo consumen, sin duplicar ningún número:
 #
 #   urdf/ugv.urdf.xacro     -> vía xacro.load_yaml() (modelo 3D, colisiones, TF)
-#   kinematic_guardian      -> vía declare_parameter (prevención de colisiones)
 #   track_odometry_node     -> radio/ancho de orugas (cinemática diferencial)
 #   flipper_node/driver     -> radio/ancho de orugas (IMU sintética) + montaje IMU
 #

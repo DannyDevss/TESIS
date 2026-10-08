@@ -16,7 +16,7 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         # *.json = layouts de Foxglove (ugv_control_v4.json).
         (os.path.join('share', package_name, 'config'),
-            glob('config/*.yaml') + glob('config/*.rviz') + glob('config/*.json')),
+            glob('config/*.yaml') + glob('config/*.json')),
         # El .xacro es la fuente; el .urdf plano es el generado (scripts/generar_urdf.sh).
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
         (os.path.join('share', package_name, 'scripts'),
@@ -49,10 +49,11 @@ setup(
             # (fallaban al ejecutarse). Los reemplazan los dos de abajo, que sí existen.
             'gui_a_comandos = ugv_bridge.gui_a_comandos:main',
             'can_monitor = ugv_bridge.can_monitor:main',
-            'kinematic_guardian = ugv_bridge.kinematic_guardian:main',
             'pi3hat_imu = ugv_bridge.pi3hat_imu_node:main',
             'teleop_flippers = ugv_bridge.teleop_flippers:main',
             'esp32_bridge = ugv_bridge.esp32_bridge_node:main',
+            # Inferencia en la Raspberry del modelo .onnx entrenado en el PC.
+            'politica_flippers = ugv_bridge.politica_flippers:main',
         ],
     },
 )

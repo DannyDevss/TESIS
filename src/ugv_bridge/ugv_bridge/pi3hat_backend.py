@@ -60,9 +60,38 @@ CAN-FD vs CAN 2.0 CLÁSICO (la otra causa de "ningún motor responde")
 ---------------------------------------------------------------------------
 Por defecto moteus_pi3hat deja los buses configurados para motores moteus:
 CAN-FD con bitrate switch, 1 Mbps de arbitraje y 5 Mbps de datos. Los SteadyWin
-hablan CAN 2.0A clásico a 1 Mbps y descartan las tramas FD como error de forma,
-así que no contestan NUNCA — dando el mismo síntoma que un cable suelto. Ver
-`config_can_clasico()`, que apaga FD/BRS antes de abrir la placa.
+hablan CAN 2.0A clásico a 500 kbps y descartan las tramas FD como error de
+forma, así que no contestan NUNCA — dando el mismo síntoma que un cable suelto.
+Ver `config_can_clasico()`, que apaga FD/BRS y baja el bitrate antes de abrir
+la placa.
+
+EL BITRATE NO SE REPARTE ENTRE LOS MOTORES DE UN MISMO BUS
+---------------------------------------------------------------------------
+Esto se malinterpreta con facilidad y cuesta horas de depuración. El bitrate es
+una propiedad del BUS, no de cada nodo: todos los nodos de un puerto señalizan
+exactamente a la misma velocidad o no se entienden. Dos motores en el mismo
+puerto NO corren a 250 kbps cada uno; corren los dos a 500 kbps y lo que
+comparten es TIEMPO en el cable, que se resuelve por arbitraje (el ID más bajo
+gana y el otro reintenta).
+
+O sea: el puerto del pi3hat tiene que ir a 500 kbps exactos, el valor de fábrica
+del GIM6010-8. Configurarlo a 1 Mbps razonando que "cada motor usa la mitad"
+deja el bus mudo, con el síntoma idéntico al de un cable suelto.
+
+Ocupación real con dos motores por bus, que es la del robot:
+
+    por motor  100 tramas/s de encoder (cada 10 ms, de fábrica)
+                10 tramas/s de heartbeat (cada 100 ms, de fábrica)
+               100 tramas/s de comando del host (bucle a 100 Hz)
+               ----
+               210 tramas/s        ->  420 tramas/s por bus (dos motores)
+
+    Una trama estándar de 8 bytes son 111 bits, hasta ~130 con bit stuffing.
+    420 x 130 bits = ~55 kbps sobre 500 kbps  ->  ~11% de ocupación.
+
+Va sobradísimo. El motivo real para emparejar dos motores por bus no es la
+banda, es el arnés: la oruga y el flipper de una misma esquina comparten el
+empalme, y así los cuatro ramales salen cortos e idénticos.
 """
 import asyncio
 import math
@@ -113,7 +142,7 @@ BITRATE_CAN = 500000
 
 
 def config_can_clasico(buses):
-    """{bus: CanConfiguration} para hablar CAN 2.0 CLÁSICO a 1 Mbps.
+    """{bus: CanConfiguration} para hablar CAN 2.0 CLÁSICO a BITRATE_CAN (500 kbps).
 
     POR QUÉ HACE FALTA
     ------------------
@@ -125,7 +154,7 @@ def config_can_clasico(buses):
         slow_bitrate = 1000000    (arbitraje)
         fast_bitrate = 5000000    (fase de datos)
 
-    Los SteadyWin de esta tesis son CAN 2.0A clásico a 1 Mbps: una trama FD no
+    Los SteadyWin de esta tesis son CAN 2.0A clásico a 500 kbps: una trama FD no
     la entienden, la descartan como error de forma y NUNCA contestan. El síntoma
     es "0 de 8 motores responden" aunque el cableado, los IDs y la alimentación
     estén bien.

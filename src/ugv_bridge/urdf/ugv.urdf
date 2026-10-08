@@ -7,7 +7,7 @@
   ugv.urdf.xacro — Modelo del UGV con orugas + 4 flippers.
 
   TODAS las dimensiones salen de config/geometria_robot.yaml (única fuente de
-  verdad, compartida con kinematic_guardian y la odometría). NO escribir números
+  verdad, compartida con la odometría y el URDF). NO escribir números
   de geometría aquí: van en el YAML.
 
   Los 4 flippers son una macro instanciada 4 veces, en vez de 4 bloques copiados.

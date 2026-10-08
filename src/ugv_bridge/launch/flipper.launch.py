@@ -7,7 +7,14 @@ Uso:
     ros2 launch ugv_bridge flipper.launch.py frecuencia_hz:=200.0 modo_simulacion:=true
     ros2 launch ugv_bridge flipper.launch.py modo:=can           # bus vcan0 + emulador
     ros2 launch ugv_bridge flipper.launch.py use_ekf:=true      # + ekf_filter_node
-    ros2 launch ugv_bridge flipper.launch.py use_rviz:=true     # + RViz con el modelo
+    ros2 launch ugv_bridge flipper.launch.py use_foxglove:=false  # sin puente (ya hay uno)
+
+VISUALIZACIÓN: SOLO FOXGLOVE
+----------------------------
+Este launch no abre ninguna ventana. RViz y la GUI de sliders se quitaron a
+propósito: con dos visores vivos había dos fuentes publicando /joint_states y
+/cmd_flippers, y los comandos se pisaban entre sí (ver can_monitor.py). La única
+interfaz es Foxglove, conectado al puente WebSocket del 8765.
 
 Argumentos:
     frecuencia_hz    (100.0) frecuencia del bucle de control de flipper_node.
@@ -19,11 +26,18 @@ Argumentos:
     imu_externa      (false) la IMU real la publica OTRA máquina (la Raspberry con
                              el pi3hat) en /imu/data_raw. Ver abajo.
     use_ekf          (false) si true, arranca robot_localization con config/ekf.yaml.
-    use_rviz         (false) si true, abre RViz con config/flippers.rviz.
-    use_foxglove     (false) si true, levanta el puente WebSocket en el 8765. Es la
-                             única visualización posible cuando esto corre en la
-                             Raspberry (headless): Foxglove se conecta desde otra
-                             máquina a ws://<ip-de-la-pi>:8765.
+    use_politica     (false) arranca politica_flippers, que ejecuta
+                             el modelo .onnx entrenado en el PC. Sin
+                             `modelo_politica` solo observa, no comanda.
+    modelo_politica  ('')    ruta al .onnx en la Raspberry. Su .json de
+                             contrato debe estar al lado, con el mismo nombre.
+    politica_activa  (false) true = comandar desde el arranque. Dejarlo en
+                             false y activar desde Foxglove con /politica/activa.
+    use_rviz         (false) OBSOLETO. Se acepta para no romper llamadas viejas,
+                             pero ya no hace nada: no se abre RViz nunca.
+    use_foxglove     (true)  puente WebSocket en el 8765. Es la ÚNICA
+                             visualización del proyecto; Foxglove se conecta a
+                             ws://<ip-de-la-maquina>:8765.
     use_teleop       (true)  nodo teleop_flippers: mueve los flippers a mano desde
                              los paneles Teleop de Foxglove (ver su docstring).
 
@@ -46,7 +60,7 @@ from typing import List
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.conditions import IfCondition
 from launch.substitutions import (
     Command, LaunchConfiguration, NotSubstitution, PythonExpression)
@@ -60,11 +74,9 @@ def generate_launch_description():
     modo_simulacion = LaunchConfiguration('modo_simulacion')
     can_canal = LaunchConfiguration('can_canal')
     use_ekf = LaunchConfiguration('use_ekf')
-    use_rviz = LaunchConfiguration('use_rviz')
 
     pkg_share = get_package_share_directory('ugv_bridge')
     ekf_config = os.path.join(pkg_share, 'config', 'ekf.yaml')
-    rviz_config = os.path.join(pkg_share, 'config', 'flippers.rviz')
 
     # Geometría: única fuente de verdad, compartida por el URDF y los nodos.
     geometria_yaml = os.path.join(pkg_share, 'config', 'geometria_robot.yaml')
@@ -94,9 +106,16 @@ def generate_launch_description():
         DeclareLaunchArgument('motores_presentes', default_value=''),
         DeclareLaunchArgument('imu_externa', default_value='false'),
         DeclareLaunchArgument('use_ekf', default_value='false'),
+        # Obsoleto: se mantiene declarado para que `use_rviz:=false` de llamadas
+        # antiguas no reviente, pero no enciende nada.
         DeclareLaunchArgument('use_rviz', default_value='false'),
-        DeclareLaunchArgument('use_foxglove', default_value='false'),
+        DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('use_teleop', default_value='true'),
+        # Política de flippers (percepción táctil). Apagada por defecto: mueve
+        # ocho motores de 48 V y no debe arrancar por accidente.
+        DeclareLaunchArgument('use_politica', default_value='false'),
+        DeclareLaunchArgument('modelo_politica', default_value=''),
+        DeclareLaunchArgument('politica_activa', default_value='false'),
 
         # Puente ROS <-> motores (orugas + flippers) + IMU.
         Node(
@@ -162,15 +181,13 @@ def generate_launch_description():
             parameters=[ekf_config],
         ),
 
-        # Visualización (opcional). Requiere: apt install ros-jazzy-rviz2
-        Node(
-            condition=IfCondition(use_rviz),
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_config],
-        ),
+        # RViz: ELIMINADO a propósito. Toda la visualización va por Foxglove.
+        # Si alguien pasa use_rviz:=true (llamadas o scripts viejos), que al
+        # menos se entere de por qué no se abre nada.
+        LogInfo(
+            condition=IfCondition(LaunchConfiguration('use_rviz')),
+            msg='[flipper.launch] use_rviz está OBSOLETO y se ignora: la única '
+                'visualización del proyecto es Foxglove (ws://<host>:8765).'),
 
         # Mover los flippers a mano desde los paneles Teleop de Foxglove.
         # Solo publica cuando llega un comando, así que no estorba a nadie.
@@ -180,6 +197,30 @@ def generate_launch_description():
             executable='teleop_flippers',
             name='teleop_flippers',
             output='screen',
+        ),
+
+        # Inferencia del modelo entrenado en el PC. Solo ejecuta
+        # un .onnx con onnxruntime: en la Raspberry no hay torch ni SB3.
+        #
+        # Sin `modelo_politica` el nodo no comanda nada y se limita a publicar
+        # /politica/observacion, que son las 40 señales táctiles normalizadas.
+        # Eso es lo útil AHORA, antes de entrenar: ver en Foxglove si el error
+        # de seguimiento y el par de cada flipper reaccionan de verdad al pasar
+        # por encima de un obstáculo.
+        #
+        # Y aunque haya modelo, arranca DESACTIVADA: hay que mandar `true` a
+        # /politica/activa para que empiece a comandar.
+        Node(
+            condition=IfCondition(LaunchConfiguration('use_politica')),
+            package='ugv_bridge',
+            executable='politica_flippers',
+            name='politica_flippers',
+            output='screen',
+            parameters=[{
+                'modelo': LaunchConfiguration('modelo_politica'),
+                'activa_al_inicio': ParameterValue(
+                    LaunchConfiguration('politica_activa'), value_type=bool),
+            }],
         ),
 
         # Puente WebSocket para Foxglove Studio, que corre en otra máquina.

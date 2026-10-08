@@ -1,35 +1,83 @@
 #!/usr/bin/env python3
-"""can_monitor.py — Ventana para VER (por motor) y EDITAR (por flipper) el bus CAN.
+"""can_monitor.py — Espía del bus CAN. SOLO LEE. Se mira desde Foxglove.
 
-Nodo ROS 2 + ventana Qt + espía SocketCAN, pensado para verse al lado de RViz.
-Resuelve dos problemas de un candump corriendo:
+QUÉ CAMBIÓ Y POR QUÉ (lee esto antes de tocar nada)
+---------------------------------------------------
+La versión anterior de este archivo era una ventana Qt (PySide6) que, además de
+mirar el bus, PUBLICABA `/cmd_flippers` y `/cmd_tracks` desde sus sliders. Eso
+convertía al monitor en un MANDO más, y con Foxglove abierto había dos fuentes
+peleando por los mismos tópicos:
 
-  1. TRAMAS SEPARADAS Y LEGIBLES. En vez de una lista que baja sin parar, muestra
-     un PANEL POR MOTOR: 8 filas fijas (una por motor) que se actualizan en su
-     sitio con su último comando, velocidad, torque, temperatura y posición. Así
-     se distingue de un vistazo qué está haciendo cada motor. El log crudo
-     (candump gráfico) queda como pestaña secundaria opcional.
+    can_monitor (sliders Qt) ──┐
+                               ├──▶ /cmd_flippers ──▶ flipper_node ──▶ CAN
+    Foxglove (Teleop/Publish) ─┘
 
-  2. EDITOR DE FLIPPERS FÁCIL. Un panel con un control por flipper (slider +
-     grados) que mueve el flipper DE VERDAD: publica /cmd_flippers -> flipper_node
-     -> tramas CAN (vcan0) -> motor_emulator -> RViz. Junto a cada flipper se ve
-     la TRAMA exacta (Set_Input_Pos de ODrive) que genera, así editar el flipper es
-     editar su
-     trama y verla al instante.
+`flipper_node` retiene el ÚLTIMO comando que le llega, así que el resultado era
+el clásico "mando el ángulo desde Foxglove y el flipper se vuelve solo": el
+monitor reenviaba su propio valor (el de sus sliders, que seguían donde los
+dejaste) en cuanto alguien tocaba algo, y pisaba la orden de Foxglove. Peor aún
+cuando la ventana quedaba viva en segundo plano tras cerrar su launch: seguía
+publicando sin que hubiera nada visible en pantalla que lo explicara.
 
-Flujo:
+Ahora este nodo NO PUBLICA NINGÚN COMANDO. No tiene publicadores de
+`/cmd_flippers` ni de `/cmd_tracks`, no importa PySide6, no abre ventana y no
+necesita servidor gráfico (corre igual en la Raspberry headless). Es un espía de
+solo lectura: escucha el bus y vuelca lo que ve en tópicos ROS para que los
+dibuje Foxglove.
 
-    editor de flippers ─▶ /cmd_flippers ─▶ flipper_node ─▶ vcan0 (Set_Input_Pos)
-                                                            │
-                                        motor_emulator ◀────┘
-                                        └─▶ vcan0 (encoder) ─▶ flipper_node ─▶ RViz
-                                                    │
-                                        can_monitor ┘  (panel por motor + log)
+El MANDO vive únicamente en Foxglove: paneles `Publish` (poses fijas) y paneles
+`Teleop` sobre `/teleop/flipper_*` (ver `teleop_flippers.py`).
 
-Uso (junto con RViz):   ros2 launch ugv_bridge can_studio.launch.py
-Uso suelto:             ros2 run ugv_bridge can_monitor --canal vcan0
+QUÉ PUBLICA Y CON QUÉ PANEL SE MIRA
+-----------------------------------
+  /diagnostics            diagnostic_msgs/DiagnosticArray   (1 Hz)
+        Una fila por motor, nombre `can/<junta>`, más la fila `can/BUS` con el
+        resumen del canal. Panel: *Diagnostics – Summary / Detail*.
+        Convive con las filas `motores/...` de flipper_node: son nombres
+        distintos dentro del mismo tópico estándar, que es el uso normal.
 
-Requisitos: python3-can, PySide6, rclpy y vcan0 arriba (scripts/setup_vcan.sh).
+  /can/posicion_rad       std_msgs/Float64MultiArray  (8 valores, IDs 1..8)
+  /can/velocidad_rad_s    std_msgs/Float64MultiArray
+  /can/iq_a               std_msgs/Float64MultiArray
+  /can/torque_nm          std_msgs/Float64MultiArray
+  /can/cmd_posicion_rad   std_msgs/Float64MultiArray   última consigna de posición
+  /can/cmd_velocidad_rad_s std_msgs/Float64MultiArray  última consigna de velocidad
+        Todo en el EJE DE SALIDA y en orden de ID: índices 0..3 = orugas
+        (track_fl, fr, rl, rr), 4..7 = flippers (flipper_fl, fr, rl, rr).
+        Panel: *Plot*, con series tipo `/can/velocidad_rad_s.data[0]`.
+
+  /can/tasa_tramas_hz     std_msgs/Float64    carga del bus, tramas/s
+        Panel: *Plot* o *Gauge*. Si cae a 0 con el robot encendido, el bus murió.
+
+  /can/trafico            std_msgs/String     (10 Hz)
+        Las últimas N tramas decodificadas, una por línea, en texto. Es el
+        equivalente a `candump` dentro de Foxglove. Panel: *Raw Messages*
+        apuntando a `/can/trafico.data`.
+
+LO QUE ESTE NODO NO PUEDE VER
+-----------------------------
+La TEMPERATURA no está: el protocolo ODrive la expone por un mensaje que viene
+APAGADO de fábrica (como el de Iq, ver `protocolo_can.py`). La versión anterior
+tenía una columna "temp" que nunca se rellenaba porque decodificaba mensajes
+`RESP_ESTADO`/`RESP_MULTIV` del protocolo RMD viejo, que ya no existe. Igual con
+Iq/torque: salen en 0 salvo que se active `iq_rate_ms` por USB con odrivetool.
+
+PARÁMETROS
+----------
+  canal              (string, 'vcan0') interfaz SocketCAN a espiar.
+  frecuencia_estado_hz (double, 10.0)  ritmo de /can/* numéricos y del tráfico.
+  frecuencia_diag_hz   (double, 1.0)   ritmo de /diagnostics (lo lee una persona).
+  lineas_trafico     (int, 25)         tramas por mensaje de /can/trafico.
+  publicar_trafico   (bool, True)      False = ahorra ancho de banda del puente.
+  timeout_motor_s    (double, 2.0)     sin tramas en este tiempo, el motor es STALE.
+
+USO
+---
+    ros2 run ugv_bridge can_monitor --ros-args -p canal:=vcan0
+    ros2 run ugv_bridge can_monitor --canal can0        # atajo equivalente
+    ros2 launch ugv_bridge can_studio.launch.py         # simulación + espía + Foxglove
+
+Requisitos: python3-can y la interfaz arriba (`scripts/setup_vcan.sh` para vcan0).
 """
 import argparse
 import collections
@@ -40,12 +88,16 @@ import time
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float64MultiArray
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+from std_msgs.msg import Float64, Float64MultiArray, String
 
 from ugv_bridge import protocolo_can as proto
 from ugv_bridge.driver_movimiento import (
-    ID_A_NOMBRE, IDS_ORUGAS, IDS_FLIPPERS, NOMBRES_FLIPPERS,
+    ID_A_NOMBRE, IDS_ORUGAS, IDS_FLIPPERS,
 )
+
+# Orden canónico de los arrays que se publican: primero orugas, luego flippers.
+TODOS = IDS_ORUGAS + IDS_FLIPPERS
 
 # Nombre legible de cada cmd_id (los 5 bits bajos del ID de arbitraje).
 NOMBRE_CMD = {
@@ -68,367 +120,359 @@ CMDS_AL_MOTOR = {
     proto.CMD_CLEAR_ERRORS,
 }
 
+NOMBRE_ESTADO = {
+    proto.ESTADO_IDLE: 'IDLE',
+    proto.ESTADO_CLOSED_LOOP: 'LAZO CERRADO',
+}
+
 
 def _rad2deg(r):
     return r * 180.0 / math.pi
 
 
 def decodificar(arb_id, data):
-    """Trama CAN cruda -> (sentido, id_motor, tipo, valor_str) para la tabla.
+    """Trama CAN cruda -> dict con lo que se pueda sacar de ella.
 
-    sentido: '-> motor' (comando del host) o '<- motor' (lo que emite el driver).
-    Devuelve None si el ID no corresponde a ningún motor conocido.
+    Devuelve None si el ID no corresponde a ningún motor conocido (así el espía
+    ignora tráfico ajeno en un bus compartido en vez de ensuciar la tabla).
+
+    Claves siempre presentes: 'sentido' ('->' host->motor, '<-' motor->host),
+    'id', 'tipo', 'texto'. Las demás son opcionales y solo aparecen cuando la
+    trama realmente las trae: 'posicion_rad', 'velocidad_rad_s', 'iq_a',
+    'cmd_posicion_rad', 'cmd_velocidad_rad_s', 'estado_eje', 'error_eje'.
     """
     nodo = proto.nodo_de_id(arb_id)
-    if nodo not in IDS_ORUGAS + IDS_FLIPPERS:
+    if nodo not in TODOS:
         return None
     cmd_id = proto.cmd_de_id(arb_id)
-    tipo = NOMBRE_CMD.get(cmd_id, f'cmd 0x{cmd_id:03X}')
+    out = {'id': nodo, 'tipo': NOMBRE_CMD.get(cmd_id, f'cmd 0x{cmd_id:03X}')}
 
+    # ------------------------------------------------ host -> motor (consignas)
     if cmd_id in CMDS_AL_MOTOR:
+        out['sentido'] = '->'
         info = proto.parsear_comando(cmd_id, data)
         if info is None:
-            valor = '—'
+            out['texto'] = '—'
         elif cmd_id == proto.CMD_SET_INPUT_VEL:
-            valor = f"{info['velocidad_rad_s']:+.2f} rad/s"
+            out['cmd_velocidad_rad_s'] = info['velocidad_rad_s']
+            out['texto'] = f"{info['velocidad_rad_s']:+.2f} rad/s"
         elif cmd_id == proto.CMD_SET_INPUT_POS:
-            valor = f"{_rad2deg(info['posicion_rad']):+.1f}°"
+            out['cmd_posicion_rad'] = info['posicion_rad']
+            out['texto'] = f"{_rad2deg(info['posicion_rad']):+.1f}°"
         elif cmd_id == proto.CMD_SET_AXIS_STATE:
-            valor = 'LAZO CERRADO' if info['estado'] == proto.ESTADO_CLOSED_LOOP else \
-                    ('IDLE' if info['estado'] == proto.ESTADO_IDLE else str(info['estado']))
+            out['texto'] = NOMBRE_ESTADO.get(info['estado'], str(info['estado']))
         elif cmd_id == proto.CMD_SET_CONTROLLER_MODE:
-            valor = f"control={info['control_mode']} entrada={info['input_mode']}"
+            out['texto'] = f"control={info['control_mode']} entrada={info['input_mode']}"
+        elif cmd_id == proto.CMD_SET_LIMITS:
+            out['texto'] = (f"vel<={info['vel_limite_rad_s']:.2f} rad/s  "
+                            f"I<={info['corriente_limite_a']:.1f} A")
         else:
-            valor = '—'
-        return ('-> motor', nodo, tipo, valor)
+            out['texto'] = '—'
+        return out
 
+    # ------------------------------------------------ motor -> host (telemetría)
+    out['sentido'] = '<-'
     info = proto.parsear(cmd_id, data)
     if info is None:
-        return ('<- motor', nodo, tipo, '—')
+        out['texto'] = '—'
+        return out
+
     if cmd_id == proto.CMD_GET_ENCODER_ESTIMATES:
-        return ('<- motor', nodo, tipo,
-                f"pos={_rad2deg(info['posicion_rad']):+.1f}°  "
-                f"v={info['velocidad_rad_s']:+.2f} rad/s")
-    if cmd_id == proto.CMD_HEARTBEAT:
-        estado = info['estado_eje']
-        nombre = {proto.ESTADO_IDLE: 'IDLE',
-                  proto.ESTADO_CLOSED_LOOP: 'LAZO CERRADO'}.get(estado, str(estado))
+        out['posicion_rad'] = info['posicion_rad']
+        out['velocidad_rad_s'] = info['velocidad_rad_s']
+        out['texto'] = (f"pos={_rad2deg(info['posicion_rad']):+.1f}°  "
+                        f"v={info['velocidad_rad_s']:+.2f} rad/s")
+    elif cmd_id == proto.CMD_HEARTBEAT:
+        out['estado_eje'] = info['estado_eje']
+        out['error_eje'] = info['error_eje']
+        nombre = NOMBRE_ESTADO.get(info['estado_eje'], str(info['estado_eje']))
         err = '' if not info['error_eje'] else f"  ERROR 0x{info['error_eje']:X}"
-        return ('<- motor', nodo, tipo, f'{nombre}{err}')
-    if cmd_id == proto.CMD_GET_IQ:
-        return ('<- motor', nodo, tipo, f"Iq={info['iq_medido_a']:+.2f} A")
-    return ('<- motor', nodo, tipo, '—')
+        out['texto'] = f'{nombre}{err}'
+    elif cmd_id == proto.CMD_GET_IQ:
+        out['iq_a'] = info['iq_medido_a']
+        out['texto'] = f"Iq={info['iq_medido_a']:+.2f} A"
+    else:
+        out['texto'] = '—'
+    return out
 
 
-class MonitorNode(Node):
-    """Publica los comandos que compone el editor (el robot se mueve de verdad)."""
+def _estado_vacio():
+    """Fila por motor. None = "todavía no se ha visto", distinto de 0.0."""
+    return {
+        'posicion_rad': None,
+        'velocidad_rad_s': None,
+        'iq_a': None,
+        'cmd_posicion_rad': None,
+        'cmd_velocidad_rad_s': None,
+        'ultimo_cmd': '—',
+        'valor_cmd': '—',
+        'estado_eje': None,
+        'error_eje': 0,
+        'tramas': 0,
+        't_ultima': None,       # time.monotonic() de la última trama DEL motor
+    }
 
-    def __init__(self):
+
+class CanMonitor(Node):
+    """Espía de solo lectura del bus CAN, con salida pensada para Foxglove."""
+
+    def __init__(self, canal_cli=None):
         super().__init__('can_monitor')
-        self.pub_flippers = self.create_publisher(Float64MultiArray, '/cmd_flippers', 10)
-        self.pub_tracks = self.create_publisher(Float64MultiArray, '/cmd_tracks', 10)
 
-    def enviar_flippers(self, pos_rad_fl_fr_rl_rr):
-        self.pub_flippers.publish(Float64MultiArray(data=list(pos_rad_fl_fr_rl_rr)))
+        self.declare_parameter('canal', 'vcan0')
+        self.declare_parameter('frecuencia_estado_hz', 10.0)
+        self.declare_parameter('frecuencia_diag_hz', 1.0)
+        self.declare_parameter('lineas_trafico', 25)
+        self.declare_parameter('publicar_trafico', True)
+        self.declare_parameter('timeout_motor_s', 2.0)
 
-    def enviar_tracks(self, vel_rad_s_fl_fr_rl_rr):
-        self.pub_tracks.publish(Float64MultiArray(data=list(vel_rad_s_fl_fr_rl_rr)))
+        # El atajo --canal de la línea de comandos gana sobre el parámetro, que
+        # es lo que espera quien escribe `ros2 run ... --canal can0`.
+        self.canal = canal_cli or self.get_parameter('canal').value
+        self.lineas_trafico = int(self.get_parameter('lineas_trafico').value)
+        self.publicar_trafico = bool(self.get_parameter('publicar_trafico').value)
+        self.timeout_motor = float(self.get_parameter('timeout_motor_s').value)
+        f_estado = float(self.get_parameter('frecuencia_estado_hz').value)
+        f_diag = float(self.get_parameter('frecuencia_diag_hz').value)
+
+        # --- Publicadores. NINGUNO es de comando: este nodo no manda nada. ---
+        self.pub_pos = self.create_publisher(Float64MultiArray, '/can/posicion_rad', 10)
+        self.pub_vel = self.create_publisher(Float64MultiArray, '/can/velocidad_rad_s', 10)
+        self.pub_iq = self.create_publisher(Float64MultiArray, '/can/iq_a', 10)
+        self.pub_torque = self.create_publisher(Float64MultiArray, '/can/torque_nm', 10)
+        self.pub_cmd_pos = self.create_publisher(
+            Float64MultiArray, '/can/cmd_posicion_rad', 10)
+        self.pub_cmd_vel = self.create_publisher(
+            Float64MultiArray, '/can/cmd_velocidad_rad_s', 10)
+        self.pub_tasa = self.create_publisher(Float64, '/can/tasa_tramas_hz', 10)
+        self.pub_trafico = self.create_publisher(String, '/can/trafico', 10)
+        self.pub_diag = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
+
+        # --- Estado interno ---
+        self.estado = {mid: _estado_vacio() for mid in TODOS}
+        self.cola = collections.deque(maxlen=8000)
+        self.trafico = collections.deque(maxlen=self.lineas_trafico)
+        self.total = 0
+        self._cuenta_ventana = 0
+        self._t0 = time.monotonic()
+        self._t_tasa = self._t0
+        self.tasa_hz = 0.0
+        self._parar = threading.Event()
+
+        # --- Socket del bus ---
+        try:
+            import can
+        except ImportError:
+            raise RuntimeError(
+                'Falta python3-can. Instalar: sudo apt install python3-can')
+        try:
+            self.bus = can.interface.Bus(channel=self.canal, interface='socketcan')
+        except OSError as e:
+            raise RuntimeError(
+                f'No se pudo abrir {self.canal}: {e}. '
+                f'¿Existe la interfaz? Crear vcan0 con scripts/setup_vcan.sh')
+
+        self._hilo = threading.Thread(target=self._lector, daemon=True)
+        self._hilo.start()
+
+        self.create_timer(1.0 / max(f_estado, 0.1), self.publicar_estado)
+        self.create_timer(1.0 / max(f_diag, 0.1), self.publicar_diagnostico)
+
+        self.get_logger().info(
+            f'can_monitor (SOLO LECTURA) espiando {self.canal}. '
+            f'No publica comandos: el mando es Foxglove. '
+            f'Tópicos: /can/* y /diagnostics (filas can/...).')
+
+    # ------------------------------------------------------------------ #
+    def _lector(self):
+        """Hilo que vacía el socket. Solo recibe; nunca transmite."""
+        while not self._parar.is_set():
+            try:
+                msg = self.bus.recv(timeout=0.2)
+            except OSError:
+                break
+            if msg is not None:
+                self.cola.append((time.monotonic(), msg.arbitration_id,
+                                  bytes(msg.data)))
+
+    def _drenar(self):
+        """Pasa lo acumulado por el hilo lector al estado por motor."""
+        while self.cola:
+            t, arb_id, data = self.cola.popleft()
+            self.total += 1
+            self._cuenta_ventana += 1
+            info = decodificar(arb_id, data)
+            if info is None:
+                continue
+            e = self.estado[info['id']]
+            e['tramas'] += 1
+            e['t_ultima'] = t
+            if info['sentido'] == '->':
+                e['ultimo_cmd'] = info['tipo']
+                e['valor_cmd'] = info['texto']
+            for clave in ('posicion_rad', 'velocidad_rad_s', 'iq_a',
+                          'cmd_posicion_rad', 'cmd_velocidad_rad_s',
+                          'estado_eje', 'error_eje'):
+                if clave in info:
+                    e[clave] = info[clave]
+            if self.publicar_trafico:
+                self.trafico.append(
+                    f"{t - self._t0:8.2f}  {info['sentido']}  "
+                    f"0x{arb_id:03X}  {ID_A_NOMBRE[info['id']]:<11}  "
+                    f"{info['tipo']:<11}  {info['texto']:<28}  {data.hex()}")
+
+    def _vector(self, clave, factor=1.0):
+        """Array de 8 en orden de ID. Lo no visto va como 0.0 (Plot no come NaN)."""
+        return [0.0 if self.estado[m][clave] is None
+                else float(self.estado[m][clave]) * factor
+                for m in TODOS]
+
+    # ------------------------------------------------------------------ #
+    def publicar_estado(self):
+        self._drenar()
+
+        ahora = time.monotonic()
+        if ahora - self._t_tasa >= 1.0:
+            self.tasa_hz = self._cuenta_ventana / (ahora - self._t_tasa)
+            self._cuenta_ventana = 0
+            self._t_tasa = ahora
+
+        self.pub_pos.publish(Float64MultiArray(data=self._vector('posicion_rad')))
+        self.pub_vel.publish(Float64MultiArray(data=self._vector('velocidad_rad_s')))
+        self.pub_iq.publish(Float64MultiArray(data=self._vector('iq_a')))
+        self.pub_torque.publish(Float64MultiArray(
+            data=self._vector('iq_a', proto.KT_NM_POR_A)))
+        self.pub_cmd_pos.publish(Float64MultiArray(
+            data=self._vector('cmd_posicion_rad')))
+        self.pub_cmd_vel.publish(Float64MultiArray(
+            data=self._vector('cmd_velocidad_rad_s')))
+        self.pub_tasa.publish(Float64(data=float(self.tasa_hz)))
+
+        if self.publicar_trafico and self.trafico:
+            self.pub_trafico.publish(String(data='\n'.join(self.trafico)))
+
+    # ------------------------------------------------------------------ #
+    def publicar_diagnostico(self):
+        """Una fila por motor vista DESDE EL BUS, más el resumen del canal.
+
+        Ojo con la diferencia respecto a las filas `motores/...` que publica
+        flipper_node: aquellas son lo que CREE el driver; estas son lo que de
+        verdad circula por el cable. Cuando las dos discrepan, el problema está
+        entre el driver y el bus (interfaz caída, bitrate, node_id).
+        """
+        ahora = time.monotonic()
+        msg = DiagnosticArray()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        vistos = 0
+
+        for mid in TODOS:
+            e = self.estado[mid]
+            st = DiagnosticStatus()
+            st.hardware_id = f'motor {mid}'
+            st.name = f'can/{ID_A_NOMBRE[mid]}'
+            edad = None if e['t_ultima'] is None else ahora - e['t_ultima']
+
+            if e['t_ultima'] is None:
+                st.level = DiagnosticStatus.ERROR
+                st.message = 'MUDO: nunca emitió en el bus'
+            elif edad > self.timeout_motor:
+                st.level = DiagnosticStatus.STALE
+                st.message = f'SIN TRAMAS desde hace {edad:.1f} s'
+            else:
+                vistos += 1
+                if e['error_eje']:
+                    st.level = DiagnosticStatus.WARN
+                    st.message = f"emite, con error 0x{e['error_eje']:X}"
+                elif e['estado_eje'] not in (None, proto.ESTADO_CLOSED_LOOP):
+                    st.level = DiagnosticStatus.WARN
+                    st.message = ('FUERA DE LAZO CERRADO: acepta las órdenes '
+                                  'y no se mueve')
+                else:
+                    st.level = DiagnosticStatus.OK
+                    st.message = 'emitiendo en el bus'
+
+            def _f(v, fmt='{:+.4f}'):
+                return '—' if v is None else fmt.format(v)
+
+            st.values = [
+                KeyValue(key='id', value=str(mid)),
+                KeyValue(key='tipo',
+                         value='oruga' if mid in IDS_ORUGAS else 'flipper'),
+                KeyValue(key='tramas', value=str(e['tramas'])),
+                KeyValue(key='edad_s', value='—' if edad is None else f'{edad:.2f}'),
+                KeyValue(key='ultimo_cmd', value=e['ultimo_cmd']),
+                KeyValue(key='valor_cmd', value=e['valor_cmd']),
+                KeyValue(key='posicion_deg',
+                         value=_f(None if e['posicion_rad'] is None
+                                  else _rad2deg(e['posicion_rad']), '{:+.1f}')),
+                KeyValue(key='velocidad_rad_s', value=_f(e['velocidad_rad_s'])),
+                KeyValue(key='iq_a', value=_f(e['iq_a'], '{:+.2f}')),
+                KeyValue(key='estado_eje',
+                         value='—' if e['estado_eje'] is None else
+                               NOMBRE_ESTADO.get(e['estado_eje'], str(e['estado_eje']))),
+                KeyValue(key='error_eje', value=f"0x{e['error_eje']:X}"),
+            ]
+            msg.status.append(st)
+
+        # Fila de resumen del canal: responde "¿el bus está vivo?" sin contar filas.
+        resumen = DiagnosticStatus()
+        resumen.hardware_id = self.canal
+        resumen.name = 'can/BUS'
+        if self.total == 0:
+            resumen.level = DiagnosticStatus.ERROR
+            resumen.message = f'{self.canal}: SIN TRÁFICO desde el arranque'
+        elif self.tasa_hz < 1.0:
+            resumen.level = DiagnosticStatus.WARN
+            resumen.message = f'{self.canal}: tráfico casi parado ({self.tasa_hz:.1f}/s)'
+        else:
+            resumen.level = DiagnosticStatus.OK
+            resumen.message = (f'{self.canal}: {vistos}/{len(TODOS)} motores '
+                               f'emitiendo, {self.tasa_hz:.0f} tramas/s')
+        resumen.values = [
+            KeyValue(key='canal', value=self.canal),
+            KeyValue(key='tramas_totales', value=str(self.total)),
+            KeyValue(key='tramas_por_segundo', value=f'{self.tasa_hz:.1f}'),
+            KeyValue(key='motores_emitiendo', value=f'{vistos}/{len(TODOS)}'),
+            KeyValue(key='publica_comandos', value='no (espía de solo lectura)'),
+        ]
+        msg.status.append(resumen)
+
+        self.pub_diag.publish(msg)
+
+    # ------------------------------------------------------------------ #
+    def cerrar(self):
+        self._parar.set()
+        try:
+            self.bus.shutdown()
+        except Exception:
+            pass
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='Monitor por motor + editor de flippers del bus CAN')
-    parser.add_argument('--canal', default='vcan0', help='interfaz SocketCAN (default: vcan0)')
-    parser.add_argument('--max-log', type=int, default=400, help='filas del log crudo (default: 400)')
-    args, _ = parser.parse_known_args(argv)
+    parser = argparse.ArgumentParser(
+        description='Espía de solo lectura del bus CAN; se mira desde Foxglove')
+    parser.add_argument('--canal', default=None,
+                        help='interfaz SocketCAN (si se omite, usa el parámetro '
+                             'ROS `canal`, por defecto vcan0)')
+    args, resto = parser.parse_known_args(argv if argv is not None else sys.argv[1:])
 
+    rclpy.init(args=resto)
     try:
-        import can
-    except ImportError:
-        sys.exit('[MONITOR] Falta python3-can. Instalar: sudo apt install python3-can')
-    try:
-        from PySide6.QtWidgets import (
-            QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-            QTableWidget, QTableWidgetItem, QPushButton, QLabel, QCheckBox,
-            QHeaderView, QGroupBox, QTabWidget, QSlider, QDoubleSpinBox,
-        )
-        from PySide6.QtCore import Qt, QTimer
-        from PySide6.QtGui import QColor, QFont
-    except ImportError:
-        sys.exit('[MONITOR] Falta PySide6. Instalar: pip install PySide6')
-
-    # Espía del bus: un socket que recibe TODAS las tramas de vcan0.
-    try:
-        bus_rx = can.interface.Bus(channel=args.canal, interface='socketcan')
-    except OSError as e:
-        sys.exit(f'[MONITOR] No se pudo abrir {args.canal}: {e}\n'
-                 f'          ¿Existe la interfaz? Crear con: scripts/setup_vcan.sh')
-
-    cola = collections.deque(maxlen=8000)
-    parar = threading.Event()
-
-    def lector():
-        while not parar.is_set():
-            msg = bus_rx.recv(timeout=0.2)
-            if msg is not None:
-                cola.append((time.monotonic(), msg.arbitration_id, bytes(msg.data)))
-
-    threading.Thread(target=lector, daemon=True).start()
-
-    # Nodo ROS (para que el editor publique comandos reales).
-    rclpy.init()
-    node = MonitorNode()
-    threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
-
-    TODOS = IDS_ORUGAS + IDS_FLIPPERS
-    COLS_MOTOR = ['motor', 'ID', 'últ. cmd', 'valor cmd', 'vel (rad/s)',
-                  'torque (Nm)', 'temp (°C)', 'pos (°)', 'tramas']
-    COLS_LOG = ['t (s)', 'sentido', 'ID', 'motor', 'tipo', 'valor', 'bytes']
-
-    AZUL = QColor(90, 170, 255)     # comando -> motor
-    VERDE = QColor(120, 210, 140)   # respuesta <- motor
-
-    class Ventana(QWidget):
-        def __init__(self):
-            super().__init__()
-            self.setWindowTitle(f'Monitor CAN por motor + editor de flippers — {args.canal}')
-            self.resize(920, 760)
-            self.t0 = time.monotonic()
-            self.total = 0
-            self._cuenta_ventana = 0
-            self._t_rate = self.t0
-            # Estado por motor para el panel (se actualiza en su sitio).
-            self.estado = {mid: {'cmd': '—', 'valor': '—', 'vel': '—', 'torque': '—',
-                                 'temp': '—', 'pos': '—', 'n': 0} for mid in TODOS}
-            self.flip_rad = [0.0, 0.0, 0.0, 0.0]  # fl, fr, rl, rr
-
-            root = QVBoxLayout(self)
-
-            # Barra: stats + pausa.
-            barra = QHBoxLayout()
-            self.lbl = QLabel('esperando tráfico…')
-            self.chk_pausa = QCheckBox('Pausar')
-            barra.addWidget(self.lbl, 1)
-            barra.addWidget(self.chk_pausa)
-            root.addLayout(barra)
-
-            # Pestañas: panel por motor (principal) y log crudo (secundario).
-            tabs = QTabWidget()
-            tabs.addTab(self._tab_motores(), 'Por motor (en vivo)')
-            tabs.addTab(self._tab_log(), 'Log crudo')
-            root.addWidget(tabs, 1)
-
-            # Editor de flippers (siempre visible).
-            root.addWidget(self._editor_flippers())
-            # Editor de orugas (compacto).
-            root.addWidget(self._editor_orugas())
-
-            self.timer = QTimer(self)
-            self.timer.timeout.connect(self._drenar)
-            self.timer.start(50)  # 20 Hz
-
-        # ---------------------------- pestañas ---------------------------- #
-        def _tab_motores(self):
-            self.tbl = QTableWidget(len(TODOS), len(COLS_MOTOR))
-            self.tbl.setHorizontalHeaderLabels(COLS_MOTOR)
-            self.tbl.verticalHeader().setVisible(False)
-            self.tbl.setEditTriggers(QTableWidget.NoEditTriggers)
-            self.tbl.setFont(QFont('monospace', 9))
-            self.tbl.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            for r, mid in enumerate(TODOS):
-                base = [ID_A_NOMBRE[mid],
-                        f'0x{proto.id_arbitraje(mid, proto.CMD_SET_INPUT_POS):03X}',
-                        '—', '—', '—', '—', '—', '—', '0']
-                for c, txt in enumerate(base):
-                    it = QTableWidgetItem(txt)
-                    if c == 0 and mid in IDS_FLIPPERS:
-                        it.setForeground(QColor(230, 200, 120))  # flippers resaltados
-                    self.tbl.setItem(r, c, it)
-            self.tbl.resizeColumnsToContents()
-            return self.tbl
-
-        def _tab_log(self):
-            w = QWidget()
-            lay = QVBoxLayout(w)
-            fila = QHBoxLayout()
-            self.chk_auto = QCheckBox('Auto-scroll'); self.chk_auto.setChecked(True)
-            btn_limpiar = QPushButton('Limpiar'); btn_limpiar.clicked.connect(
-                lambda: self.log.setRowCount(0))
-            fila.addWidget(self.chk_auto); fila.addStretch(1); fila.addWidget(btn_limpiar)
-            lay.addLayout(fila)
-            self.log = QTableWidget(0, len(COLS_LOG))
-            self.log.setHorizontalHeaderLabels(COLS_LOG)
-            self.log.verticalHeader().setVisible(False)
-            self.log.setEditTriggers(QTableWidget.NoEditTriggers)
-            self.log.setFont(QFont('monospace', 9))
-            self.log.horizontalHeader().setSectionResizeMode(5, QHeaderView.Stretch)
-            self.log.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
-            lay.addWidget(self.log)
-            return w
-
-        # ---------------------------- editores ---------------------------- #
-        def _editor_flippers(self):
-            caja = QGroupBox('Editar flippers (mueve el flipper y muestra su trama)')
-            g = QGridLayout(caja)
-            g.addWidget(QLabel('flipper'), 0, 0)
-            g.addWidget(QLabel('ángulo'), 0, 1)
-            g.addWidget(QLabel('grados'), 0, 2)
-            g.addWidget(QLabel('trama que se envía (0xA4)'), 0, 3)
-            self.sliders, self.spins, self.tramas_lbl = [], [], []
-            for i, nombre in enumerate(NOMBRES_FLIPPERS):
-                g.addWidget(QLabel(nombre), i + 1, 0)
-                s = QSlider(Qt.Horizontal); s.setRange(-180, 180); s.setValue(0)
-                sp = QDoubleSpinBox(); sp.setRange(-180, 180); sp.setDecimals(0)
-                sp.setSuffix('°'); sp.setValue(0)
-                lbl = QLabel('—'); lbl.setFont(QFont('monospace', 9))
-                s.valueChanged.connect(lambda v, i=i: self._flip_desde_slider(i, v))
-                sp.valueChanged.connect(lambda v, i=i: self._flip_desde_spin(i, v))
-                g.addWidget(s, i + 1, 1)
-                g.addWidget(sp, i + 1, 2)
-                g.addWidget(lbl, i + 1, 3)
-                self.sliders.append(s); self.spins.append(sp); self.tramas_lbl.append(lbl)
-                self._actualizar_trama_lbl(i)
-            botones = QHBoxLayout()
-            b0 = QPushButton('Todos a 0° (plano)'); b0.clicked.connect(self._flippers_cero)
-            b45 = QPushButton('Todos a 45°'); b45.clicked.connect(lambda: self._flippers_todos(45))
-            botones.addWidget(b0); botones.addWidget(b45); botones.addStretch(1)
-            g.addLayout(botones, len(NOMBRES_FLIPPERS) + 1, 0, 1, 4)
-            return caja
-
-        def _editor_orugas(self):
-            caja = QGroupBox('Orugas (velocidad)')
-            fila = QHBoxLayout(caja)
-            self.sp_izq = QDoubleSpinBox(); self.sp_izq.setRange(-20, 20)
-            self.sp_izq.setSuffix(' rad/s'); self.sp_izq.setSingleStep(0.5)
-            self.sp_der = QDoubleSpinBox(); self.sp_der.setRange(-20, 20)
-            self.sp_der.setSuffix(' rad/s'); self.sp_der.setSingleStep(0.5)
-            b_ir = QPushButton('Aplicar'); b_ir.clicked.connect(self._enviar_orugas)
-            b_stop = QPushButton('Parar'); b_stop.clicked.connect(self._parar_orugas)
-            fila.addWidget(QLabel('izq (fl,rl)')); fila.addWidget(self.sp_izq)
-            fila.addWidget(QLabel('der (fr,rr)')); fila.addWidget(self.sp_der)
-            fila.addWidget(b_ir); fila.addWidget(b_stop); fila.addStretch(1)
-            return caja
-
-        # ---------------------------- callbacks --------------------------- #
-        def _actualizar_trama_lbl(self, i):
-            hexstr = proto.trama_set_input_pos(self.flip_rad[i]).hex()
-            par = ' '.join(hexstr[j:j + 2] for j in range(0, len(hexstr), 2))
-            arb = proto.id_arbitraje(IDS_FLIPPERS[i], proto.CMD_SET_INPUT_POS)
-            self.tramas_lbl[i].setText(f'0x{arb:03X}  {par}')
-
-        def _set_flip(self, i, grados):
-            self.flip_rad[i] = math.radians(grados)
-            self._actualizar_trama_lbl(i)
-            node.enviar_flippers(self.flip_rad)
-
-        def _flip_desde_slider(self, i, v):
-            self.spins[i].blockSignals(True); self.spins[i].setValue(v); self.spins[i].blockSignals(False)
-            self._set_flip(i, v)
-
-        def _flip_desde_spin(self, i, v):
-            self.sliders[i].blockSignals(True); self.sliders[i].setValue(int(v)); self.sliders[i].blockSignals(False)
-            self._set_flip(i, v)
-
-        def _flippers_cero(self):
-            self._flippers_todos(0)
-
-        def _flippers_todos(self, grados):
-            for i in range(4):
-                self.sliders[i].blockSignals(True); self.sliders[i].setValue(grados); self.sliders[i].blockSignals(False)
-                self.spins[i].blockSignals(True); self.spins[i].setValue(grados); self.spins[i].blockSignals(False)
-                self.flip_rad[i] = math.radians(grados)
-                self._actualizar_trama_lbl(i)
-            node.enviar_flippers(self.flip_rad)
-
-        def _enviar_orugas(self):
-            izq, der = self.sp_izq.value(), self.sp_der.value()
-            node.enviar_tracks([izq, der, izq, der])  # orden fl, fr, rl, rr
-
-        def _parar_orugas(self):
-            self.sp_izq.setValue(0); self.sp_der.setValue(0)
-            node.enviar_tracks([0.0, 0.0, 0.0, 0.0])
-
-        # ---------------------------- refresco ---------------------------- #
-        def _drenar(self):
-            if self.chk_pausa.isChecked():
-                return
-            nuevas_log = 0
-            while cola:
-                t, arb_id, data = cola.popleft()
-                self.total += 1
-                self._cuenta_ventana += 1
-                fila = decodificar(arb_id, data)
-                if fila is None:
-                    continue
-                sentido, mid, tipo, valor = fila
-                # Actualiza el panel por motor (en su sitio, no scroll).
-                e = self.estado[mid]
-                e['n'] += 1
-                if sentido == '-> motor':
-                    e['cmd'], e['valor'] = tipo, valor
-                elif tipo == 'RESP_MULTIV':
-                    e['pos'] = valor
-                elif tipo == 'RESP_ESTADO':
-                    # "v=.. τ=.. T=.." -> desglosar a columnas
-                    try:
-                        partes = valor.replace('v=', '').replace('τ=', '').replace('T=', '')
-                        vel, torque, temp = partes.split()
-                        e['vel'], e['torque'], e['temp'] = vel, torque, temp.replace('°C', '')
-                    except ValueError:
-                        pass
-                # Log crudo (pestaña secundaria).
-                self._append_log(t, arb_id, sentido, mid, tipo, valor, data)
-                nuevas_log += 1
-
-            self._pintar_motores()
-            if nuevas_log and self.chk_auto.isChecked():
-                self.log.scrollToBottom()
-
-            ahora = time.monotonic()
-            if ahora - self._t_rate >= 1.0:
-                rate = self._cuenta_ventana / (ahora - self._t_rate)
-                self._cuenta_ventana = 0; self._t_rate = ahora
-                estado = 'PAUSA' if self.chk_pausa.isChecked() else 'en vivo'
-                self.lbl.setText(f'{self.total} tramas · {rate:.0f} tramas/s · '
-                                 f'{args.canal} · {estado}')
-
-        def _pintar_motores(self):
-            for r, mid in enumerate(TODOS):
-                e = self.estado[mid]
-                for c, val in ((2, e['cmd']), (3, e['valor']), (4, e['vel']),
-                               (5, e['torque']), (6, e['temp']), (7, e['pos']),
-                               (8, str(e['n']))):
-                    self.tbl.item(r, c).setText(val)
-
-        def _append_log(self, t, arb_id, sentido, mid, tipo, valor, data):
-            r = self.log.rowCount()
-            self.log.insertRow(r)
-            celdas = [f'{t - self.t0:7.2f}', sentido, f'0x{arb_id:03X}',
-                      ID_A_NOMBRE.get(mid, ''), tipo, valor, data.hex()]
-            color = AZUL if sentido == '-> motor' else VERDE
-            for c, txt in enumerate(celdas):
-                it = QTableWidgetItem(txt); it.setForeground(color)
-                self.log.setItem(r, c, it)
-            while self.log.rowCount() > args.max_log:
-                self.log.removeRow(0)
-
-        def closeEvent(self, ev):
-            parar.set()
-            try:
-                bus_rx.shutdown()
-            except Exception:
-                pass
-            ev.accept()
-
-    app = QApplication(sys.argv)
-    win = Ventana()
-    win.show()
-    codigo = app.exec()
-
-    parar.set()
-    node.destroy_node()
-    if rclpy.ok():
+        nodo = CanMonitor(canal_cli=args.canal)
+    except RuntimeError as e:
+        print(f'[can_monitor] {e}', file=sys.stderr)
         rclpy.shutdown()
-    sys.exit(codigo)
+        sys.exit(1)
+
+    try:
+        rclpy.spin(nodo)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        nodo.cerrar()
+        nodo.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

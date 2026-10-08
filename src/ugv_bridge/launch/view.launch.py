@@ -1,84 +1,68 @@
 #!/usr/bin/env python3
-"""view.launch.py — Visualizar y POSAR el robot: mueve las 4 articulaciones de los
-flippers con sliders, sin conducir (robot fijo y centrado en base_link).
+"""view.launch.py — Posar los flippers (sin conducir) desde Foxglove.
 
-Lanza:
-  - robot_state_publisher : carga el URDF y publica el TF de cada flipper.
-  - joint_state_publisher_gui : ventana con un slider por cada junta revolute
-      (los 4 flippers, fl/fr/rl/rr), respetando los límites del URDF (+-60 grados).
-  - rviz2 : con config/view.rviz (fixed frame base_link -> el robot no se desplaza).
-  - foxglove_bridge : abre el servidor WebSocket en el puerto 8765 para conectar con la GCS.
+QUÉ ERA Y POR QUÉ CAMBIÓ
+------------------------
+Este launch abría RViz + la ventana Qt de sliders (`joint_state_publisher_gui`)
+y era la fuente de /joint_states. Dos problemas, los dos resueltos aquí:
 
-NO arranca flipper_node, ni EKF, ni odometría: aquí no hay locomoción. La fuente de
-/joint_states es el propio joint_state_publisher_gui (por eso flipper_node no debe correr
-a la vez: entrarían en conflicto publicando el mismo tópico).
+ 1. DOS MANDOS A LA VEZ. La GUI de sliders publicaba por su cuenta, y Foxglove
+    publicaba /cmd_flippers. Como las dos cadenas acaban en las mismas juntas,
+    el robot saltaba entre el valor del slider y el de Foxglove. Peor: las
+    ventanas Qt sobreviven con frecuencia al Ctrl+C del launch y siguen
+    publicando en segundo plano, de modo que el síntoma aparecía incluso
+    "sin nada abierto".
+ 2. ARRANCABA UN NODO QUE YA NO EXISTE. Lanzaba `kinematic_guardian`, que se
+    eliminó del proyecto. El launch moría al no encontrar el ejecutable.
 
-Uso:  ros2 launch ugv_bridge view.launch.py
+Ahora no hay sliders, no hay RViz y no hay guardián: este launch es un atajo a
+flipper.launch.py en modo GEMELO DIGITAL con el puente de Foxglove. El
+gemelo mueve las juntas sin hardware ni bus CAN, que es exactamente lo que se
+quería para "posar y mirar".
+
+CÓMO SE POSA AHORA EL ROBOT (todo en Foxglove)
+----------------------------------------------
+    panel *Publish* -> /cmd_flippers  con una pose fija ([0,0,0,0], [0.785 x4]...)
+    panel *Teleop*  -> /teleop/flipper_fl|fr|rl|rr  (mantener pulsado = girar)
+El layout config/ugv_control_v4.json ya trae esos paneles.
+
+Uso:
+    ros2 launch ugv_bridge view.launch.py
+    ros2 launch ugv_bridge view.launch.py use_ekf:=true   # + inclinación del chasis
+
+Conectar Foxglove a ws://localhost:8765. Panel 3D con Display frame = odom
+(con base_link el chasis queda clavado y solo se ven girar los flippers).
+
+Para la simulación con tramas CAN de verdad:  can_view.launch.py
+Para la simulación CAN + espía del bus:       can_studio.launch.py
 """
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.substitutions import Command
-from launch_ros.actions import Node
-from launch_ros.parameter_descriptions import ParameterValue
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('ugv_bridge')
-    rviz_config = os.path.join(pkg_share, 'config', 'view.rviz')
-
-    # Geometría: única fuente de verdad (URDF + guardián de colisiones).
-    geometria_yaml = os.path.join(pkg_share, 'config', 'geometria_robot.yaml')
-    xacro_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf.xacro')
-    robot_description = ParameterValue(
-        Command(['xacro ', xacro_path, ' geometria:=', geometria_yaml]),
-        value_type=str,
-    )
 
     return LaunchDescription([
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            output='screen',
-            parameters=[{'robot_description': robot_description}],
-        ),
-        Node(
-            package='joint_state_publisher_gui',
-            executable='joint_state_publisher_gui',
-            name='joint_state_publisher_gui',
-            output='screen',
-            #Redirige la salida de los sliders a /joint_states_raw, que es lo que lee kinematic_guardian.py
-        
-            remappings=[('/joint_states', '/joint_states_raw')] 
-        ),
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_config],
-        ),
-        # --- NODO DE FOXGLOVE INTEGRADO ---
-        Node(
-            package='foxglove_bridge',
-            executable='foxglove_bridge',
-            name='foxglove_bridge',
-            output='screen',
-            parameters=[{
-                'port': 8765,
-                'send_buffer_limit': 100000000, # Buffer ampliado para modelos 3D pesados
-            }]
-        ),
-        Node(
-            package='ugv_bridge',
-            executable='kinematic_guardian',
-            name='kinematic_guardian',
-            output='screen',
-            # Misma geometría que el URDF: el guardián protege exactamente
-            # contra la forma que se está dibujando.
-            parameters=[geometria_yaml],
-        ),
+        DeclareLaunchArgument('frecuencia_hz', default_value='100.0'),
+        DeclareLaunchArgument('use_ekf', default_value='false'),
 
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_share, 'launch', 'flipper.launch.py')),
+            launch_arguments={
+                # Gemelo digital: sin pi3hat, sin bus, sin emulador. Las juntas
+                # siguen la consigna directamente.
+                'modo': 'gemelo',
+                'frecuencia_hz': LaunchConfiguration('frecuencia_hz'),
+                'use_ekf': LaunchConfiguration('use_ekf'),
+                'use_foxglove': 'true',
+                'use_teleop': 'true',
+            }.items(),
+        ),
     ])

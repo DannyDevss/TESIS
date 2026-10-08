@@ -8,7 +8,9 @@
 #     compilar_real   motores REALES por los buses CAN del pi3hat + IMU real
 #
 # En los dos casos: EKF encendido (sin el, el chasis no se inclina) y puente
-# Foxglove en el 8765, que es la unica visualizacion posible en una Pi headless.
+# Foxglove en el 8765, que es la UNICA visualizacion del proyecto. No se abre
+# RViz ni ninguna ventana Qt: eran un segundo mando que se peleaba con Foxglove
+# por /cmd_flippers y /cmd_tracks.
 #
 # Instalar (o reinstalar tras cambiar este archivo):
 #     bash src/ugv_bridge/scripts/instalar_comandos.sh
@@ -52,6 +54,16 @@ pkill -9    -f "lib/ugv_bridge/"                2>/dev/null || true
 pkill -9    -f "robot_localization/ekf_node"    2>/dev/null || true
 pkill -9    -f "foxglove_bridge/foxglove_bridge" 2>/dev/null || true
 pkill -9    -f "lib/robot_state_publisher"      2>/dev/null || true
+# Fantasmas de la epoca en que habia ventanas (RViz, sliders Qt, el viejo
+# can_monitor con PySide6). Esas ventanas sobrevivian al Ctrl+C del launch y
+# seguian PUBLICANDO /cmd_flippers y /cmd_tracks en segundo plano: el sintoma
+# era un flipper que se movia solo o que ignoraba lo que mandabas desde
+# Foxglove, sin nada visible en pantalla que lo explicara. Hoy ningun launch
+# los abre, pero una sesion vieja todavia puede tenerlos vivos.
+pkill -9    -f "rviz2"                          2>/dev/null || true
+pkill -9    -f "joint_state_publisher_gui"      2>/dev/null || true
+pkill -9    -f "ugv_bridge.can_monitor"         2>/dev/null || true
+pkill -9    -f "ugv_bridge.gui_a_comandos"      2>/dev/null || true
 sleep 1
 
 # --- 2. Compilar ------------------------------------------------------------

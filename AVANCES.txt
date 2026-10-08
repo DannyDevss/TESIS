@@ -1,7 +1,7 @@
 ================================================================================
 AVANCES DEL PROYECTO - UGV DE RESCATE CON ORUGAS Y FLIPPERS
 Workspace ROS 2 Jazzy
-Ultima actualizacion: 12 de agosto de 2026
+Ultima actualizacion: 8 de octubre de 2026
 Rama de trabajo: feature/parametrizacion-geometria (ultimo commit: P6)
 ================================================================================
 
@@ -59,24 +59,30 @@ agrupados en dos "tracks" o lineas de trabajo que hoy son independientes:
                  orugas, fusion sensorial (EKF), modelo del robot (URDF),
                  guardian de colisiones, emulador de motores y todos los launch.
 
-  TRACK B - NAVEGACION 2D Y APRENDIZAJE POR REFUERZO
-  ---------------------------------------------------
-    ugv_core     Entorno de simulacion 2D (RobotEnv) con API compatible con
-                 Gymnasium, mas los "cerebros" de decision (HeuristicBrain y
-                 RLBrain). No depende de ROS ni de Qt: se puede entrenar
-                 headless.
-    ugv_sim      Envuelve RobotEnv como nodo ROS: publica /scan, /odom y TF, y
-                 escucha /cmd_vel.
-    ugv_policy   Nodo de politica: lee /scan, decide con el cerebro activo y
-                 publica /cmd_vel.
-    ugv_gcs      Estacion de control en tierra minima: ventana Qt (PySide6) con
-                 un mini-mapa 2D alimentado por /odom y /scan.
+  TRACK B - NAVEGACION 2D Y APRENDIZAJE POR REFUERZO   [ELIMINADO, oct-2026]
+  ---------------------------------------------------------------------------
+  Los paquetes ugv_core, ugv_sim, ugv_policy, ugv_gcs y ugv_msgs se BORRARON
+  del repositorio en octubre de 2026. Se describen aqui solo como registro
+  historico; ya no existen en src/.
 
-    ugv_msgs     Paquete de mensajes propios. ESTA DESACTIVADO (tiene un archivo
-                 COLCON_IGNORE) y no contiene ninguna definicion .msg todavia.
+  El motivo: modelaban una navegacion 2D plana (telemetros, /cmd_vel, tres
+  acciones discretas) que no es la tarea de esta tesis. El robot tiene orugas
+  y flippers articulados y se comanda por /cmd_tracks y /cmd_flippers, y nunca
+  hubo nada que tradujera entre ambos mundos (era la limitacion 2.4.2). Con el
+  RL redefinido como percepcion tactil de los flippers, ese track quedo sin
+  ningun camino al hardware y solo aparentaba una capa de navegacion que no
+  existia.
 
-Los dos tracks NO se ejecutan juntos hoy: ambos publican /odom y el TF
-odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
+    ugv_core     Entorno de simulacion 2D (RobotEnv) compatible con Gymnasium,
+                 mas HeuristicBrain y RLBrain.
+    ugv_sim      Envolvia RobotEnv como nodo ROS: /scan, /odom y TF.
+    ugv_policy   Leia /scan y publicaba /cmd_vel.
+    ugv_gcs      Ventana Qt con un mini-mapa 2D.
+    ugv_msgs     Mensajes propios; ya estaba desactivado con COLCON_IGNORE.
+
+  HOY EL WORKSPACE TIENE UN SOLO PAQUETE: ugv_bridge. La inferencia de la
+  politica se rescato de ugv_policy y vive ahi (contrato_politica.py,
+  politica_flippers.py, scripts/exportar_onnx.py).
 
 
 1.3 ESTRUCTURA DEL PAQUETE PRINCIPAL (ugv_bridge)
@@ -126,7 +132,9 @@ odom -> base_link, asi que se pisarian. Ver limitaciones en la seccion 2.4.
                                transporte CAN por la placa y lector de la IMU.
         track_odometry_node.py Odometria de orugas: /joint_states -> /odom
                                (cinematica diferencial skid-steer).
-        kinematic_guardian.py  Filtro de seguridad que impide que los flippers
+        kinematic_guardian.py  [ELIMINADO del proyecto, oct-2026. Se describe
+                               aqui solo como registro historico.]
+                               Filtro de seguridad que impide que los flippers
                                choquen entre si.
         pi3hat_imu_node.py     Nodo suelto de prueba de la IMU fisica.
         can_monitor.py         Monitor grafico del trafico del bus CAN.
@@ -302,7 +310,6 @@ GEOMETRIA PARAMETRIZADA (una sola fuente de verdad)
     separacion de las orugas, montaje de la IMU y mapa de motores a buses CAN.
   - Lo consumen sin duplicar un solo numero:
         ugv.urdf.xacro         (via xacro.load_yaml)
-        kinematic_guardian     (via declare_parameter)
         track_odometry_node    (radio y ancho de orugas)
         flipper_node / driver  (IMU sintetica y montaje de la IMU)
   - Los launch procesan el .xacro en caliente, asi que el modelo 3D no puede
@@ -310,7 +317,7 @@ GEOMETRIA PARAMETRIZADA (una sola fuente de verdad)
   - Para actualizar cuando lleguen las medidas reales: editar el YAML, correr
     "bash src/ugv_bridge/scripts/generar_urdf.sh" y recompilar.
 
-GUARDIAN CINEMATICO (kinematic_guardian.py)
+GUARDIAN CINEMATICO (kinematic_guardian.py)   [ELIMINADO del proyecto, oct-2026]
 
   - Escucha /joint_states_raw (lo que el operador o la IA PIDEN) y publica en
     /joint_states solo lo que es geometricamente seguro. Si un comando haria
@@ -520,13 +527,13 @@ TENSORES DE INERCIA DEL URDF
   simulacion dinamica (Gazebo), pero habria que reemplazarlos por los del modelo
   CAD real antes de cualquier simulacion fisica.
 
-PAQUETE ugv_msgs
+PAQUETE ugv_msgs   [ELIMINADO oct-2026, registro historico]
 
   Existe el esqueleto (package.xml y CMakeLists.txt) pero esta DESACTIVADO con un
   archivo COLCON_IGNORE y no contiene ninguna definicion .msg. Hoy todo se
   comunica con mensajes estandar de ROS.
 
-ESTACION DE CONTROL (ugv_gcs)
+ESTACION DE CONTROL (ugv_gcs)   [ELIMINADO oct-2026, registro historico]
 
   Funciona como esqueleto: dibuja un mini-mapa 2D con la pose y el barrido de
   telemetros. Esta explicitamente pensado como base sobre la que enchufar la GUI
@@ -646,16 +653,21 @@ responden" o de "se colgo el robot":
 2.4 LIMITACIONES ACTUALES
 --------------------------
 
-  1. LOS DOS TRACKS NO CONVIVEN. ugv_sim (navegacion 2D) publica /odom y el TF
-     odom -> base_link, exactamente igual que track_odometry_node y el EKF del
-     track de hardware. Si se lanzan juntos, base_link queda con dos padres y el
-     arbol TF se vuelve invalido. Hoy se ejecutan por separado a proposito.
+  1. [RESUELTO oct-2026] Los dos tracks no convivian: ugv_sim publicaba /odom y
+     el TF odom -> base_link igual que track_odometry_node, y base_link quedaba
+     con dos padres. Se resolvio eliminando el track 2D entero.
 
-  2. LOS DOS MUNDOS NO COMPARTEN ESCALA NI MODELO. RobotEnv trabaja en
-     centimetros, con un robot circular de 12 cm de radio en una arena plana de
-     5x5 m, sin flippers. El track de hardware trabaja en metros con el robot real
-     de orugas y flippers. La politica de RL decide sobre /cmd_vel; el hardware
-     escucha /cmd_tracks y /cmd_flippers. Falta el nodo que traduzca entre ambos.
+  2. [RESUELTO oct-2026, eliminando el track 2D] Los dos mundos no compartian
+     escala ni modelo: RobotEnv era un robot circular de 12 cm en una arena
+     plana de 5x5 m sin flippers, y decidia sobre /cmd_vel, mientras el hardware
+     escucha /cmd_tracks y /cmd_flippers. Nunca existio el traductor.
+
+     LA LECCION SIGUE VIGENTE PARA EL RL NUEVO: el entorno de entrenamiento
+     tiene que producir exactamente el vector de ugv_bridge/contrato_politica.py
+     (40 observaciones, 4 acciones continuas) y aplicar la misma
+     integrar_accion(), importandolas, no reimplementandolas. Si no, el modelo
+     entrenado no fallara en el robot: devolvera angulos plausibles y
+     equivocados, sin un solo error en los logs.
 
   3. UN SOLO DUENO DE LA PLACA pi3hat. El bus SPI admite un unico proceso. Si
      corren a la vez flipper_node con imu_fuente:=pi3hat_real y el nodo suelto
@@ -707,9 +719,10 @@ responden" o de "se colgo el robot":
      orden de imports). El codigo nuevo esta limpio, pero el linter no esta
      integrado en CI y las pruebas de ament (test_flake8, test_pep257) fallarian
      si se ejecutaran.
- 11. FALTAN DEPENDENCIAS DECLARADAS. ugv_gcs usa nav_msgs y PySide6 sin
-     declararlos en su package.xml; ugv_policy usa numpy sin declararlo. Funciona
-     porque estan instalados, pero rosdep no los instalaria en una maquina nueva.
+ 11. [OBSOLETO] Se referia a ugv_gcs y ugv_policy, ya eliminados. Lo que queda
+     por revisar en ugv_bridge: onnxruntime (politica_flippers) no esta en los
+     repos de ROS y hay que instalarlo con pip3 en la Raspberry; esta anotado
+     como comentario en package.xml porque rosdep no sabria resolverlo.
  12. LA INTERFAZ vcan0 NO PERSISTE entre reinicios del PC y requiere root para
      crearse, asi que hay que ejecutar setup_vcan.sh en cada arranque antes de
      usar el modo 'can'.
@@ -823,12 +836,15 @@ responden" o de "se colgo el robot":
      LiDAR real, slam_toolbox encajaria directamente sobre el /scan que ya se
      publica.
 
-  5. GUI COMPLETA DE LA ESTACION DE CONTROL, sobre el esqueleto de ugv_gcs:
-     video, telemetria de los 8 motores, estado de la IMU, mando de flippers y
-     alarmas del watchdog.
+  5. [REEMPLAZADO] La estacion de control ya no se construye como ventana Qt
+     propia (ugv_gcs, eliminado): es un LAYOUT DE FOXGLOVE. Lo que falta es
+     completarlo con video y las alarmas del watchdog; la telemetria de los 8
+     motores y el estado de la IMU ya estan en /diagnostics y /can/*.
 
-  6. ACTIVAR ugv_msgs con mensajes propios para telemetria compacta de los 8
-     motores (hoy se usa JointState, que no lleva temperatura ni corriente).
+  6. [DESCARTADO] Activar ugv_msgs para telemetria compacta. El paquete se
+     elimino. JointState ya lleva position, velocity y effort, y lo que falta
+     (corriente) sale por /can/iq_a desde can_monitor. No hace falta un tipo
+     de mensaje propio.
 
   7. GRABACION DE ROSBAGS de las pruebas para el analisis de la tesis.
 
@@ -842,12 +858,8 @@ responden" o de "se colgo el robot":
 
 REFACTORS
 
-  1. Meter kinematic_guardian en la cadena de flipper.launch.py. Hoy el guardian
-     solo corre en view.launch.py y pi_view.launch.py; en el sistema completo
-     flipper_node publica /joint_states directo y NO pasa por el filtro de
-     seguridad. Habria que remapear la salida del driver a /joint_states_raw y
-     dejar que el guardian publique /joint_states, de modo que la proteccion
-     contra choques de flippers valga tambien con el hardware real.
+  1. [ELIMINADO] kinematic_guardian se retiro del proyecto: no va a ser
+     necesario. No queda ninguna referencia en codigo ni en los launch.
 
   2. Unificar los topicos de IMU. Hoy conviven /imu/data (nodo suelto de prueba)
      e /imu/data_raw (driver). Documentado, pero es una fuente de confusion.
@@ -870,17 +882,17 @@ OPTIMIZACIONES
      multivuelta en la misma respuesta del comando, lo que reduciria a la mitad
      el trafico del bus.
 
-  7. En modo 'can' la comunicacion es pregunta-respuesta motor por motor, o sea 16
-     esperas por ciclo. Con hardware real sobre un adaptador CAN fisico esto
-     podria no alcanzar los 100 Hz; medir y, si hace falta, pasar a envio en
-     rafaga con recoleccion posterior.
+  7. [HECHO] El envio en rafaga con recoleccion posterior YA esta implementado:
+     _intercambiar_socketcan manda el lote entero y despues drena el buffer; no
+     hay 16 esperas por ciclo. Lo que SI queda: ese drenaje consume siempre el
+     timeout completo (4 ms de los 10 ms de presupuesto a 100 Hz) en vez de
+     cortar en cuanto han contestado todos los motores presentes. Medir con
+     hardware real y, si hace falta, salir temprano.
 
 TESTS FALTANTES
 
-  8. No hay ninguna prueba de kinematic_guardian. Es codigo de SEGURIDAD y es el
-     mas facil de probar: es geometria pura, sin ROS ni hardware. Deberia haber
-     casos de flippers cruzados, flippers rozando, poses seguras en los limites y
-     verificacion de que se congela la ultima pose segura.
+  8. [ELIMINADO] Las pruebas de kinematic_guardian ya no aplican: el nodo se
+     retiro del proyecto.
 
   9. No hay pruebas de protocolo_can.py. Un test de ida y vuelta (empaquetar y
      desempaquetar cada tipo de trama, comprobando que el valor sobrevive) daria
@@ -900,11 +912,11 @@ CALIDAD Y MANTENIMIENTO
  13. Completar los metadatos de los package.xml: description, license y
      maintainer siguen con "TODO" en varios paquetes.
 
- 14. Declarar las dependencias que faltan: nav_msgs y PySide6 en ugv_gcs, numpy
-     en ugv_policy.
+ 14. [HECHO oct-2026] Las dependencias que faltaban eran de ugv_gcs y
+     ugv_policy, paquetes ya eliminados.
 
- 15. Decidir que hacer con ugv_msgs: definir los mensajes propios o eliminar el
-     paquete. Un paquete con COLCON_IGNORE y sin contenido solo genera dudas.
+ 15. [HECHO oct-2026] ugv_msgs se elimino. Un paquete con COLCON_IGNORE y sin
+     contenido solo generaba dudas.
 
  16. Anadir un archivo LICENSE al repositorio.
 

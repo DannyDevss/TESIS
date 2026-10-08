@@ -26,26 +26,51 @@ colcon build --packages-select ugv_bridge   # uno solo
 source install/setup.bash                # tras cada build (en bash; en fish: rosws)
 ```
 
-## 2. Track de FLIPPERS (paquete `ugv_bridge`)
+## 2. Track de FLIPPERS (paquete `ugv_bridge`, el único del workspace)
 
-Hay **dos launch** según lo que quieras hacer:
+> ### ⚠️ La única interfaz es FOXGLOVE
+>
+> No hay RViz ni ventanas Qt en ningún launch. Se quitaron a propósito: la GUI
+> de sliders (`joint_state_publisher_gui`) y la vieja ventana de `can_monitor`
+> **publicaban `/cmd_flippers` y `/cmd_tracks`** igual que Foxglove. Como
+> `flipper_node` retiene el último comando recibido, el flipper se iba al valor
+> de quien hablara último: parecía moverse solo, o ignoraba lo que mandabas.
+> Peor, las ventanas Qt sobreviven con frecuencia al Ctrl+C del launch y siguen
+> publicando en segundo plano, con lo que el síntoma aparece "sin nada abierto".
+>
+> Si sospechas de un fantasma de una sesión vieja:
+>
+> ```bash
+> bash src/ugv_bridge/scripts/limpiar_fantasmas.sh --ver   # listar
+> bash src/ugv_bridge/scripts/limpiar_fantasmas.sh         # cerrar
+> ```
+
+Hay **cuatro launch**, todos sin ventanas y con el puente de Foxglove incluido:
 
 | Launch | Para qué | Corre |
 |--------|----------|-------|
-| **`view.launch.py`** | posar/mirar el robot: mover las 4 articulaciones con sliders, robot fijo y centrado | robot_state_publisher + joint_state_publisher_gui + RViz |
-| **`flipper.launch.py`** | sistema completo: driver, IMU, odometría, EKF y locomoción | flipper_node + track_odometry_node + robot_state_publisher (+ EKF/RViz opcionales) |
+| **`view.launch.py`** | posar/mirar el robot sin bus ni hardware (gemelo digital) | atajo a `flipper.launch.py modo:=gemelo` + Foxglove |
+| **`flipper.launch.py`** | sistema completo: driver, IMU, odometría, EKF y locomoción | flipper_node + track_odometry_node + robot_state_publisher + teleop_flippers + foxglove_bridge (+ EKF opcional) |
+| **`can_view.launch.py`** | lo mismo pero hablando por **tramas CAN reales** sobre `vcan0` | `can_sim` (motor_emulator + flipper_node modo can) + Foxglove |
+| **`can_studio.launch.py`** | `can_view` + **espía del bus** (`can_monitor`) | lo anterior + `can_monitor` en modo solo lectura |
 
-### 2a. Posar los flippers con sliders (sin movimiento)
+### 2a. Posar los flippers (sin locomoción)
 
 ```bash
 ros2 launch ugv_bridge view.launch.py
 ```
 
-Abre RViz (fixed frame `base_link`, el robot no se desplaza) y una **ventana con un slider
-por cada flipper** (`fl/fr/rl/rr`). Las juntas son `continuous` (**giro completo de 360°**),
-así que el slider recorre todo el rango. Mueve un
-slider y el brazo gira en tiempo real. Aquí `/joint_states` lo publica la GUI, así que **no**
-se lanza `flipper_node` (entrarían en conflicto en el mismo tópico).
+Levanta el gemelo digital y el puente de Foxglove. Las juntas son `continuous`
+(**giro completo de 360°**), así que se puede llegar a cualquier ángulo. Lo que
+antes hacía cada slider, ahora lo hace un panel de Foxglove:
+
+| Antes (ventana Qt) | Ahora (Foxglove) |
+|---|---|
+| slider de un flipper | panel **Teleop** sobre `/teleop/flipper_fl` (mantener pulsado = girar) |
+| arrastrar los 4 a la vez | panel **Teleop** sobre `/teleop/flippers` |
+| poner un ángulo exacto | panel **Publish** sobre `/cmd_flippers` con la pose fija |
+
+Todo eso ya viene en el layout `config/ugv_control_v4.json`.
 
 ### 2b. Sistema completo (con locomoción, IMU y EKF)
 
@@ -53,8 +78,12 @@ se lanza `flipper_node` (entrarían en conflicto en el mismo tópico).
 # Básico: flipper_node + track_odometry_node + robot_state_publisher
 ros2 launch ugv_bridge flipper.launch.py
 
-# Con fusión sensorial EKF (robot_localization) y/o RViz:
-ros2 launch ugv_bridge flipper.launch.py use_ekf:=true use_rviz:=true
+# Con fusión sensorial EKF (robot_localization), necesaria para que el chasis se incline:
+ros2 launch ugv_bridge flipper.launch.py use_ekf:=true
+
+# El puente de Foxglove va encendido por defecto. Apagarlo solo si ya hay uno
+# corriendo en el 8765 (dos puentes = el segundo muere con "address already in use"):
+ros2 launch ugv_bridge flipper.launch.py use_foxglove:=false
 
 # Ajustar frecuencia del bucle de control o modo hardware:
 ros2 launch ugv_bridge flipper.launch.py frecuencia_hz:=200.0 modo_simulacion:=true
@@ -113,7 +142,8 @@ ros2 run tf2_ros tf2_echo base_link flipper_fl_link   # TF de un flipper
 ros2 run rqt_plot rqt_plot /joint_states/position[4]  # ángulo de un flipper en el tiempo
 ```
 
-En RViz: fixed frame `base_link` (sin EKF) u `odom` (con EKF); displays RobotModel + TF.
+En el panel 3D de Foxglove: **Display frame = `odom`** (con EKF) o `base_link`
+(sin EKF), y el modelo desde `/robot_description`.
 
 ### 2c. Foxglove: puente + layout del proyecto
 
@@ -184,6 +214,55 @@ problemas, para no ir contando filas. Se publica a 1 Hz.
 Los paneles de publicación funcionan porque el puente expone la capability
 `clientPublish` (activa por defecto). Recuerda que la velocidad de orugas es
 persistente: hay que frenar mandando `[0,0,0,0]`.
+
+#### Espiar el bus CAN desde Foxglove (`can_monitor`)
+
+`can_monitor` ya **no abre ninguna ventana** y, sobre todo, **ya no publica
+comandos**: es un espía de solo lectura del socket CAN. Antes era una ventana Qt
+con sliders que publicaba `/cmd_flippers` y `/cmd_tracks`, y por eso se peleaba
+con Foxglove por el mando.
+
+```bash
+ros2 launch ugv_bridge can_studio.launch.py          # simulación + espía + puente
+ros2 run ugv_bridge can_monitor --canal can0         # suelto, sobre un bus real
+ros2 launch ugv_bridge can_studio.launch.py publicar_trafico:=false  # bus cargado
+```
+
+Qué publica y con qué panel se mira:
+
+| Tópico | Tipo | Panel de Foxglove |
+|---|---|---|
+| `/diagnostics` (filas `can/…`) | `DiagnosticArray` | *Diagnostics – Summary* |
+| `/can/posicion_rad` | `Float64MultiArray` | *Plot* → `/can/posicion_rad.data[4]` |
+| `/can/velocidad_rad_s` | `Float64MultiArray` | *Plot* → `…data[0]` |
+| `/can/iq_a`, `/can/torque_nm` | `Float64MultiArray` | *Plot* |
+| `/can/cmd_posicion_rad`, `/can/cmd_velocidad_rad_s` | `Float64MultiArray` | *Plot* (consigna vs. real) |
+| `/can/tasa_tramas_hz` | `Float64` | *Gauge* o *Plot* |
+| `/can/trafico` | `String` | *Raw Messages* → `/can/trafico.data` |
+
+> En todos los arrays el orden es por **ID de motor**: índices `0..3` son las
+> orugas `fl, fr, rl, rr` (IDs 1-4) y `4..7` los flippers `fl, fr, rl, rr`
+> (IDs 5-8). Poner en el mismo Plot `/can/cmd_posicion_rad.data[4]` y
+> `/can/posicion_rad.data[4]` muestra consigna contra realidad del `flipper_fl`:
+> si la consigna se mueve y la posición no, el eje está en IDLE.
+
+**Dos fuentes de verdad en `/diagnostics`, y la diferencia importa:**
+
+| Filas | Las publica | Qué dicen |
+|---|---|---|
+| `motores/…` | `flipper_node` | lo que **cree** el driver |
+| `can/…` | `can_monitor` | lo que **circula de verdad** por el cable |
+| `can/BUS` | `can_monitor` | tramas/s del canal y cuántos motores emiten |
+
+Cuando esas dos vistas discrepan, el fallo está entre el driver y el bus:
+interfaz caída, bitrate mal puesto o `node_id` equivocado. Si coinciden en que
+un motor está mudo, el fallo es del motor o de su cableado.
+
+> **Temperatura, Iq y torque salen en 0** salvo que se activen por USB
+> (`odrv0.axis0.config.can.iq_rate_ms = 10` y compañía): de fábrica el ODrive
+> solo emite `Heartbeat` y `Get_Encoder_Estimates`. La versión antigua del
+> monitor tenía una columna de temperatura que **nunca** se rellenó porque
+> decodificaba mensajes del protocolo RMD viejo, que ya no existe.
 
 ### Que el modelo 3D se INCLINE en Foxglove (no sólo los flippers)
 
@@ -590,6 +669,8 @@ muere con `pi3hat: could not acquire lock, is another process running?` (la plac
 admite un solo dueño del SPI). Antes de relanzar:
 
 ```bash
+bash src/ugv_bridge/scripts/limpiar_fantasmas.sh
+# o, a mano:
 pkill -9 -f "lib/ugv_bridge/"
 ```
 
@@ -601,28 +682,166 @@ son Python) hereda esa variable vacía: el síntoma es un nodo C++ que muere con
 La solución no es pelear con `LD_LIBRARY_PATH`, es registrar el directorio en
 `/etc/ld.so.conf.d/ros2-jazzy.conf` y correr `sudo ldconfig`.
 
-## 3. Track de NAVEGACIÓN 2D (simulación + política RL)
+## 3. Track de RL: percepción táctil de los flippers
+
+**El entrenamiento no corre en la Raspberry.** Se entrena en el PC y a la Pi
+llega un único `.onnx` que ejecuta `politica_flippers` con `onnxruntime`. En el
+robot no hay gymnasium, ni stable-baselines3, ni torch.
+
+### 3a. La idea: el sensor táctil son los propios motores
+
+El objetivo es que el robot note las imperfecciones del suelo y acomode los
+flippers solo. La tentación es montar un sensor de contacto en la punta de cada
+flipper. No hace falta: cuando un flipper se apoya contra el terreno pasan dos
+cosas que ya están en `/joint_states`.
+
+| Señal | De dónde sale | Qué dice |
+|---|---|---|
+| **Error de seguimiento** (`consigna − real`) | `position` | El lazo del ODrive persigue la consigna; si algo lo frena, el eje se queda atrás. Cuánto se queda atrás es cuánto le cuesta, o sea el contacto. |
+| **Par** | `effort` (torque_nm, de Iq) | Corriente que mete el driver para sostener la posición: medida directa de la fuerza de contacto. |
+| **Deslizamiento de oruga** | `velocity` vs `/cmd_tracks` | Si la oruga gira más de lo que el robot avanza, está patinando. |
+| **Actitud y giro** | `/imu/data_raw` | Inclinación del chasis e impactos verticales. |
+
+Es propiocepción, lo mismo que usan los cuadrúpedos (ANYmal, MIT Cheetah) para
+detectar el apoyo de las patas. Sin hardware nuevo.
+
+> ⚠️ **Prerrequisito: activar Iq por USB.** El GIM6010-8 trae los mensajes de Iq
+> apagados de fábrica, así que hoy `effort` llega en cero y falta la mitad de la
+> señal. Con `odrivetool`, en los ocho motores:
+> `odrv0.axis0.config.can.iq_rate_ms = 10` y `odrv0.save_configuration()`.
+> El error de seguimiento sí funciona sin tocar nada.
+>
+> Y `KT_NM_POR_A = 1.0` en `protocolo_can.py` sigue siendo un marcador de
+> posición: hasta poner el Kt real, `effort` está en una unidad arbitraria. Para
+> el RL da igual (la red aprende la escala), **pero tiene que ser la misma en el
+> entrenamiento y en el robot**. Por eso las escalas viven en el contrato.
+
+### 3b. El contrato, que es lo que impide el fallo silencioso
+
+`src/ugv_bridge/ugv_bridge/contrato_politica.py` es la **única fuente de
+verdad** del vector de observación (40 valores) y del de acción (4). Lo
+comparten el entrenamiento en el PC y la inferencia en la Pi.
+
+Importa porque un `.onnx` solo sabe que recibe 40 números y devuelve 4; no sabe
+qué significa cada uno. Si se reordena el vector o se cambia una escala y se
+despliega un modelo viejo, **la red no da ningún error**: recibe el par de un
+flipper donde esperaba una velocidad y devuelve ángulos plausibles y
+equivocados. El robot se mueve raro y no hay nada en los logs.
+
+Por eso cada modelo se exporta con un `.json` que graba `version_contrato`, y el
+nodo se niega a cargar un modelo cuya versión no sea la suya. **Al tocar el
+contrato hay que subir `VERSION_CONTRATO` y reexportar.**
+
+La acción son 4 **velocidades** normalizadas, no ángulos absolutos: así el peor
+error posible mueve el flipper `VEL_ACCION_MAX / frecuencia` radianes, y la red
+no necesita saber dónde está el cero mecánico de cada flipper.
+
+### 3c. Usarlo HOY, antes de tener ningún modelo
+
+Esto es lo más útil ahora mismo. Sin el parámetro `modelo`, el nodo **no comanda
+nada** y publica `/politica/observacion`: las 40 señales normalizadas, en vivo.
 
 ```bash
-ros2 run ugv_sim sim_node        # avanza RobotEnv 20 Hz: publica /scan, /odom, TF; escucha /cmd_vel
-ros2 run ugv_policy policy_node  # decide con el cerebro (heurística/RL) y publica /cmd_vel
-#   con modelo RL: ros2 run ugv_policy policy_node --ros-args -p model_path:=/ruta/modelo_robot.zip
-ros2 run ugv_gcs gcs_node        # GCS mínima ROS2 (mini-mapa 2D)
-
-# Todo junto (sim + policy + la GUI simu.py de tesis/):
-ros2 launch ~/Proyectos/ugv_ws/ugv.launch.py
+ros2 run ugv_bridge politica_flippers
+# o dentro del sistema completo:
+ros2 launch ugv_bridge flipper.launch.py use_politica:=true
 ```
 
-## 4. App / simulación de escritorio (carpeta `tesis/`, venv propio)
+En Foxglove, un panel *Plot* con estas series mientras conduces el robot por
+encima de un obstáculo:
 
-No es ROS puro, pero `simu.py` importa `rclpy` (necesita ROS sourceado). Desde el venv de `tesis/`:
+| Serie | Índice en `/politica/observacion.data` |
+|---|---|
+| `flipper_fl/error` | 3 |
+| `flipper_fl/esfuerzo` | 4 |
+| `track_fl/desliz` | 21 |
+| `chasis/sin_pitch` | 34 |
+
+Si esas curvas no reaccionan al pasar por encima de algo, no hay señal táctil
+que aprender y entrenar sería tiempo perdido. Si reaccionan, sus amplitudes
+reales son las que hay que poner en las escalas del contrato, y su forma es de
+donde sale la recompensa. El orden completo de las 40 componentes lo da
+`contrato_politica.descripcion_observacion()`.
+
+### 3d. Entrenar en el PC y exportar
+
+El entorno de entrenamiento tiene que producir **exactamente** el vector del
+contrato, y **todavía no existe**. El que había (`robot_env`, en el paquete
+`ugv_core`) se eliminó: su tarea era navegación 2D plana con 3 acciones
+discretas, sin flippers en el espacio de acciones ni contacto en la
+observación. No servía para esto y solo podía confundir.
+
+Hace falta un entorno nuevo **con física de contacto** (MuJoCo, Isaac Sim o
+Gazebo) que importe `contrato_politica` y llame a `construir_observacion()` e
+`integrar_accion()` tal cual, **sin reimplementarlas**: reimplementarlas es
+justo el fallo que el contrato existe para evitar. Ese entorno vive en el PC y
+no tiene por qué estar en este repositorio.
+
+Con el modelo entrenado:
 
 ```bash
-python simu.py             # GCS completa (PySide6 + OpenGL)
-python robot_env.py        # demo headless del entorno + heurística (métricas)
-python entrenar.py         # entrena PPO -> modelo_robot.zip (requiere gymnasium/sb3/torch)
-python entrenar.py eval    # evalúa un modelo entrenado
+# En el PC (necesita torch y stable-baselines3):
+python3 src/ugv_bridge/scripts/exportar_onnx.py modelo_flippers.zip -s politica --verificar
+scp politica.onnx politica.json ros2@robotdeteccion.local:~/
 ```
+
+### 3e. Ejecutarlo en el robot
+
+```bash
+# En la Raspberry, una vez:
+pip3 install onnxruntime
+
+ros2 launch ugv_bridge flipper.launch.py \
+    modo:=pi3hat imu_fuente:=pi3hat_real use_ekf:=true \
+    use_politica:=true modelo_politica:=/home/ros2/politica.onnx
+```
+
+**Arranca desactivada.** Para que empiece a comandar, panel *Publish* de
+Foxglove sobre `/politica/activa` (`std_msgs/Bool`) con `{"data": true}`.
+Conviene tener al lado otro botón con `false` como paro.
+
+Cuatro frenos, todos activos a la vez:
+
+1. **Arranca desactivada.** Sin `true` en `/politica/activa` no sale un comando.
+2. **Salida en velocidad, integrada sobre la posición medida.** El peor comando
+   posible mueve el flipper `VEL_ACCION_MAX / frecuencia_hz` rad. A 50 Hz son
+   1,4°. Integrar sobre la posición medida y no sobre la consigna evita que, con
+   un flipper atascado contra una piedra, la consigna se escape hacia adelante y
+   se descargue de golpe al liberarse.
+3. **Watchdog.** Si `/joint_states` se calla más de 0,5 s, deja de publicar.
+4. **Contrato verificado al cargar.** Versión distinta o entrada de otro tamaño:
+   el modelo no se carga.
+
+El estado sale en `/diagnostics` como fila `politica/flippers`, junto a las
+`can/…` y las `motores/…`, en el mismo panel *Diagnostics* de Foxglove.
+
+## 4. Lo que se eliminó del workspace (octubre 2026)
+
+El repositorio tenía cinco paquetes en `src/`. Hoy tiene uno: **`ugv_bridge`**.
+
+| Eliminado | Qué era | Por qué |
+|---|---|---|
+| `ugv_core` | `robot_env`: entorno Gymnasium de navegación 2D plana | Tarea equivocada: 3 acciones discretas, sin flippers ni contacto con el suelo |
+| `ugv_sim` | `sim_node`: simulación 2D, publicaba `/scan` y `/odom` | Solo servía a `robot_env` |
+| `ugv_policy` | `policy_node`: heurística de evitación → `/cmd_vel` | `/cmd_vel` no lo consume nadie en este robot, que va por `/cmd_tracks` y `/cmd_flippers` |
+| `ugv_msgs` | Mensajes propios | Ya estaba desactivado con `COLCON_IGNORE` |
+| `ugv.launch.py` (raíz) | Lanzaba sim + policy + una GUI de otra carpeta | Apuntaba a rutas que no existen en este repo |
+| `kinematic_guardian` | Filtro de colisiones entre flippers | Ya no es necesario; se retiró el nodo y sus referencias |
+
+Todos eran de una versión anterior del proyecto. Nada de `ugv_bridge` los
+importaba, y ninguno llegaba al hardware: el track 2D hablaba `/cmd_vel` contra
+un simulador plano y el robot habla `/cmd_tracks` y `/cmd_flippers`, sin ningún
+puente entre ambos. Mantenerlos daba la impresión de que el sistema tenía una
+capa de navegación que en realidad no existía.
+
+Lo único que se rescató es la inferencia de la política, que estaba en
+`ugv_policy` y ahora vive en `ugv_bridge`: `contrato_politica.py`,
+`politica_flippers.py` y `scripts/exportar_onnx.py`.
+
+> La GUI de escritorio (`simu.py`), el entrenamiento (`entrenar.py`) y la
+> documentación de la memoria siguen en el repo hermano
+> [TesisT60doc](https://github.com/ThanquolElGris/TesisT60doc) y en la carpeta
+> `tesis/`, con su propio venv. No dependen de este workspace.
 
 ## 5. Instalar dependencias ROS
 

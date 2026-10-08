@@ -5,12 +5,16 @@ Levanta `motor_emulator` (los 8 motores al otro lado de vcan0) y encima el siste
 completo de flipper.launch.py con modo:=can, de forma que flipper_node hable con
 los motores mediante TRAMAS CAN REALES sobre la interfaz virtual.
 
+VISUALIZACIÓN: SOLO FOXGLOVE. Este launch no abre ninguna ventana. El argumento
+`use_rviz` se eliminó; si lo pasas, el launch avisará de que no existe. El mando
+son los paneles Publish y Teleop de Foxglove (ver teleop_flippers.py).
+
 Requisito previo (una vez por arranque del PC, en el HOST o dentro de rosdev):
     sudo bash src/ugv_bridge/scripts/setup_vcan.sh
 
 Uso:
     ros2 launch ugv_bridge can_sim.launch.py
-    ros2 launch ugv_bridge can_sim.launch.py use_rviz:=true use_ekf:=true
+    ros2 launch ugv_bridge can_sim.launch.py use_ekf:=true
     ros2 launch ugv_bridge can_sim.launch.py can_canal:=vcan0 frecuencia_hz:=100.0
 
 Con el pi3hat ya montado (motores emulados, IMU FÍSICA real):
@@ -20,7 +24,8 @@ Si el pi3hat está en la Raspberry y esto corre en el PC, la IMU real la publica
 la Pi (su SPI no se alcanza por red) y aquí solo hay que callar la sintética:
     ros2 launch ugv_bridge can_sim.launch.py imu_externa:=true use_ekf:=true
 
-Depurar el tráfico del bus en otra terminal:  candump vcan0
+Para VER el bus desde Foxglove sin abrir terminales, usar can_studio.launch.py,
+que añade el espía `can_monitor`. En crudo y fuera de ROS:  candump vcan0
 """
 import os
 
@@ -41,8 +46,13 @@ def generate_launch_description():
         DeclareLaunchArgument('frecuencia_hz', default_value='100.0'),
         DeclareLaunchArgument('imu_fuente', default_value='sintetica'),
         DeclareLaunchArgument('imu_externa', default_value='false'),
+        DeclareLaunchArgument('motores_presentes', default_value=''),
         DeclareLaunchArgument('use_ekf', default_value='false'),
-        DeclareLaunchArgument('use_rviz', default_value='false'),
+        # Por defecto NO se levanta el puente aquí: can_view/can_studio lo
+        # levantan una sola vez por encima. Dos foxglove_bridge en el mismo
+        # puerto = el segundo muere con "address already in use".
+        DeclareLaunchArgument('use_foxglove', default_value='false'),
+        DeclareLaunchArgument('use_teleop', default_value='true'),
 
         # Los 8 motores emulados escuchando el bus (proceso sin ROS).
         Node(
@@ -70,8 +80,10 @@ def generate_launch_description():
                 'frecuencia_hz': LaunchConfiguration('frecuencia_hz'),
                 'imu_fuente': LaunchConfiguration('imu_fuente'),
                 'imu_externa': LaunchConfiguration('imu_externa'),
+                'motores_presentes': LaunchConfiguration('motores_presentes'),
                 'use_ekf': LaunchConfiguration('use_ekf'),
-                'use_rviz': LaunchConfiguration('use_rviz'),
+                'use_foxglove': LaunchConfiguration('use_foxglove'),
+                'use_teleop': LaunchConfiguration('use_teleop'),
             }.items(),
         ),
     ])

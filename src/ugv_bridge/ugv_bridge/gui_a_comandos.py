@@ -1,5 +1,24 @@
 #!/usr/bin/env python3
-"""gui_a_comandos.py — Puente sliders (joint_state_publisher_gui) -> /cmd_flippers.
+"""gui_a_comandos.py — LEGADO. Puente sliders (joint_state_publisher_gui) -> /cmd_flippers.
+
+NINGÚN LAUNCH ARRANCA YA ESTE NODO.
+-----------------------------------
+Toda la interacción del proyecto pasa por Foxglove: paneles `Publish` para poses
+fijas de /cmd_flippers y /cmd_tracks, y paneles `Teleop` sobre /teleop/flipper_*
+(ver teleop_flippers.py). La ventana Qt de sliders se retiró porque era un
+SEGUNDO mando: publicaba en /cmd_flippers a la vez que Foxglove y, como
+flipper_node retiene el último comando que recibe, el flipper se iba al valor de
+quien hablara último. Encima la ventana sobrevivía al Ctrl+C del launch y seguía
+publicando en segundo plano.
+
+El archivo se conserva por si alguna vez hace falta volver a los sliders en un
+PC con escritorio. Para usarlo hay que levantar a mano las dos piezas:
+
+    ros2 run joint_state_publisher_gui joint_state_publisher_gui \
+        --ros-args -r joint_states:=gui/joint_states
+    ros2 run ugv_bridge gui_a_comandos
+
+Y entonces NO usar los paneles de mando de Foxglove al mismo tiempo.
 
 En view.launch.py la GUI de sliders publica /joint_states directamente: "dibuja" el
 robot sin pasar por el driver. Este nodo invierte el flujo para can_view.launch.py:

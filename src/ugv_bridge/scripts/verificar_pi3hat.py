@@ -100,7 +100,7 @@ async def main_async(args):
         servo_bus_map.setdefault(bus, []).append(mid)
     try:
         # Mismo camino que el driver: abre la placa con los buses en CAN 2.0
-        # clásico a 1 Mbps, no en el CAN-FD que moteus_pi3hat pone por defecto.
+        # clásico a 500 kbps, no en el CAN-FD que moteus_pi3hat pone por defecto.
         router = backend.abrir_router(mapa)
         await router.cycle([])
     except Exception as e:
