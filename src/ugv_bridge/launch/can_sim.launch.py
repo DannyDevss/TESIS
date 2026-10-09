@@ -24,6 +24,11 @@ Si el pi3hat está en la Raspberry y esto corre en el PC, la IMU real la publica
 la Pi (su SPI no se alcanza por red) y aquí solo hay que callar la sintética:
     ros2 launch ugv_bridge can_sim.launch.py imu_externa:=true use_ekf:=true
 
+Con la política de RL (por ejemplo el modelo falso de scripts/modelo_falso.py),
+arranca desactivada; se activa desde Foxglove con /politica/activa:
+    ros2 launch ugv_bridge can_sim.launch.py use_foxglove:=true \
+        use_politica:=true modelo_politica:=/tmp/falso.onnx
+
 Para VER el bus desde Foxglove sin abrir terminales, usar can_studio.launch.py,
 que añade el espía `can_monitor`. En crudo y fuera de ROS:  candump vcan0
 """
@@ -53,6 +58,9 @@ def generate_launch_description():
         # puerto = el segundo muere con "address already in use".
         DeclareLaunchArgument('use_foxglove', default_value='false'),
         DeclareLaunchArgument('use_teleop', default_value='true'),
+        DeclareLaunchArgument('use_politica', default_value='false'),
+        DeclareLaunchArgument('modelo_politica', default_value=''),
+        DeclareLaunchArgument('politica_activa', default_value='false'),
 
         # Los 8 motores emulados escuchando el bus (proceso sin ROS).
         Node(
@@ -84,6 +92,9 @@ def generate_launch_description():
                 'use_ekf': LaunchConfiguration('use_ekf'),
                 'use_foxglove': LaunchConfiguration('use_foxglove'),
                 'use_teleop': LaunchConfiguration('use_teleop'),
+                'use_politica': LaunchConfiguration('use_politica'),
+                'modelo_politica': LaunchConfiguration('modelo_politica'),
+                'politica_activa': LaunchConfiguration('politica_activa'),
             }.items(),
         ),
     ])

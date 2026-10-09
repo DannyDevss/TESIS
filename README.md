@@ -131,14 +131,17 @@ simulador + RL (PPO/SAC)                 politica_flippers
         |                                  lee /joint_states, /imu/data_raw
         v                     .onnx        construye la observación
 scripts/exportar_onnx.py  ──────────────▶  ejecuta la red (onnxruntime)
-                          .json            publica /cmd_flippers
+                          .json            publica /cmd_flippers y /cmd_tracks
 ```
 
-El **contrato** (`ugv_bridge/contrato_politica.py`) es la única fuente de verdad
-del vector de observación y de acción, y lo comparten los dos lados. El `.json`
-que acompaña al modelo graba su versión, y el nodo se niega a cargar un modelo
-cuya versión no sea la suya: si los layouts no coinciden, la red no falla, solo
-devuelve ángulos plausibles y equivocados.
+La política la entrena un profesor y es **autónoma**: maneja flippers y orugas.
+Su **contrato** (qué es cada número que entra y sale de la red) viaja en el
+`.json` junto al modelo, y el robot arma la observación a partir de él: así no
+puede desincronizarse con el simulador. El formato está en
+`ugv_bridge/contrato_politica.py`; los frenos (desactivada al arrancar,
+watchdog, topes duros y parada segura con orugas a 0), en
+`ugv_bridge/ejecutor_politica.py`. Para probar sin modelo real:
+`scripts/modelo_falso.py`.
 
 Detalle completo del objetivo (percepción táctil sin sensor táctil), de las
 señales y de los frenos de seguridad en `COMO_EJECUTAR.md`, sección 3.

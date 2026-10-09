@@ -1,114 +1,107 @@
 #!/usr/bin/env python3
-"""politica_flippers.py — Ejecuta en la Raspberry el modelo entrenado en el PC.
+r"""politica_flippers.py — Ejecuta en el robot la política entrenada fuera de él.
 
 SOLO INFERENCIA. Aquí no hay gymnasium, ni stable-baselines3, ni torch, ni
-entorno de entrenamiento, ni recompensa. El entrenamiento vive en el PC; a la Pi
-llega un único archivo `.onnx` más su `.json` de contrato, y este nodo lo
-ejecuta. Esa separación es lo que permite que la Pi no necesite más que
-`onnxruntime` (unos pocos MB) en vez de la pila entera de PyTorch.
+recompensa. El entrenamiento vive en otro equipo; al robot llega un `.onnx`
+más su `.json` con el CONTRATO, y este nodo los ejecuta con `onnxruntime`.
 
-    PC (alta gama)                      Raspberry Pi
-    ---------------                     -------------
-    simulador + RL                      este nodo
-    entrena PPO/SAC          .onnx      lee /joint_states, /imu/data_raw
-    exportar_onnx.py  ───────────────▶  construye la observación
-                             .json      ejecuta la red
-                                        publica /cmd_flippers
+    PC de entrenamiento                 Robot (Raspberry / Jetson)
+    -------------------                 --------------------------
+    simulador + RL           .onnx      este nodo
+    exportar_onnx.py  ───────────────▶  lee /joint_states, /imu/data_raw
+                             .json      arma la observación según el contrato
+                                        ejecuta la red
+                                        publica /cmd_flippers y /cmd_tracks
 
-OBJETIVO: PERCEPCIÓN TÁCTIL
----------------------------
-El robot tiene que notar las imperfecciones del suelo y acomodar los flippers
-solo. Los sensores son los propios motores: el error de seguimiento y el par de
-cada flipper dicen si está tocando algo y con cuánta fuerza. La explicación
-completa y el layout exacto del vector están en `contrato_politica.py`, que es
-la única fuente de verdad y la comparten el entrenamiento y este nodo.
+La política es AUTÓNOMA: maneja flippers y orugas. Foxglove queda para
+activarla, pararla y mirar.
+
+ESTE NODO ES SOLO PEGAMENTO ROS
+-------------------------------
+  - QUÉ entra a la red y QUÉ significa lo que sale: `contrato_politica.py`. Es
+    un dato que viaja con el modelo; adaptarse a otro modelo es escribir su
+    .json, no tocar este archivo.
+  - CUÁNDO se le deja comandar y qué se hace si algo falla:
+    `ejecutor_politica.py`, que se prueba sin ROS. Arranca desactivada, tiene
+    watchdog, topes duros propios y PARADA SEGURA: al desactivarse o fallar
+    manda orugas a 0 y flippers quietos (flipper_node retiene el último
+    comando, así que sin eso el robot seguiría andando).
 
 SIRVE AUNQUE TODAVÍA NO HAYA MODELO
 -----------------------------------
-Sin el parámetro `modelo`, el nodo arranca igual y NO publica ningún comando,
-pero sí publica `/politica/observacion`: las 40 señales normalizadas, en vivo.
-Eso es justo lo que hace falta AHORA, antes de entrenar nada: conducir el robot
-por encima de un obstáculo mirando en Foxglove cómo responden
-`flipper_fl/error` y `flipper_fl/esfuerzo`, para saber si la señal táctil
-existe de verdad y con qué amplitud, y de ahí sacar las escalas y la
-recompensa. Entrenar antes de haber visto esas curvas es entrenar a ciegas.
-
-SEGURIDAD
----------
-Una red neuronal mandando ángulos a ocho motores de 48 V merece frenos. Hay
-cuatro, todos activos a la vez:
-
-  1. ARRANCA DESACTIVADA. Hasta que no llega `true` por `/politica/activa`
-     (std_msgs/Bool), no sale un solo comando. En Foxglove es un panel Publish.
-  2. SALIDA EN VELOCIDAD, NO EN POSICIÓN. La red pide velocidades acotadas que
-     se integran sobre la posición MEDIDA. El peor comando posible mueve el
-     flipper `VEL_ACCION_MAX / frecuencia_hz` radianes. Ver integrar_accion().
-  3. WATCHDOG DE ESTADO. Si /joint_states se calla más de `timeout_estado_s`,
-     deja de publicar. Sin esto la política seguiría comandando a ciegas sobre
-     una foto vieja del robot, que es como se rompen los flippers.
-  4. CONTRATO VERIFICADO AL CARGAR. Si la versión del contrato del modelo no es
-     la de este código, o la entrada de la red no mide OBS_DIM, el nodo se
-     niega a arrancar en vez de alimentar la red con el vector equivocado. Ese
-     fallo, si se dejara pasar, no da ningún error: solo ángulos plausibles y
-     erróneos.
+Sin `modelo`, no comanda nada pero publica `/politica/observacion`: las señales
+normalizadas del contrato, en vivo (el provisional, o el de `contrato`). Sirve
+para mirar en Foxglove cómo responden el error de seguimiento y el esfuerzo de
+los flippers al pasar por un obstáculo, antes de entrenar nada.
 
 TÓPICOS
 -------
 Suscribe:
-    /joint_states      (sensor_msgs/JointState)   posición, velocidad, esfuerzo
-    /imu/data_raw      (sensor_msgs/Imu)          actitud, giro, aceleración
-    /cmd_tracks        (std_msgs/Float64MultiArray) consigna de orugas, para el
-                                                   deslizamiento
-    /politica/activa   (std_msgs/Bool)            interruptor de seguridad
+    /joint_states      (sensor_msgs/JointState)      posición, velocidad, esfuerzo
+    /imu/data_raw      (sensor_msgs/Imu)             actitud, giro, aceleración
+    /cmd_flippers      (std_msgs/Float64MultiArray)  consigna vigente (de otro o eco)
+    /cmd_tracks        (std_msgs/Float64MultiArray)  ídem, para el deslizamiento
+    /politica/activa   (std_msgs/Bool)               interruptor de seguridad
 Publica:
     /cmd_flippers         (std_msgs/Float64MultiArray) 4 posiciones rad
-    /politica/observacion (std_msgs/Float64MultiArray) las 40 señales, en vivo
+    /cmd_tracks           (std_msgs/Float64MultiArray) 4 velocidades rad/s
+    /politica/observacion (std_msgs/Float64MultiArray) la entrada de la red, en vivo
     /diagnostics          (diagnostic_msgs/DiagnosticArray) fila politica/flippers
 
 PARÁMETROS
 ----------
-    modelo            (string, '')   ruta al .onnx. Vacío = solo observar.
-    frecuencia_hz     (double, 50.0) ritmo de inferencia y de publicación.
+    modelo            (string, '')   ruta al .onnx; su contrato es el .json de al
+                                     lado. Vacío = solo observar.
+    contrato          (string, '')   sin modelo: contrato con el que observar.
+                                     Vacío = el provisional.
+    frecuencia_hz     (double, 0.0)  0 = la del contrato (o 50 si no la dice). La
+                                     red se entrenó a un ritmo: conviene respetarlo.
     activa_al_inicio  (bool, False)  true solo en banco, nunca con el robot en
                                      el suelo sin vigilancia.
-    timeout_estado_s  (double, 0.5)  sin /joint_states en este tiempo, se para.
+    timeout_estado_s  (double, 0.5)  sin /joint_states en este tiempo, para.
+    vel_max_oruga     (double, 6.0)  tope duro rad/s, gane lo que gane el contrato.
+    vel_max_flipper   (double, 1.5)  tope duro rad/s de cada flipper.
     limite_min_rad    (double, nan)  tope inferior opcional de los flippers.
     limite_max_rad    (double, nan)  tope superior opcional. Las juntas son
                                      `continuous`, así que por defecto no hay.
 
 USO
 ---
-    # Solo mirar las señales táctiles (sin modelo, no mueve nada):
+    # Solo mirar las señales (sin modelo, no mueve nada):
     ros2 run ugv_bridge politica_flippers
 
-    # Con el modelo entrenado en el PC y copiado a la Pi:
+    # Con un modelo (el .json tiene que estar al lado):
     ros2 run ugv_bridge politica_flippers --ros-args -p modelo:=/home/ros2/politica.onnx
 
-    # Dentro del sistema completo:
-    ros2 launch ugv_bridge flipper.launch.py use_politica:=true \\
-        modelo_politica:=/home/ros2/politica.onnx
+    # Dentro del sistema completo, por ejemplo con el modelo falso:
+    python3 src/ugv_bridge/scripts/modelo_falso.py -s /tmp/falso
+    ros2 launch ugv_bridge can_sim.launch.py use_foxglove:=true \
+        use_politica:=true modelo_politica:=/tmp/falso.onnx
 
     # Activar desde Foxglove: panel Publish -> /politica/activa -> {"data": true}
 
-En la Raspberry:  pip3 install onnxruntime
+Hace falta onnxruntime donde corra este nodo (PC, Pi o contenedor). En Ubuntu
+24.04 pip se niega a instalar en el sistema (PEP 668), y un venv no sirve
+porque ros2 usa el python3 del sistema:
+    pip3 install --user --break-system-packages onnxruntime "numpy<2"
+"numpy<2" conserva el numpy 1.26 contra el que están compilados los paquetes
+de ROS.
 """
-import json
 import math
-import os
 import signal
 
-import numpy as np
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 import rclpy
 from rclpy.node import Node
-from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import Imu, JointState
 from std_msgs.msg import Bool, Float64MultiArray
 
-from ugv_bridge import contrato_politica as contrato
+from ugv_bridge import contrato_politica
+from ugv_bridge.ejecutor_politica import EjecutorPolitica, huella_texto, ModeloOnnx
 
 
 def _rpy_de_cuaternion(x, y, z, w):
-    """Cuaternión -> (roll, pitch). El yaw no entra en la observación a propósito."""
+    """Cuaternión -> (roll, pitch). El yaw no se usa: depende de dónde está el robot."""
     sinr = 2.0 * (w * x + y * z)
     cosr = 1.0 - 2.0 * (x * x + y * y)
     roll = math.atan2(sinr, cosr)
@@ -118,121 +111,71 @@ def _rpy_de_cuaternion(x, y, z, w):
     return roll, pitch
 
 
-class MotorOnnx:
-    """Carga y ejecuta el .onnx, verificando antes que cumple el contrato."""
-
-    def __init__(self, ruta):
-        try:
-            import onnxruntime as ort
-        except ImportError as e:
-            raise RuntimeError(
-                'Falta onnxruntime. En la Raspberry: pip3 install onnxruntime'
-            ) from e
-
-        if not os.path.isfile(ruta):
-            raise RuntimeError(f'No existe el modelo: {ruta}')
-
-        # El sidecar es opcional pero MUY recomendable: sin él no se puede
-        # comprobar la versión del contrato y solo queda validar la forma.
-        self.meta = None
-        ruta_json = os.path.splitext(ruta)[0] + '.json'
-        if os.path.isfile(ruta_json):
-            with open(ruta_json, encoding='utf-8') as f:
-                self.meta = json.load(f)
-            v = self.meta.get('version_contrato')
-            if v != contrato.VERSION_CONTRATO:
-                raise RuntimeError(
-                    f'El modelo se exportó con el contrato v{v} y este código usa '
-                    f'v{contrato.VERSION_CONTRATO}. Reexporta el modelo o vuelve a '
-                    f'la versión correcta del código: mezclarlos no da ningún '
-                    f'error, solo ángulos equivocados.')
-
-        # Un hilo: la Pi tiene que repartir CPU con el bucle de control a 100 Hz.
-        opciones = ort.SessionOptions()
-        opciones.intra_op_num_threads = 1
-        opciones.inter_op_num_threads = 1
-        self.sesion = ort.InferenceSession(
-            ruta, sess_options=opciones, providers=['CPUExecutionProvider'])
-
-        entrada = self.sesion.get_inputs()[0]
-        self.nombre_entrada = entrada.name
-        dim = entrada.shape[-1]
-        if isinstance(dim, int) and dim != contrato.OBS_DIM:
-            raise RuntimeError(
-                f'La red espera {dim} valores de entrada y el contrato produce '
-                f'{contrato.OBS_DIM}. No se carga.')
-        self.nombre_salida = self.sesion.get_outputs()[0].name
-        self.ruta = ruta
-
-    def inferir(self, obs):
-        salida = self.sesion.run(
-            [self.nombre_salida],
-            {self.nombre_entrada: obs.reshape(1, -1).astype(np.float32)})[0]
-        return np.asarray(salida, dtype=np.float64).ravel()[:contrato.ACC_DIM]
-
-
 class PoliticaFlippers(Node):
 
     def __init__(self):
         super().__init__('politica_flippers')
 
         self.declare_parameter('modelo', '')
-        self.declare_parameter('frecuencia_hz', 50.0)
+        self.declare_parameter('contrato', '')
+        self.declare_parameter('frecuencia_hz', 0.0)
         self.declare_parameter('activa_al_inicio', False)
         self.declare_parameter('timeout_estado_s', 0.5)
+        self.declare_parameter('vel_max_oruga', 6.0)
+        self.declare_parameter('vel_max_flipper', 1.5)
         self.declare_parameter('limite_min_rad', float('nan'))
         self.declare_parameter('limite_max_rad', float('nan'))
 
-        ruta = str(self.get_parameter('modelo').value)
-        self.frecuencia = float(self.get_parameter('frecuencia_hz').value)
-        self.dt = 1.0 / max(self.frecuencia, 1.0)
-        self.activa = bool(self.get_parameter('activa_al_inicio').value)
-        self.timeout = float(self.get_parameter('timeout_estado_s').value)
-
-        lo = float(self.get_parameter('limite_min_rad').value)
-        hi = float(self.get_parameter('limite_max_rad').value)
-        self.limites = None if (math.isnan(lo) or math.isnan(hi)) else (lo, hi)
-
-        # --- Modelo (opcional) ---
-        self.motor = None
+        # --- Modelo y contrato ---
+        modelo, contrato = None, None
         self.error_modelo = None
+        ruta = str(self.get_parameter('modelo').value)
         if ruta:
             try:
-                self.motor = MotorOnnx(ruta)
-                self.get_logger().info(f'Modelo cargado: {ruta}')
+                modelo = ModeloOnnx(ruta)
+                contrato = modelo.contrato
+                self.get_logger().info(
+                    f'Modelo cargado: {ruta}, contrato {huella_texto(contrato)}')
             except RuntimeError as e:
                 # No se aborta: sin modelo el nodo sigue siendo útil como
                 # observador, y en un robot a medio montar eso vale más que un
                 # arranque fallido que se lleva el launch entero por delante.
                 self.error_modelo = str(e)
                 self.get_logger().error(f'No se cargó el modelo: {e}')
-        else:
-            self.get_logger().info(
-                'Sin parámetro `modelo`: modo SOLO OBSERVACIÓN. No se publicará '
-                'ningún comando; mira /politica/observacion en Foxglove.')
+        if contrato is None:
+            contrato = self._contrato_de_observacion()
+            if not ruta:
+                self.get_logger().info(
+                    'Sin parámetro `modelo`: modo SOLO OBSERVACIÓN. No se publicará '
+                    'ningún comando; mira /politica/observacion en Foxglove.')
 
-        # --- Estado medido ---
-        self.pos_flipper = [0.0] * 4
-        self.vel_flipper = [0.0] * 4
-        self.esf_flipper = [0.0] * 4
-        self.vel_oruga = [0.0] * 4
-        self.esf_oruga = [0.0] * 4
-        self.cmd_oruga = [0.0] * 4
-        self.roll = 0.0
-        self.pitch = 0.0
-        self.giro = [0.0, 0.0, 0.0]
-        self.acel_z = 0.0
-        self.t_estado = None
-        self.hay_estado = False
+        frecuencia = float(self.get_parameter('frecuencia_hz').value)
+        if frecuencia <= 0.0:
+            frecuencia = contrato.frecuencia_hz or 50.0
+        elif contrato.frecuencia_hz and abs(frecuencia - contrato.frecuencia_hz) > 1e-6:
+            self.get_logger().warn(
+                f'frecuencia_hz={frecuencia:g} y el contrato dice '
+                f'{contrato.frecuencia_hz:g}: la red se entrenó a otro ritmo.')
+        self.frecuencia = frecuencia
+
+        lo = float(self.get_parameter('limite_min_rad').value)
+        hi = float(self.get_parameter('limite_max_rad').value)
+        self.ej = EjecutorPolitica(
+            contrato, modelo, dt=1.0 / frecuencia,
+            timeout_estado=float(self.get_parameter('timeout_estado_s').value),
+            vel_max_oruga=float(self.get_parameter('vel_max_oruga').value),
+            vel_max_flipper=float(self.get_parameter('vel_max_flipper').value),
+            limites_flipper=None if (math.isnan(lo) or math.isnan(hi)) else (lo, hi))
+        if contrato.senales_extra:
+            self.get_logger().warn(
+                f'El contrato pide sensores que este nodo todavía no lee: '
+                f'{contrato.senales_extra}. La política no podrá comandar.')
+
         self.ciclos = 0
-        self.ciclos_publicados = 0
+        self.error_avisado = None
 
-        # La consigna vigente: de dónde parte la integración y qué se compara
-        # con la posición real para sacar el error de seguimiento.
-        self.consigna = [0.0] * 4
-        self.consigna_sembrada = False
-
-        self.pub_cmd = self.create_publisher(Float64MultiArray, '/cmd_flippers', 10)
+        self.pub_flippers = self.create_publisher(Float64MultiArray, '/cmd_flippers', 10)
+        self.pub_orugas = self.create_publisher(Float64MultiArray, '/cmd_tracks', 10)
         self.pub_obs = self.create_publisher(
             Float64MultiArray, '/politica/observacion', 10)
         self.pub_diag = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
@@ -240,144 +183,125 @@ class PoliticaFlippers(Node):
         self.create_subscription(JointState, '/joint_states', self.on_joints, 10)
         self.create_subscription(Imu, '/imu/data_raw', self.on_imu, 10)
         self.create_subscription(
+            Float64MultiArray, '/cmd_flippers', self.on_cmd_flippers, 10)
+        self.create_subscription(
             Float64MultiArray, '/cmd_tracks', self.on_cmd_tracks, 10)
         self.create_subscription(Bool, '/politica/activa', self.on_activa, 10)
-        self.create_subscription(
-            Float64MultiArray, '/cmd_flippers', self.on_cmd_flippers, 10)
 
-        self.create_timer(self.dt, self.ciclo)
+        if bool(self.get_parameter('activa_al_inicio').value):
+            self.ej.activar(True)
+
+        self.create_timer(1.0 / frecuencia, self.ciclo)
         self.create_timer(1.0, self.publicar_diagnostico)
 
-        estado = 'ACTIVA' if self.activa else 'en espera (/politica/activa)'
+        estado = 'ACTIVA' if self.ej.activa else 'en espera (/politica/activa)'
         self.get_logger().info(
-            f'politica_flippers lista a {self.frecuencia:.0f} Hz, {estado}. '
-            f'Contrato v{contrato.VERSION_CONTRATO}, obs={contrato.OBS_DIM}, '
-            f'acc={contrato.ACC_DIM}.')
+            f'politica_flippers lista a {frecuencia:.0f} Hz, {estado}. '
+            f'obs={contrato.obs_dim}, acc={contrato.acc_dim}.')
+
+    def _contrato_de_observacion(self):
+        ruta = str(self.get_parameter('contrato').value)
+        if ruta:
+            try:
+                return contrato_politica.Contrato.desde_json(ruta)
+            except (OSError, ValueError) as e:
+                self.get_logger().error(
+                    f'No se pudo leer el contrato {ruta}: {e}. Uso el provisional.')
+        return contrato_politica.contrato_provisional()
 
     # ------------------------------------------------------------------ #
+    def _ahora(self):
+        return self.get_clock().now().nanoseconds * 1e-9
+
     def on_joints(self, msg: JointState):
         idx = {n: i for i, n in enumerate(msg.name)}
+        e = self.ej.estado
 
-        def _leer(seq, i, por_defecto=0.0):
-            return float(seq[i]) if i is not None and i < len(seq) else por_defecto
+        def _leer(seq, i):
+            return float(seq[i]) if i < len(seq) else 0.0
 
-        for k, junta in enumerate(contrato.JUNTAS_FLIPPER):
+        for k, junta in enumerate(contrato_politica.JUNTAS_FLIPPER):
             i = idx.get(junta)
             if i is None:
                 continue
-            self.pos_flipper[k] = _leer(msg.position, i)
-            self.vel_flipper[k] = _leer(msg.velocity, i)
-            self.esf_flipper[k] = _leer(msg.effort, i)
-        for k, junta in enumerate(contrato.JUNTAS_ORUGA):
+            e.pos_flipper[k] = _leer(msg.position, i)
+            e.vel_flipper[k] = _leer(msg.velocity, i)
+            e.esf_flipper[k] = _leer(msg.effort, i)
+        for k, junta in enumerate(contrato_politica.JUNTAS_ORUGA):
             i = idx.get(junta)
             if i is None:
                 continue
-            self.vel_oruga[k] = _leer(msg.velocity, i)
-            self.esf_oruga[k] = _leer(msg.effort, i)
-
-        # La primera consigna es la pose ACTUAL, no cero. Si se sembrara en cero,
-        # el primer ciclo con la política activa pediría llevar los flippers al
-        # cero mecánico de golpe, estuvieran donde estuvieran.
-        if not self.consigna_sembrada:
-            self.consigna = list(self.pos_flipper)
-            self.consigna_sembrada = True
-
-        self.t_estado = self.get_clock().now().nanoseconds * 1e-9
-        self.hay_estado = True
+            e.vel_oruga[k] = _leer(msg.velocity, i)
+            e.esf_oruga[k] = _leer(msg.effort, i)
+        self.ej.estado_actualizado(self._ahora())
 
     def on_imu(self, msg: Imu):
+        e = self.ej.estado
         q = msg.orientation
-        self.roll, self.pitch = _rpy_de_cuaternion(q.x, q.y, q.z, q.w)
-        self.giro = [msg.angular_velocity.x, msg.angular_velocity.y,
-                     msg.angular_velocity.z]
-        self.acel_z = msg.linear_acceleration.z
-
-    def on_cmd_tracks(self, msg: Float64MultiArray):
-        if len(msg.data) >= 4:
-            self.cmd_oruga = [float(v) for v in msg.data[:4]]
+        e.roll, e.pitch = _rpy_de_cuaternion(q.x, q.y, q.z, q.w)
+        e.giro = [msg.angular_velocity.x, msg.angular_velocity.y,
+                  msg.angular_velocity.z]
+        e.acel = [msg.linear_acceleration.x, msg.linear_acceleration.y,
+                  msg.linear_acceleration.z]
 
     def on_cmd_flippers(self, msg: Float64MultiArray):
-        """Mientras la política no comanda, la consigna es la de quien sí lo hace.
+        self.ej.consigna_externa(flippers=list(msg.data))
 
-        Sin esto, en modo observación la consigna se quedaba en la pose del
-        arranque y `flipper_*/error` medía la distancia a esa foto vieja en vez
-        del error de seguimiento real: la señal táctil no servía justo cuando
-        se conduce con Teleop para estudiarla. Activa, se ignora: lo que llega
-        es el eco de sus propios comandos.
-        """
-        if self.activa and self.motor is not None:
-            return
-        if len(msg.data) < contrato.ACC_DIM:
-            return
-        self.consigna = [float(v) for v in msg.data[:contrato.ACC_DIM]]
-        self.consigna_sembrada = True
+    def on_cmd_tracks(self, msg: Float64MultiArray):
+        self.ej.consigna_externa(orugas=list(msg.data))
 
     def on_activa(self, msg: Bool):
-        nueva = bool(msg.data)
-        if nueva == self.activa:
+        if bool(msg.data) and self.ej.modelo is None:
+            self.get_logger().error('No hay modelo cargado: no se puede activar.')
             return
-        self.activa = nueva
-        if nueva:
-            # Al activarse, la consigna se resincroniza con la pose real: si no,
-            # la política arrancaría integrando desde donde quedó la vez
-            # anterior y el primer comando sería un salto.
-            self.consigna = list(self.pos_flipper)
-            self.get_logger().warn('Política ACTIVADA: ya comanda los flippers.')
+        if not self.ej.activar(msg.data):
+            return
+        if self.ej.activa:
+            self.get_logger().warn('Política ACTIVADA: comanda flippers y orugas.')
         else:
             self.get_logger().info(
-                'Política desactivada: deja de publicar. Los flippers se quedan '
-                'en su última consigna (flipper_node la retiene).')
+                'Política desactivada: orugas a 0 y flippers quietos donde están.')
 
     # ------------------------------------------------------------------ #
-    def _observacion(self):
-        return contrato.construir_observacion(
-            pos_flipper=self.pos_flipper,
-            vel_flipper=self.vel_flipper,
-            esfuerzo_flipper=self.esf_flipper,
-            consigna_flipper=self.consigna,
-            vel_oruga=self.vel_oruga,
-            esfuerzo_oruga=self.esf_oruga,
-            consigna_oruga=self.cmd_oruga,
-            roll=self.roll, pitch=self.pitch,
-            giro=self.giro, acel_z=self.acel_z,
-        )
-
-    def _estado_fresco(self):
-        if not self.hay_estado or self.t_estado is None:
-            return False
-        ahora = self.get_clock().now().nanoseconds * 1e-9
-        return (ahora - self.t_estado) <= self.timeout
-
     def ciclo(self):
         self.ciclos += 1
-        if not self.hay_estado:
+        s = self.ej.paso(self._ahora())
+        if s.observacion is not None:
+            self.pub_obs.publish(Float64MultiArray(data=[float(v) for v in s.observacion]))
+        if s.flippers is not None:
+            self.pub_flippers.publish(Float64MultiArray(data=s.flippers))
+        if s.orugas is not None:
+            self.pub_orugas.publish(Float64MultiArray(data=s.orugas))
+
+        if self.ej.error and self.ej.error != self.error_avisado:
+            self.get_logger().error(f'Política DESACTIVADA y robot parado: {self.ej.error}')
+            self.error_avisado = self.ej.error
+        if (self.ej.frenando and self.ej.comandando
+                and self.ciclos % int(max(self.frecuencia, 1)) == 0):
+            # Una vez por segundo, no en cada ciclo, para no inundar /rosout.
+            self.get_logger().warn(
+                '/joint_states lleva demasiado tiempo callado: robot parado hasta '
+                'que vuelva.')
+
+    def parar_al_salir(self):
+        """Si se cierra comandando, deja el robot parado: flipper_node retiene el comando.
+
+        Es lo mejor que se puede hacer desde aquí, no una garantía: si el
+        contexto de rclpy ya se cerró, el mensaje no sale. Un proceso que muere
+        de golpe (kill -9, corte de luz de la Pi) tampoco llega hasta aquí.
+        """
+        if not self.ej.comandando:
             return
+        try:
+            self.pub_orugas.publish(Float64MultiArray(data=[0.0] * 4))
+            self.pub_flippers.publish(
+                Float64MultiArray(data=[float(v) for v in self.ej.estado.pos_flipper]))
+        except Exception:  # noqa: B902 - al cerrar, cualquier fallo da igual
+            pass
 
-        obs = self._observacion()
-        # La observación se publica SIEMPRE, activa o no, con modelo o sin él.
-        # Es el instrumento para diseñar la recompensa antes de entrenar.
-        self.pub_obs.publish(Float64MultiArray(data=[float(v) for v in obs]))
-
-        if self.motor is None or not self.activa:
-            return
-        if not self._estado_fresco():
-            # Watchdog: sin estado fresco no se comanda. Se avisa una vez por
-            # segundo, no en cada ciclo, para no inundar /rosout.
-            if self.ciclos % int(max(self.frecuencia, 1)) == 0:
-                self.get_logger().warn(
-                    '/joint_states lleva demasiado tiempo callado: la política '
-                    'no comanda hasta que vuelva.')
-            return
-
-        accion = self.motor.inferir(obs)
-        self.consigna = contrato.integrar_accion(
-            accion, self.pos_flipper, self.dt, self.limites)
-        self.pub_cmd.publish(Float64MultiArray(data=self.consigna))
-        self.ciclos_publicados += 1
-
-    # ------------------------------------------------------------------ #
     def publicar_diagnostico(self):
         """Fila `politica/flippers` en /diagnostics, para el panel de Foxglove."""
+        ej = self.ej
         st = DiagnosticStatus()
         st.hardware_id = 'politica'
         st.name = 'politica/flippers'
@@ -385,31 +309,40 @@ class PoliticaFlippers(Node):
         if self.error_modelo:
             st.level = DiagnosticStatus.ERROR
             st.message = f'modelo NO cargado: {self.error_modelo}'
-        elif self.motor is None:
+        elif ej.error:
+            st.level = DiagnosticStatus.ERROR
+            st.message = f'desactivada por fallo: {ej.error}'
+        elif ej.modelo is None:
             st.level = DiagnosticStatus.OK
             st.message = 'solo observación (sin modelo): no comanda nada'
-        elif not self.activa:
+        elif not ej.activa:
             st.level = DiagnosticStatus.WARN
             st.message = 'modelo cargado pero DESACTIVADA (/politica/activa)'
-        elif not self._estado_fresco():
+        elif ej.frenando:
             st.level = DiagnosticStatus.ERROR
-            st.message = 'activa pero /joint_states está mudo: watchdog frenando'
+            st.message = 'activa pero /joint_states está mudo: robot parado'
         else:
             st.level = DiagnosticStatus.OK
-            st.message = 'comandando los flippers'
+            st.message = 'comandando flippers y orugas'
+        if ej.ultimo_error_obs and not ej.error:
+            st.level = max(st.level, DiagnosticStatus.WARN)
+            st.message += f' | observación incompleta: {ej.ultimo_error_obs}'
 
+        e = ej.estado
         st.values = [
-            KeyValue(key='modelo',
-                     value=self.motor.ruta if self.motor else '—'),
-            KeyValue(key='contrato', value=f'v{contrato.VERSION_CONTRATO}'),
-            KeyValue(key='obs_dim', value=str(contrato.OBS_DIM)),
-            KeyValue(key='activa', value='sí' if self.activa else 'no'),
+            KeyValue(key='modelo', value=ej.modelo.ruta if ej.modelo else '—'),
+            KeyValue(key='contrato', value=huella_texto(ej.contrato)),
+            KeyValue(key='obs_dim', value=str(ej.contrato.obs_dim)),
+            KeyValue(key='acc_dim', value=str(ej.contrato.acc_dim)),
+            KeyValue(key='activa', value='sí' if ej.activa else 'no'),
             KeyValue(key='frecuencia_hz', value=f'{self.frecuencia:.0f}'),
             KeyValue(key='ciclos', value=str(self.ciclos)),
-            KeyValue(key='comandos_publicados', value=str(self.ciclos_publicados)),
-            KeyValue(key='consigna_deg',
+            KeyValue(key='comandos_publicados', value=str(ej.ciclos_publicados)),
+            KeyValue(key='consigna_flippers_deg',
                      value=', '.join(f'{math.degrees(v):+.1f}'
-                                     for v in self.consigna)),
+                                     for v in e.consigna_flipper)),
+            KeyValue(key='consigna_orugas_rad_s',
+                     value=', '.join(f'{v:+.2f}' for v in e.consigna_oruga)),
         ]
         msg = DiagnosticArray()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -428,6 +361,7 @@ def main(args=None):
         # Un Ctrl+C llega dos veces: el de la terminal y el que reenvía
         # ros2 launch. Si el segundo cae aquí, corta la limpieza a medias.
         signal.signal(signal.SIGINT, signal.SIG_IGN)
+        nodo.parar_al_salir()
         nodo.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

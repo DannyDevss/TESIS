@@ -718,28 +718,58 @@ detectar el apoyo de las patas. Sin hardware nuevo.
 
 ### 3b. El contrato, que es lo que impide el fallo silencioso
 
-`src/ugv_bridge/ugv_bridge/contrato_politica.py` es la **única fuente de
-verdad** del vector de observación (40 valores) y del de acción (4). Lo
-comparten el entrenamiento en el PC y la inferencia en la Pi.
+**La política la entrena un profesor, no nosotros.** Su contrato (qué entra a
+la red y qué sale) todavía no se conoce, así que el robot no puede llevarlo
+escrito en el código: el contrato es un **dato** que viaja junto al modelo.
 
-Importa porque un `.onnx` solo sabe que recibe 40 números y devuelve 4; no sabe
-qué significa cada uno. Si se reordena el vector o se cambia una escala y se
-despliega un modelo viejo, **la red no da ningún error**: recibe el par de un
-flipper donde esperaba una velocidad y devuelve ángulos plausibles y
-equivocados. El robot se mueve raro y no hay nada en los logs.
+```
+politica.onnx    la red
+politica.json    {"contrato": {...}}   qué es cada número que entra y sale
+```
 
-Por eso cada modelo se exporta con un `.json` que graba `version_contrato`, y el
-nodo se niega a cargar un modelo cuya versión no sea la suya. **Al tocar el
-contrato hay que subir `VERSION_CONTRATO` y reexportar.**
+Importa porque un `.onnx` solo sabe que recibe N números y devuelve M; no sabe
+qué significa cada uno. Si el robot arma la observación en otro orden o con
+otra escala que el simulador, **la red no da ningún error**: recibe el par de
+un flipper donde esperaba una velocidad y devuelve comandos plausibles y
+equivocados. Como el robot arma la observación **a partir del mismo `.json`**,
+no hay una segunda copia que se pueda desincronizar. Sin `.json`, o si la red
+no mide lo que dice el contrato, el nodo no carga el modelo.
 
-La acción son 4 **velocidades** normalizadas, no ángulos absolutos: así el peor
-error posible mueve el flipper `VEL_ACCION_MAX / frecuencia` radianes, y la red
-no necesita saber dónde está el cero mecánico de cada flipper.
+El formato está documentado en `src/ugv_bridge/ugv_bridge/contrato_politica.py`.
+En resumen:
+
+- **Observación:** lista de términos `{"senal": ..., "op": ...}`. Las señales
+  salen de un catálogo (`flipper_fl/pos`, `flipper_fl/error`, `track_rr/desliz`,
+  `imu/pitch`, `accion_previa/0`...) y la `op` es `crudo`, `escala` (con
+  `centro` opcional), `sin` o `cos`. Los sensores que aún no existen (el
+  "bastón de ciego" en los flippers) entran como `extra/<nombre>`.
+- **Acción:** lista de términos `{"destino": ..., "modo": ..., "escala": ...}`.
+  Destinos: `flipper_<n>` (en `velocidad` o `posicion`), `track_<n>` u
+  `orugas_izq` / `orugas_der` (en `velocidad`). La política es **autónoma**:
+  maneja flippers **y** orugas.
+
+**Adaptarse al modelo del profesor = escribir su `.json`.** Si su observación
+usa una señal que no está en el catálogo, se agrega al catálogo (`senales()`)
+y no se toca nada más.
+
+Mientras tanto hay un **contrato provisional** (`contrato_provisional()`): 40
+observaciones (las señales táctiles de la tabla de arriba) y 6 acciones
+(velocidad de cada flipper y de cada lado de orugas).
+
+**Frenos que no dependen del contrato** (`ejecutor_politica.py`, probados en
+`test/test_ejecutor_politica.py`): arranca desactivada; watchdog si
+`/joint_states` se calla; topes duros de velocidad de orugas
+(`vel_max_oruga`) y de flippers (`vel_max_flipper`) gane lo que gane el
+contrato; y **parada segura** al desactivarse, al saltar el watchdog o si la
+red devuelve basura: orugas a 0 y flippers quietos donde están. Es
+imprescindible porque `flipper_node` retiene el último comando. Si la red
+falla, además se desactiva y hay que reactivarla a mano.
 
 ### 3c. Usarlo HOY, antes de tener ningún modelo
 
 Esto es lo más útil ahora mismo. Sin el parámetro `modelo`, el nodo **no comanda
-nada** y publica `/politica/observacion`: las 40 señales normalizadas, en vivo.
+nada** y publica `/politica/observacion`: la entrada de la red según el
+contrato (el provisional si no se indica otro con `contrato:=...`), en vivo.
 
 ```bash
 ros2 run ugv_bridge politica_flippers
@@ -760,36 +790,65 @@ encima de un obstáculo:
 Si esas curvas no reaccionan al pasar por encima de algo, no hay señal táctil
 que aprender y entrenar sería tiempo perdido. Si reaccionan, sus amplitudes
 reales son las que hay que poner en las escalas del contrato, y su forma es de
-donde sale la recompensa. El orden completo de las 40 componentes lo da
-`contrato_politica.descripcion_observacion()`.
+donde sale la recompensa. Los índices de la tabla son los del contrato
+provisional; el orden completo lo da `Contrato.descripcion_observacion()`.
 
 ### 3d. Entrenar en el PC y exportar
 
-El entorno de entrenamiento tiene que producir **exactamente** el vector del
-contrato, y **todavía no existe**. El que había (`robot_env`, en el paquete
-`ugv_core`) se eliminó: su tarea era navegación 2D plana con 3 acciones
-discretas, sin flippers en el espacio de acciones ni contacto en la
-observación. No servía para esto y solo podía confundir.
+Lo hace el profesor, con su simulador y su librería. Lo que necesitamos de él
+es el **resultado**: un `.onnx` con una entrada (observación) y una salida
+(acción), y la descripción exacta de ambas (orden, unidades, escalas,
+frecuencia) para escribir el `.json`. Si entrena en Python, lo más seguro es
+que su entorno use `contrato_politica` (`Contrato.observacion()` y
+`Contrato.aplicar_accion()`) en vez de reimplementarlo.
 
-Hace falta un entorno nuevo **con física de contacto** (MuJoCo, Isaac Sim o
-Gazebo) que importe `contrato_politica` y llame a `construir_observacion()` e
-`integrar_accion()` tal cual, **sin reimplementarlas**: reimplementarlas es
-justo el fallo que el contrato existe para evitar. Ese entorno vive en el PC y
-no tiene por qué estar en este repositorio.
-
-Con el modelo entrenado:
+`scripts/exportar_onnx.py` es un ejemplo para Stable-Baselines3:
 
 ```bash
-# En el PC (necesita torch y stable-baselines3):
-python3 src/ugv_bridge/scripts/exportar_onnx.py modelo_flippers.zip -s politica --verificar
+python3 src/ugv_bridge/scripts/exportar_onnx.py modelo.zip -s politica --verificar \
+    --contrato contrato.json      # sin --contrato usa el provisional
 scp politica.onnx politica.json ros2@robotdeteccion.local:~/
+```
+
+**Sin modelo real, con un modelo falso** (`scripts/modelo_falso.py`, solo
+necesita `onnx` y `numpy`). Una acción constante es lo más fácil de reconocer:
+
+```bash
+# Avanzar despacio (0,3 × 6 rad/s) con los flippers quietos:
+python3 src/ugv_bridge/scripts/modelo_falso.py -s /tmp/falso --ganancia 0 --sesgo 0 0 0 0 0.3 0.3
+sudo bash src/ugv_bridge/scripts/setup_vcan.sh
+ros2 launch ugv_bridge can_sim.launch.py use_foxglove:=true \
+    use_politica:=true modelo_politica:=/tmp/falso.onnx
+# Foxglove: /politica/activa -> {"data": true}; las orugas giran a 1,8 rad/s.
+#           {"data": false} -> orugas a 0.
+```
+
+**Guion de giro** (`--giro`): gira en el sitio cada cierto tiempo, con su
+propio contrato mínimo (entrada `reloj/t_activa`, salidas `orugas_izq` y
+`orugas_der`). Es a lazo abierto: la velocidad sale de `radio_oruga` y
+`ancho_orugas`, así que la odometría simulada marca el ángulo pedido y el robot
+real, por el patinaje, algo menos.
+
+```bash
+python3 src/ugv_bridge/scripts/modelo_falso.py -s modelos/giro --giro 90 --periodo 5 --duracion 1.5
+ros2 launch ugv_bridge can_sim.launch.py use_foxglove:=true use_ekf:=true \
+    use_politica:=true modelo_politica:=/home/ubuntu/TESIS/modelos/giro.onnx
+```
+
+Pruebas sin ROS (desde `src/ugv_bridge`):
+
+```bash
+python3 -m pytest test/test_contrato_politica.py test/test_ejecutor_politica.py
 ```
 
 ### 3e. Ejecutarlo en el robot
 
 ```bash
-# En la Raspberry, una vez:
-pip3 install onnxruntime
+# Donde corra la política (Raspberry, PC), una vez. Ubuntu 24.04 no deja usar
+# pip en el sistema (PEP 668) y ros2 usa el python3 del sistema, así que va con
+# --user. "numpy<2" conserva el numpy 1.26 contra el que está compilado ROS.
+# (En el contenedor Docker del PC ya viene en la imagen: ~/.config/ros2_jazzy/Dockerfile.)
+pip3 install --user --break-system-packages onnxruntime "numpy<2"
 
 ros2 launch ugv_bridge flipper.launch.py \
     modo:=pi3hat imu_fuente:=pi3hat_real use_ekf:=true \
@@ -798,6 +857,10 @@ ros2 launch ugv_bridge flipper.launch.py \
 
 **Arranca desactivada.** Para que empiece a comandar, panel *Publish* de
 Foxglove sobre `/politica/activa` (`std_msgs/Bool`) con `{"data": true}`.
+Con `{"data": false}` se detiene: orugas a 0 y flippers quietos.
+En el layout `ugv_control_v4` están como botones, en la pestaña **Política**
+del panel de control, junto al estado de la política y lo que publica en
+`/cmd_tracks`.
 Conviene tener al lado otro botón con `false` como paro.
 
 Cuatro frenos, todos activos a la vez:

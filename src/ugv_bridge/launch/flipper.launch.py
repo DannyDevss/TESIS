@@ -26,9 +26,10 @@ Argumentos:
     imu_externa      (false) la IMU real la publica OTRA máquina (la Raspberry con
                              el pi3hat) en /imu/data_raw. Ver abajo.
     use_ekf          (false) si true, arranca robot_localization con config/ekf.yaml.
-    use_politica     (false) arranca politica_flippers, que ejecuta
-                             el modelo .onnx entrenado en el PC. Sin
-                             `modelo_politica` solo observa, no comanda.
+    use_politica     (false) arranca politica_flippers, que ejecuta el
+                             modelo .onnx entrenado en el PC y comanda
+                             flippers Y orugas. Sin `modelo_politica` solo
+                             observa, no comanda.
     modelo_politica  ('')    ruta al .onnx en la Raspberry. Su .json de
                              contrato debe estar al lado, con el mismo nombre.
     politica_activa  (false) true = comandar desde el arranque. Dejarlo en
@@ -203,13 +204,14 @@ def generate_launch_description():
         # un .onnx con onnxruntime: en la Raspberry no hay torch ni SB3.
         #
         # Sin `modelo_politica` el nodo no comanda nada y se limita a publicar
-        # /politica/observacion, que son las 40 señales táctiles normalizadas.
+        # /politica/observacion, la entrada de la red según el contrato.
         # Eso es lo útil AHORA, antes de entrenar: ver en Foxglove si el error
         # de seguimiento y el par de cada flipper reaccionan de verdad al pasar
         # por encima de un obstáculo.
         #
         # Y aunque haya modelo, arranca DESACTIVADA: hay que mandar `true` a
-        # /politica/activa para que empiece a comandar.
+        # /politica/activa para que empiece a comandar. Al desactivarse o si
+        # algo falla, manda orugas a 0 y deja los flippers donde están.
         Node(
             condition=IfCondition(LaunchConfiguration('use_politica')),
             package='ugv_bridge',

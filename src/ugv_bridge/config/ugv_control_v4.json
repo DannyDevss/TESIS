@@ -1066,6 +1066,25 @@
               "second": "Publish!f_libre"
             }
           }
+        },
+        {
+          "title": "Política",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 30,
+            "first": {
+              "direction": "row",
+              "splitPercentage": 50,
+              "first": "Publish!pol_activar",
+              "second": "Publish!pol_detener"
+            },
+            "second": {
+              "direction": "row",
+              "splitPercentage": 60,
+              "first": "DiagnosticSummary!politica",
+              "second": "RawMessages!cmd_tracks"
+            }
+          }
         }
       ]
     },
@@ -1074,6 +1093,38 @@
       "sortByLevel": true,
       "pinnedIds": [],
       "hardwareIdFilter": ""
+    },
+    "Publish!pol_activar": {
+      "topicName": "/politica/activa",
+      "datatype": "std_msgs/msg/Bool",
+      "buttonText": "ACTIVAR política",
+      "buttonTooltip": "La red pasa a manejar flippers y orugas. Arranca desactivada.",
+      "buttonColor": "#2e7d32",
+      "advancedView": false,
+      "value": "{\n  \"data\": true\n}"
+    },
+    "Publish!pol_detener": {
+      "topicName": "/politica/activa",
+      "datatype": "std_msgs/msg/Bool",
+      "buttonText": "DETENER política",
+      "buttonTooltip": "Orugas a 0 y flippers quietos donde están.",
+      "buttonColor": "#b03a3a",
+      "advancedView": false,
+      "value": "{\n  \"data\": false\n}"
+    },
+    "DiagnosticSummary!politica": {
+      "topicToRender": "/diagnostics",
+      "sortByLevel": true,
+      "pinnedIds": [],
+      "hardwareIdFilter": "politica"
+    },
+    "RawMessages!cmd_tracks": {
+      "topicPath": "/cmd_tracks.data",
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "expansion": "all"
     }
   },
   "globalVariables": {},
