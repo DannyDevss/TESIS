@@ -5,6 +5,10 @@ Uso:
     ros2 launch rmd_description display.launch.py               # RViz + sliders
     ros2 launch rmd_description display.launch.py rviz:=false   # sliders, para Foxglove
     ros2 launch rmd_description display.launch.py gui:=false    # juntas fijas en 0
+    ros2 launch rmd_description display.launch.py modelo:=rescate   # export de Fusion
+
+modelo: 'rmd' (urdf/rmd.urdf.xacro, STEP de Inventor) o 'rescate'
+(urdf/rescate.urdf.xacro, generado con scripts/fusion_a_urdf.py).
 
 Los sliders (joint_state_publisher_gui) publican /joint_states para las 4
 ruedas (track_*) y los 4 flippers (flipper_*). No lanzar junto a flipper_node:
@@ -20,20 +24,22 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('rmd_description')
-    xacro_file = os.path.join(pkg_share, 'urdf', 'rmd.urdf.xacro')
+    xacro_file = PathJoinSubstitution(
+        [pkg_share, 'urdf', [LaunchConfiguration('modelo'), '.urdf.xacro']])
     rviz_config = os.path.join(pkg_share, 'config', 'display.rviz')
 
     robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
     gui = LaunchConfiguration('gui')
 
     return LaunchDescription([
+        DeclareLaunchArgument('modelo', default_value='rmd'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('gui', default_value='true'),
 

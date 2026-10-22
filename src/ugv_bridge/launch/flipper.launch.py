@@ -8,6 +8,7 @@ Uso:
     ros2 launch ugv_bridge flipper.launch.py modo:=can           # bus vcan0 + emulador
     ros2 launch ugv_bridge flipper.launch.py use_ekf:=true      # + ekf_filter_node
     ros2 launch ugv_bridge flipper.launch.py use_rviz:=true     # + RViz con el modelo
+    ros2 launch ugv_bridge flipper.launch.py modelo:=rescate    # modelo CAD de Fusion
 
 Argumentos:
     frecuencia_hz    (100.0) frecuencia del bucle de control de flipper_node.
@@ -26,6 +27,10 @@ Argumentos:
                              máquina a ws://<ip-de-la-pi>:8765.
     use_teleop       (true)  nodo teleop_flippers: mueve los flippers a mano desde
                              los paneles Teleop de Foxglove (ver su docstring).
+    modelo           (ugv)   modelo 3D que publica robot_state_publisher:
+                             'ugv' = urdf/ugv.urdf.xacro (paramétrico, del YAML);
+                             'rescate' | 'rmd' = CAD de rmd_description. Solo cambia
+                             lo que se ve: los nodos siguen usando el YAML.
 
 IMU FÍSICA EN OTRA MÁQUINA (imu_externa:=true)
 ----------------------------------------------
@@ -46,7 +51,7 @@ from typing import List
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import (
     Command, LaunchConfiguration, NotSubstitution, PythonExpression)
@@ -69,11 +74,26 @@ def generate_launch_description():
     # Geometría: única fuente de verdad, compartida por el URDF y los nodos.
     geometria_yaml = os.path.join(pkg_share, 'config', 'geometria_robot.yaml')
     xacro_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf.xacro')
-    # Se procesa el xacro en caliente: el modelo nunca queda desfasado del YAML.
-    robot_description = ParameterValue(
-        Command(['xacro ', xacro_path, ' geometria:=', geometria_yaml]),
-        value_type=str,
-    )
+
+    def robot_state_publisher(context):
+        # Se procesa el xacro en caliente: el modelo nunca queda desfasado del YAML.
+        # rmd_description solo se busca si se pide, para que la Raspberry pueda
+        # seguir compilando solo ugv_bridge.
+        modelo = LaunchConfiguration('modelo').perform(context)
+        if modelo == 'ugv':
+            comando = ['xacro ', xacro_path, ' geometria:=', geometria_yaml]
+        else:
+            comando = ['xacro ', os.path.join(
+                get_package_share_directory('rmd_description'), 'urdf',
+                f'{modelo}.urdf.xacro')]
+        robot_description = ParameterValue(Command(comando), value_type=str)
+        return [Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[{'robot_description': robot_description}],
+        )]
 
     # Destino de la IMU que publica flipper_node. Con imu_externa:=true se aparta
     # a /imu/sintetica para dejarle /imu/data_raw a la IMU real de la Raspberry;
@@ -97,6 +117,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_rviz', default_value='false'),
         DeclareLaunchArgument('use_foxglove', default_value='false'),
         DeclareLaunchArgument('use_teleop', default_value='true'),
+        DeclareLaunchArgument('modelo', default_value='ugv'),
 
         # Puente ROS <-> motores (orugas + flippers) + IMU.
         Node(
@@ -144,13 +165,7 @@ def generate_launch_description():
         ),
 
         # Modelo del robot: lee /joint_states y publica el TF de cada flipper.
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            output='screen',
-            parameters=[{'robot_description': robot_description}],
-        ),
+        OpaqueFunction(function=robot_state_publisher),
 
         # Fusión sensorial EKF (opcional). Requiere: apt install ros-jazzy-robot-localization
         Node(

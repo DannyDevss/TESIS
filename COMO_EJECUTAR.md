@@ -72,6 +72,27 @@ ros2 run ugv_bridge track_odometry_node --ros-args \
 > `wheel_radius`/`track_width`) salen de `config/geometria_robot.yaml`, que es la
 > única fuente de verdad y la comparte con el URDF y el guardián de colisiones.
 
+#### Modelo 3D del CAD (`modelo:=rescate`)
+
+Por defecto se ve el modelo paramétrico (`ugv.urdf.xacro`). Para ver el CAD de
+Fusion 360 (`rmd_description/urdf/rescate.urdf.xacro`) con el mismo sistema:
+
+```bash
+ros2 launch ugv_bridge flipper.launch.py modelo:=rescate use_rviz:=true
+ros2 launch rmd_description display.launch.py modelo:=rescate   # solo sliders
+```
+
+Solo cambia lo que se ve; los nodos siguen usando `geometria_robot.yaml`. Si se
+re-exporta desde Fusion (acdc4robot), se regenera con:
+
+```bash
+cd src/rmd_description
+python3 scripts/fusion_a_urdf.py cad/<carpeta_export> urdf/rescate.urdf.xacro meshes/rescate
+```
+
+> Si RViz queda en negro dentro del distrobox (`failed to load driver: nvidia-drm`),
+> lanzarlo con `LIBGL_ALWAYS_SOFTWARE=1`.
+
 ### Cómo mover el robot en la simulación
 
 El robot se controla con dos tópicos `std_msgs/Float64MultiArray` (4 valores, orden
