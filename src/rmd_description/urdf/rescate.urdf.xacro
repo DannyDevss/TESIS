@@ -45,14 +45,14 @@
     <visual name="base_link-v1_1_visual">
       <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0" />
       <geometry>
-        <mesh filename="${mesh_dir}/base_link-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/base_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="base" />
     </visual>
     <collision name="base_link-v1_1_collision">
       <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0" />
       <geometry>
-        <mesh filename="${mesh_dir}/base_link-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/base_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -65,14 +65,14 @@
     <visual name="Flipper-v1_3_visual">
       <origin xyz="-0.17500000000000007 0.054999999999999966 0.1545002804570198" rpy="1.5707963267948966 -1.2931560315090898e-29 -9.860761315262648e-32" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fl_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="brazo" />
     </visual>
     <collision name="Flipper-v1_3_collision">
       <origin xyz="-0.17500000000000007 0.054999999999999966 0.1545002804570198" rpy="1.5707963267948966 -1.2931560315090898e-29 -9.860761315262648e-32" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fl_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -85,14 +85,14 @@
     <visual name="Eje_LR-v2_2_visual">
       <origin xyz="0.17500000000000002 0.055 -0.075" rpy="1.5707963267948966 -0.0 0.0" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="eje" />
     </visual>
     <collision name="Eje_LR-v2_2_collision">
       <origin xyz="0.17500000000000002 0.055 -0.075" rpy="1.5707963267948966 -0.0 0.0" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -105,14 +105,14 @@
     <visual name="Flipper-v1_1_visual">
       <origin xyz="-0.1750000000000009 -0.054999999999999986 -0.15450028045701958" rpy="-1.5707963267948966 1.5777218104420233e-30 2.449293598294706e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fr_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="brazo" />
     </visual>
     <collision name="Flipper-v1_1_collision">
       <origin xyz="-0.1750000000000009 -0.054999999999999986 -0.15450028045701958" rpy="-1.5707963267948966 1.5777218104420233e-30 2.449293598294706e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fr_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -125,14 +125,14 @@
     <visual name="Eje_LR-v2_3_visual">
       <origin xyz="-0.1749999999999992 0.05499999999999996 0.07500000000000179" rpy="-1.5707963267948966 -9.728329253277933e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="eje" />
     </visual>
     <collision name="Eje_LR-v2_3_collision">
       <origin xyz="-0.1749999999999992 0.05499999999999996 0.07500000000000179" rpy="-1.5707963267948966 -9.728329253277933e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_fr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -145,14 +145,14 @@
     <visual name="Flipper-v1_4_visual">
       <origin xyz="0.17500000000000046 -0.055000000000000084 0.15450028045701988" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rl_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="brazo" />
     </visual>
     <collision name="Flipper-v1_4_collision">
       <origin xyz="0.17500000000000046 -0.055000000000000084 0.15450028045701988" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rl_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -165,14 +165,14 @@
     <visual name="Eje_LR-v2_1_visual">
       <origin xyz="0.17500000000000002 -0.055 0.075" rpy="-1.5707963267948966 -0.0 0.0" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="eje" />
     </visual>
     <collision name="Eje_LR-v2_1_collision">
       <origin xyz="0.17500000000000002 -0.055 0.075" rpy="-1.5707963267948966 -0.0 0.0" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -185,14 +185,14 @@
     <visual name="Flipper-v1_2_visual">
       <origin xyz="0.1749999999999994 0.05500000000000016 -0.15450028045702" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rr_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="brazo" />
     </visual>
     <collision name="Flipper-v1_2_collision">
       <origin xyz="0.1749999999999994 0.05500000000000016 -0.15450028045702" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Flipper-v1_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rr_brazo.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -205,14 +205,14 @@
     <visual name="Eje_LR-v2_4_visual">
       <origin xyz="-0.17499999999999893 -0.05499999999999977 -0.07500000000000143" rpy="1.570796326794896 7.393031115511251e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="eje" />
     </visual>
     <collision name="Eje_LR-v2_4_collision">
       <origin xyz="-0.17499999999999893 -0.05499999999999977 -0.07500000000000143" rpy="1.570796326794896 7.393031115511251e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/Eje_LR-v2_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/flipper_rr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -225,14 +225,14 @@
     <visual name="RuedaL-v1_6_visual">
       <origin xyz="-0.43099999999999933 -0.05499999999999986 -0.26950028045701985" rpy="-1.5707963267948968 1.296401223465379e-29 9.860761315262665e-32" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_6.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fl_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_6_collision">
       <origin xyz="-0.43099999999999933 -0.05499999999999986 -0.26950028045701985" rpy="-1.5707963267948968 1.296401223465379e-29 9.860761315262665e-32" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_6.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fl_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -245,14 +245,14 @@
     <visual name="RuedaL-v1_5_visual">
       <origin xyz="-0.4310000000000001 0.054999999999999986 0.24050028045701993" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_5.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fl_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_5_collision">
       <origin xyz="-0.4310000000000001 0.054999999999999986 0.24050028045701993" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_5.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fl_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -265,14 +265,14 @@
     <visual name="RuedaL-v1_2_visual">
       <origin xyz="-0.43100000000000016 0.05499999999999988 0.2695002804570196" rpy="1.5707963267948966 8.717412843332556e-47 -2.4492935982947054e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fr_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_2_collision">
       <origin xyz="-0.43100000000000016 0.05499999999999988 0.2695002804570196" rpy="1.5707963267948966 8.717412843332556e-47 -2.4492935982947054e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fr_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -285,14 +285,14 @@
     <visual name="RuedaL-v1_1_visual">
       <origin xyz="-0.43100000000000094 0.054999999999999896 0.2695002804570198" rpy="1.5707963267948966 2.0762805858447885e-46 2.4492935982947054e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fr_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_1_collision">
       <origin xyz="-0.43100000000000094 0.054999999999999896 0.2695002804570198" rpy="1.5707963267948966 2.0762805858447885e-46 2.4492935982947054e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_fr_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -305,14 +305,14 @@
     <visual name="RuedaL-v1_8_visual">
       <origin xyz="0.43099999999999916 0.054999999999999945 -0.26950028045702007" rpy="-1.5707963267948966 -1.2682441276783952e-29 -3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_8.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rl_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_8_collision">
       <origin xyz="0.43099999999999916 0.054999999999999945 -0.26950028045702007" rpy="-1.5707963267948966 -1.2682441276783952e-29 -3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_8.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rl_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -325,14 +325,14 @@
     <visual name="RuedaL-v1_7_visual">
       <origin xyz="0.43100000000000044 -0.05500000000000009 0.24050028045702002" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_7.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rl_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_7_collision">
       <origin xyz="0.43100000000000044 -0.05500000000000009 0.24050028045702002" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_7.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rl_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -345,14 +345,14 @@
     <visual name="RuedaL-v1_3_visual">
       <origin xyz="0.43099999999999994 0.05500000000000023 -0.24050028045701996" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rr_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_3_collision">
       <origin xyz="0.43099999999999994 0.05500000000000023 -0.24050028045701996" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rr_1.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -365,14 +365,14 @@
     <visual name="RuedaL-v1_4_visual">
       <origin xyz="0.43099999999999755 -0.054999999999999875 0.26950028045702" rpy="1.570796326794896 2.335298137766703e-15 -3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rr_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="loca" />
     </visual>
     <collision name="RuedaL-v1_4_collision">
       <origin xyz="0.43099999999999755 -0.054999999999999875 0.26950028045702" rpy="1.570796326794896 2.335298137766703e-15 -3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaL-v1_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/rueda_loca_rr_2.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -385,14 +385,14 @@
     <visual name="RuedaM-v1_3_visual">
       <origin xyz="-0.1750000000000001 0.054999999999999966 0.18950028045702" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_fl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="motriz" />
     </visual>
     <collision name="RuedaM-v1_3_collision">
       <origin xyz="-0.1750000000000001 0.054999999999999966 0.18950028045702" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_fl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -405,14 +405,14 @@
     <visual name="RuedaM-v1_1_visual">
       <origin xyz="-0.17500000000000093 -0.054999999999999986 -0.1895002804570196" rpy="-1.5707963267948966 -8.717412843332556e-47 2.4492935982947054e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_fr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="motriz" />
     </visual>
     <collision name="RuedaM-v1_1_collision">
       <origin xyz="-0.17500000000000093 -0.054999999999999986 -0.1895002804570196" rpy="-1.5707963267948966 -8.717412843332556e-47 2.4492935982947054e-16" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_fr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -425,14 +425,14 @@
     <visual name="RuedaM-v1_4_visual">
       <origin xyz="0.1750000000000005 -0.055000000000000084 0.18950028045702003" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_rl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="motriz" />
     </visual>
     <collision name="RuedaM-v1_4_collision">
       <origin xyz="0.1750000000000005 -0.055000000000000084 0.18950028045702003" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_rl_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
@@ -445,14 +445,14 @@
     <visual name="RuedaM-v1_2_visual">
       <origin xyz="0.1749999999999997 0.05500000000000041 -0.18950028045702003" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_rr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="motriz" />
     </visual>
     <collision name="RuedaM-v1_2_collision">
       <origin xyz="0.1749999999999997 0.05500000000000041 -0.18950028045702003" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
       <geometry>
-        <mesh filename="${mesh_dir}/RuedaM-v1_2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="${mesh_dir}/track_rr_link.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>

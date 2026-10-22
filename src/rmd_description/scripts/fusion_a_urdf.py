@@ -148,7 +148,9 @@ for viejo in sorted(links, key=lambda n: nombres[n]):
     for tag in ('visual', 'collision'):
         e = l.find(tag)
         malla = e.find('geometry/mesh')
-        archivo = os.path.basename(malla.get('filename'))
+        # Nombre del link, no el de Fusion: el allowlist de assets de
+        # foxglove_bridge rechaza guiones ("Eje_LR-v2_1.stl") y Foxglove no carga la malla.
+        archivo = nombres[viejo] + '.stl'
         shutil.copy(os.path.join(export_dir, malla.get('filename')),
                     os.path.join(dir_mallas, archivo))
         malla.set('filename', '${mesh_dir}/' + archivo)
