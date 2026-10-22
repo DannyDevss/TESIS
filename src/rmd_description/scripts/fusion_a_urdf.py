@@ -13,15 +13,17 @@ modelo sin traducir nada:
                            robot_state_publisher no emite su TF
 La esquina de cada flipper se deduce del signo x/y de su junta, así que un
 re-export de Fusion con otra numeración sigue funcionando.
+Las STL (mm) se reescriben como .dae en metros con Z_UP: ver mallas_dae.py.
 """
 import math
 import os
-import shutil
 import struct
 import sys
 import xml.etree.ElementTree as ET
 
 import numpy as np
+
+from mallas_dae import write_dae
 
 export_dir, salida, dir_mallas = sys.argv[1], sys.argv[2], sys.argv[3]
 urdf_in = next(f for f in os.listdir(export_dir) if f.endswith('.urdf'))
@@ -71,14 +73,19 @@ def pose(link):
     return pose(j.find('parent').get('link')) @ tf(j.find('origin'))
 
 
-def vertices(link):
+def triangulos(link):
+    """Triángulos (N, 3, 3) de la STL binaria del link, en metros y en su marco."""
     v = links[link].find('visual')
     b = open(os.path.join(export_dir, v.find('geometry/mesh').get('filename')), 'rb').read()
     n = struct.unpack('<I', b[80:84])[0]
     tri = np.frombuffer(b[84:84 + 50 * n], dtype=np.dtype(
         [('n', '<3f4'), ('v', '<9f4'), ('a', '<u2')]))
-    pts = tri['v'].reshape(-1, 3).astype(float) * 0.001
-    M = pose(link) @ tf(v.find('origin'))
+    return tri['v'].reshape(-1, 3, 3).astype(float) * 0.001
+
+
+def vertices(link):
+    pts = triangulos(link).reshape(-1, 3)
+    M = pose(link) @ tf(links[link].find('visual').find('origin'))
     return pts @ M[:3, :3].T + M[:3, 3]
 
 
@@ -110,11 +117,12 @@ ET.register_namespace('xacro', XACRO)
 out = ET.Element('robot', name='rescate')
 ET.SubElement(out, f'{{{XACRO}}}property', name='mesh_dir',
               value='package://rmd_description/meshes/rescate')
-colores = {'base': '0.70 0.70 0.72 1.0', 'eje': '0.75 0.25 0.20 1.0',
-           'brazo': '0.29 0.50 0.75 1.0', 'motriz': '0.15 0.15 0.15 1.0',
-           'loca': '0.85 0.75 0.38 1.0'}
-for nombre, rgba in colores.items():
-    ET.SubElement(ET.SubElement(out, 'material', name=nombre), 'color', rgba=rgba)
+colores = {'base': (0.70, 0.70, 0.72), 'eje': (0.75, 0.25, 0.20),
+           'brazo': (0.29, 0.50, 0.75), 'motriz': (0.15, 0.15, 0.15),
+           'loca': (0.85, 0.75, 0.38)}
+for nombre, rgb in colores.items():
+    ET.SubElement(ET.SubElement(out, 'material', name=nombre), 'color',
+                  rgba=' '.join(f'{c:.2f}' for c in rgb) + ' 1.0')
 
 # base_link es la raíz porque el EKF y la odometría publican odom -> base_link:
 # con base_footprint encima tendría dos padres y el TF se rompe. base_footprint
@@ -145,17 +153,18 @@ for viejo in sorted(links, key=lambda n: nombres[n]):
     nuevo = ET.SubElement(out, 'link', name=nombres[viejo])
     if viejo != raiz:
         nuevo.append(l.find('inertial'))
+    # Nombre del link, no el de Fusion: el allowlist de assets de
+    # foxglove_bridge rechaza guiones ("Eje_LR-v2_1") y Foxglove no carga la malla.
+    archivo = nombres[viejo] + '.dae'
+    rol = papel.get(viejo, ('base',))[0]
+    write_dae(os.path.join(dir_mallas, archivo), triangulos(viejo), colores[rol])
     for tag in ('visual', 'collision'):
         e = l.find(tag)
         malla = e.find('geometry/mesh')
-        # Nombre del link, no el de Fusion: el allowlist de assets de
-        # foxglove_bridge rechaza guiones ("Eje_LR-v2_1.stl") y Foxglove no carga la malla.
-        archivo = nombres[viejo] + '.stl'
-        shutil.copy(os.path.join(export_dir, malla.get('filename')),
-                    os.path.join(dir_mallas, archivo))
         malla.set('filename', '${mesh_dir}/' + archivo)
+        del malla.attrib['scale']  # el .dae ya viene en metros
         if tag == 'visual':
-            ET.SubElement(e, 'material', name=papel.get(viejo, ('base',))[0])
+            ET.SubElement(e, 'material', name=rol)
         nuevo.append(e)
 
 for hijo, j in juntas.items():
