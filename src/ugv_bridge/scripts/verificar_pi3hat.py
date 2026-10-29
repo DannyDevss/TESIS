@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""verificar_pi3hat.py — Comprobación de la placa pi3hat ANTES de energizar motores.
+"""
+verificar_pi3hat.py — Comprobación de la placa pi3hat ANTES de energizar motores.
 
 Correr en la Raspberry Pi:
 

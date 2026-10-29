@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""view.launch.py — Visualizar y POSAR el robot: mueve las 4 articulaciones de los
-flippers con sliders, sin conducir (robot fijo y centrado en base_link).
+"""
+view.launch.py — Visualizar y POSAR el robot.
+
+Mueve las 4 articulaciones de los flippers con sliders, sin conducir (robot fijo
+y centrado en base_link).
 
 Lanza:
   - robot_state_publisher : carga el URDF y publica el TF de cada flipper.
@@ -49,9 +52,9 @@ def generate_launch_description():
             executable='joint_state_publisher_gui',
             name='joint_state_publisher_gui',
             output='screen',
-            #Redirige la salida de los sliders a /joint_states_raw, que es lo que lee kinematic_guardian.py
-        
-            remappings=[('/joint_states', '/joint_states_raw')] 
+            # Redirige la salida de los sliders a /joint_states_raw, que es lo que
+            # lee kinematic_guardian.py
+            remappings=[('/joint_states', '/joint_states_raw')]
         ),
         Node(
             package='rviz2',
@@ -68,7 +71,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'port': 8765,
-                'send_buffer_limit': 100000000, # Buffer ampliado para modelos 3D pesados
+                'send_buffer_limit': 100000000,  # Buffer ampliado para modelos 3D pesados
             }]
         ),
         Node(

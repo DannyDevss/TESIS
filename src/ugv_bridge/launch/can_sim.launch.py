@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""can_sim.launch.py — Simulación de bus CAN completa: emulador de motores + sistema.
+"""
+can_sim.launch.py — Simulación de bus CAN completa: emulador de motores + sistema.
 
 Levanta `motor_emulator` (los 8 motores al otro lado de vcan0) y encima el sistema
 completo de flipper.launch.py con modo:=can, de forma que flipper_node hable con

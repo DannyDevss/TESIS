@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Pruebas del ciclo de bus del driver (modos 'can' y 'pi3hat').
+"""
+Pruebas del ciclo de bus del driver (modos 'can' y 'pi3hat').
 
 Los dos modos comparten `_estado_via_bus`: lo que se valida aquí es el código que
 correrá contra los motores reales. Para no depender de vcan0 ni de la placa, el
@@ -14,12 +15,13 @@ import time
 
 from ugv_bridge import protocolo_can as proto
 from ugv_bridge.driver_movimiento import (
-    RMD_Hardware, IDS_ORUGAS, IDS_FLIPPERS, PERIODO_REARMADO_S)
-from ugv_bridge.motor_emulator import MotorEmulado, atender
+    IDS_FLIPPERS, IDS_ORUGAS, PERIODO_REARMADO_S, RMD_Hardware)
+from ugv_bridge.motor_emulator import atender, MotorEmulado
 
 
 class TransporteMemoria:
-    """Los 8 motores emulados al otro lado, sin bus de por medio.
+    """
+    Los 8 motores emulados al otro lado, sin bus de por medio.
 
     Implementa la misma interfaz que TransportePi3Hat y que el camino SocketCAN:
     recibe [(node_id, cmd_id, datos)] y devuelve {node_id: {cmd_id: datos}}.
@@ -74,7 +76,8 @@ def construir(**kwargs):
 
 
 def ciclar(robot, orugas=None, flippers=None, n=20, pausa=0.0):
-    """Ejecuta n ciclos de control.
+    """
+    Ejecuta n ciclos de control.
 
     `pausa` deja pasar tiempo real entre ciclos: la actitud de la IMU sintética se
     integra con time.monotonic(), así que sin pausa dt~0 y no avanza.
@@ -188,7 +191,8 @@ def test_el_driver_arma_los_ejes_al_arrancar():
 
 
 def test_un_eje_en_idle_ignora_las_consignas():
-    """El emulador debe reproducir el fallo silencioso del hardware.
+    """
+    El emulador debe reproducir el fallo silencioso del hardware.
 
     Se mira DENTRO de la ventana de rearmado (PERIODO_REARMADO_S): pasado ese
     tiempo el driver lo arma solo, y de eso se ocupa
@@ -228,7 +232,8 @@ def test_el_watchdog_rearma_al_recuperarse():
 
 
 def test_el_driver_rearma_un_eje_que_se_cayo_a_idle():
-    """El fallo silencioso: un eje se cae a IDLE y nadie lo vuelve a armar.
+    """
+    El fallo silencioso: un eje se cae a IDLE y nadie lo vuelve a armar.
 
     Reproduce el síntoma real: se manda /cmd_flippers, la orden LLEGA al motor,
     el motor no se mueve y no hay ningún error, porque en ODrive un eje en IDLE
@@ -262,7 +267,8 @@ def test_el_driver_rearma_un_eje_que_se_cayo_a_idle():
 
 
 def test_el_armado_del_arranque_puede_perderse_y_se_recupera():
-    """Los motores no escuchaban cuando arrancó el nodo (el caso de vcan0).
+    """
+    Los motores no escuchaban cuando arrancó el nodo (el caso de vcan0).
 
     `can_sim.launch.py` levanta motor_emulator y flipper_node a la vez: si el
     emulador aún no ha abierto su socket, el kernel TIRA las tramas de armado y
@@ -370,7 +376,8 @@ def test_imu_nivelada_en_reposo():
 
 
 def test_signos_de_actitud_segun_rep103():
-    """Levantar los flippers delanteros = morro arriba = pitch NEGATIVO.
+    """
+    Levantar los flippers delanteros = morro arriba = pitch NEGATIVO.
 
     En REP-103 el eje Y apunta a la IZQUIERDA, así que un pitch positivo es morro
     abajo (al revés que en la convención aeronáutica). Un flipper con ángulo

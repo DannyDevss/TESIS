@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""protocolo_can.py — Empaquetado/desempaquetado de tramas CAN de los motores.
+"""
+protocolo_can.py — Empaquetado/desempaquetado de tramas CAN de los motores.
 
 Única fuente de verdad del protocolo: la usan tanto el driver (`driver_movimiento`,
 lado Raspberry/pi3hat) como el emulador (`motor_emulator`, lado "motores").
@@ -163,7 +164,8 @@ def trama_set_input_vel(vel_rad_s, torque_ff_nm=0.0):
 
 
 def trama_set_input_pos(pos_rad, vel_ff_rad_s=0.0, torque_ff_nm=0.0):
-    """0x00C: posición objetivo. Entrada en radianes del EJE DE SALIDA.
+    """
+    0x00C: posición objetivo. Entrada en radianes del EJE DE SALIDA.
 
     Vel_FF y Torque_FF viajan comprimidos en int16 (0.001 rev/s y 0.001 Nm), así
     que su rango útil es +-32.7 rev/s y +-32.7 Nm. Se saturan en vez de desbordar.
@@ -192,8 +194,12 @@ def trama_set_limits(vel_limite_rad_s, corriente_limite_a):
 
 
 def trama_estop():
-    """0x002: paro de emergencia. Desarma el eje; para volver a mover hay que
-    limpiar errores y pedir de nuevo CLOSED_LOOP."""
+    """
+    0x002: paro de emergencia.
+
+    Desarma el eje; para volver a mover hay que limpiar errores y pedir de nuevo
+    CLOSED_LOOP.
+    """
     return b''
 
 
@@ -214,8 +220,11 @@ def parsear_encoder(data):
 
 
 def parsear_heartbeat(data):
-    """0x001 -> {'error_eje', 'estado_eje', 'error_motor', 'error_encoder',
-    'error_controlador', 'trayectoria_hecha'}.
+    """
+    0x001 -> dict con el estado del eje y sus flags de error.
+
+    Claves: 'error_eje', 'estado_eje', 'error_motor', 'error_encoder',
+    'error_controlador', 'trayectoria_hecha'.
 
     Formato de firmware >= 0.5.12: los flags van empaquetados en un byte, y el
     bit vale 1 cuando NO hay error (el manual lo enuncia como "¿es el error 0?").

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""can_studio.launch.py — Robot (RViz) + monitor CAN por motor + editor de flippers.
+"""
+can_studio.launch.py — Robot (RViz) + monitor CAN por motor + editor de flippers.
 
 Abre en una sola sesión:
     - RViz con el modelo del robot,

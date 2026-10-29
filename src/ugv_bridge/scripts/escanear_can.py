@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""escanear_can.py — Busca motores en los buses del pi3hat sin suponer nada.
+"""
+escanear_can.py — Busca motores en los buses del pi3hat sin suponer nada.
 
 `verificar_pi3hat.py --motores` responde "¿están los motores donde los espero?".
 Este script responde la pregunta de antes: "¿hay ALGÚN motor ahí?", cuando no
@@ -49,7 +50,8 @@ NOMBRE_CMD = {
 
 
 async def escuchar(router, buses, segundos):
-    """Escucha sin transmitir. Devuelve [(arb_id, datos), ...].
+    """
+    Escucha sin transmitir. Devuelve [(arb_id, datos), ...].
 
     El pi3hat no dice por qué bus entró cada trama, así que se apunta sólo el ID
     de arbitraje: para localizar el bus, escuchar de uno en uno con --buses.

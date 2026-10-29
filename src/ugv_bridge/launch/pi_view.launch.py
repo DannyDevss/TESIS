@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""pi_view.launch.py — Version headless para correr en la Raspberry Pi.
+"""
+pi_view.launch.py — Version headless para correr en la Raspberry Pi.
+
 Solo nodos sin interfaz gráfica: robot_state_publisher, foxglove_bridge,
  pi3hat_imu,
 kinematic_guardian. Los nodos con GUI (joint_state_publisher_gui, rviz2)

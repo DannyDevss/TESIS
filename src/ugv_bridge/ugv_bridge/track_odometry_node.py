@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""track_odometry_node.py — Odometría de las orugas (JointState -> nav_msgs/Odometry).
+"""
+track_odometry_node.py — Odometría de las orugas (JointState -> nav_msgs/Odometry).
 
 Deriva la pose planar del chasis integrando las velocidades de las 4 orugas con un
 modelo de tracción diferencial (skid-steer):
@@ -26,11 +27,11 @@ claves del YAML y no haya dos nombres para el mismo número.
 """
 import math
 
+from geometry_msgs.msg import Quaternion, TransformStamped
+from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import TransformStamped, Quaternion
 from tf2_ros import TransformBroadcaster
 
 # Nombres de las orugas por lado (deben coincidir con driver_movimiento.NOMBRES_ORUGAS).

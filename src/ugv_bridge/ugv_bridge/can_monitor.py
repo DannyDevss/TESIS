@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""can_monitor.py — Ventana para VER (por motor) y EDITAR (por flipper) el bus CAN.
+"""
+can_monitor.py — Ventana para VER (por motor) y EDITAR (por flipper) el bus CAN.
 
 Nodo ROS 2 + ventana Qt + espía SocketCAN, pensado para verse al lado de RViz.
 Resuelve dos problemas de un candump corriendo:
@@ -44,7 +45,7 @@ from std_msgs.msg import Float64MultiArray
 
 from ugv_bridge import protocolo_can as proto
 from ugv_bridge.driver_movimiento import (
-    ID_A_NOMBRE, IDS_ORUGAS, IDS_FLIPPERS, NOMBRES_FLIPPERS,
+    ID_A_NOMBRE, IDS_FLIPPERS, IDS_ORUGAS, NOMBRES_FLIPPERS,
 )
 
 # Nombre legible de cada cmd_id (los 5 bits bajos del ID de arbitraje).
@@ -74,7 +75,8 @@ def _rad2deg(r):
 
 
 def decodificar(arb_id, data):
-    """Trama CAN cruda -> (sentido, id_motor, tipo, valor_str) para la tabla.
+    """
+    Trama CAN cruda -> (sentido, id_motor, tipo, valor_str) para la tabla.
 
     sentido: '-> motor' (comando del host) o '<- motor' (lo que emite el driver).
     Devuelve None si el ID no corresponde a ningún motor conocido.
@@ -136,9 +138,11 @@ class MonitorNode(Node):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='Monitor por motor + editor de flippers del bus CAN')
+    parser = argparse.ArgumentParser(
+        description='Monitor por motor + editor de flippers del bus CAN')
     parser.add_argument('--canal', default='vcan0', help='interfaz SocketCAN (default: vcan0)')
-    parser.add_argument('--max-log', type=int, default=400, help='filas del log crudo (default: 400)')
+    parser.add_argument('--max-log', type=int, default=400,
+                        help='filas del log crudo (default: 400)')
     args, _ = parser.parse_known_args(argv)
 
     try:
@@ -250,10 +254,13 @@ def main(argv=None):
             w = QWidget()
             lay = QVBoxLayout(w)
             fila = QHBoxLayout()
-            self.chk_auto = QCheckBox('Auto-scroll'); self.chk_auto.setChecked(True)
-            btn_limpiar = QPushButton('Limpiar'); btn_limpiar.clicked.connect(
-                lambda: self.log.setRowCount(0))
-            fila.addWidget(self.chk_auto); fila.addStretch(1); fila.addWidget(btn_limpiar)
+            self.chk_auto = QCheckBox('Auto-scroll')
+            self.chk_auto.setChecked(True)
+            btn_limpiar = QPushButton('Limpiar')
+            btn_limpiar.clicked.connect(lambda: self.log.setRowCount(0))
+            fila.addWidget(self.chk_auto)
+            fila.addStretch(1)
+            fila.addWidget(btn_limpiar)
             lay.addLayout(fila)
             self.log = QTableWidget(0, len(COLS_LOG))
             self.log.setHorizontalHeaderLabels(COLS_LOG)
@@ -276,36 +283,58 @@ def main(argv=None):
             self.sliders, self.spins, self.tramas_lbl = [], [], []
             for i, nombre in enumerate(NOMBRES_FLIPPERS):
                 g.addWidget(QLabel(nombre), i + 1, 0)
-                s = QSlider(Qt.Horizontal); s.setRange(-180, 180); s.setValue(0)
-                sp = QDoubleSpinBox(); sp.setRange(-180, 180); sp.setDecimals(0)
-                sp.setSuffix('°'); sp.setValue(0)
-                lbl = QLabel('—'); lbl.setFont(QFont('monospace', 9))
+                s = QSlider(Qt.Horizontal)
+                s.setRange(-180, 180)
+                s.setValue(0)
+                sp = QDoubleSpinBox()
+                sp.setRange(-180, 180)
+                sp.setDecimals(0)
+                sp.setSuffix('°')
+                sp.setValue(0)
+                lbl = QLabel('—')
+                lbl.setFont(QFont('monospace', 9))
                 s.valueChanged.connect(lambda v, i=i: self._flip_desde_slider(i, v))
                 sp.valueChanged.connect(lambda v, i=i: self._flip_desde_spin(i, v))
                 g.addWidget(s, i + 1, 1)
                 g.addWidget(sp, i + 1, 2)
                 g.addWidget(lbl, i + 1, 3)
-                self.sliders.append(s); self.spins.append(sp); self.tramas_lbl.append(lbl)
+                self.sliders.append(s)
+                self.spins.append(sp)
+                self.tramas_lbl.append(lbl)
                 self._actualizar_trama_lbl(i)
             botones = QHBoxLayout()
-            b0 = QPushButton('Todos a 0° (plano)'); b0.clicked.connect(self._flippers_cero)
-            b45 = QPushButton('Todos a 45°'); b45.clicked.connect(lambda: self._flippers_todos(45))
-            botones.addWidget(b0); botones.addWidget(b45); botones.addStretch(1)
+            b0 = QPushButton('Todos a 0° (plano)')
+            b0.clicked.connect(self._flippers_cero)
+            b45 = QPushButton('Todos a 45°')
+            b45.clicked.connect(lambda: self._flippers_todos(45))
+            botones.addWidget(b0)
+            botones.addWidget(b45)
+            botones.addStretch(1)
             g.addLayout(botones, len(NOMBRES_FLIPPERS) + 1, 0, 1, 4)
             return caja
 
         def _editor_orugas(self):
             caja = QGroupBox('Orugas (velocidad)')
             fila = QHBoxLayout(caja)
-            self.sp_izq = QDoubleSpinBox(); self.sp_izq.setRange(-20, 20)
-            self.sp_izq.setSuffix(' rad/s'); self.sp_izq.setSingleStep(0.5)
-            self.sp_der = QDoubleSpinBox(); self.sp_der.setRange(-20, 20)
-            self.sp_der.setSuffix(' rad/s'); self.sp_der.setSingleStep(0.5)
-            b_ir = QPushButton('Aplicar'); b_ir.clicked.connect(self._enviar_orugas)
-            b_stop = QPushButton('Parar'); b_stop.clicked.connect(self._parar_orugas)
-            fila.addWidget(QLabel('izq (fl,rl)')); fila.addWidget(self.sp_izq)
-            fila.addWidget(QLabel('der (fr,rr)')); fila.addWidget(self.sp_der)
-            fila.addWidget(b_ir); fila.addWidget(b_stop); fila.addStretch(1)
+            self.sp_izq = QDoubleSpinBox()
+            self.sp_izq.setRange(-20, 20)
+            self.sp_izq.setSuffix(' rad/s')
+            self.sp_izq.setSingleStep(0.5)
+            self.sp_der = QDoubleSpinBox()
+            self.sp_der.setRange(-20, 20)
+            self.sp_der.setSuffix(' rad/s')
+            self.sp_der.setSingleStep(0.5)
+            b_ir = QPushButton('Aplicar')
+            b_ir.clicked.connect(self._enviar_orugas)
+            b_stop = QPushButton('Parar')
+            b_stop.clicked.connect(self._parar_orugas)
+            fila.addWidget(QLabel('izq (fl,rl)'))
+            fila.addWidget(self.sp_izq)
+            fila.addWidget(QLabel('der (fr,rr)'))
+            fila.addWidget(self.sp_der)
+            fila.addWidget(b_ir)
+            fila.addWidget(b_stop)
+            fila.addStretch(1)
             return caja
 
         # ---------------------------- callbacks --------------------------- #
@@ -321,11 +350,15 @@ def main(argv=None):
             node.enviar_flippers(self.flip_rad)
 
         def _flip_desde_slider(self, i, v):
-            self.spins[i].blockSignals(True); self.spins[i].setValue(v); self.spins[i].blockSignals(False)
+            self.spins[i].blockSignals(True)
+            self.spins[i].setValue(v)
+            self.spins[i].blockSignals(False)
             self._set_flip(i, v)
 
         def _flip_desde_spin(self, i, v):
-            self.sliders[i].blockSignals(True); self.sliders[i].setValue(int(v)); self.sliders[i].blockSignals(False)
+            self.sliders[i].blockSignals(True)
+            self.sliders[i].setValue(int(v))
+            self.sliders[i].blockSignals(False)
             self._set_flip(i, v)
 
         def _flippers_cero(self):
@@ -333,8 +366,12 @@ def main(argv=None):
 
         def _flippers_todos(self, grados):
             for i in range(4):
-                self.sliders[i].blockSignals(True); self.sliders[i].setValue(grados); self.sliders[i].blockSignals(False)
-                self.spins[i].blockSignals(True); self.spins[i].setValue(grados); self.spins[i].blockSignals(False)
+                self.sliders[i].blockSignals(True)
+                self.sliders[i].setValue(grados)
+                self.sliders[i].blockSignals(False)
+                self.spins[i].blockSignals(True)
+                self.spins[i].setValue(grados)
+                self.spins[i].blockSignals(False)
                 self.flip_rad[i] = math.radians(grados)
                 self._actualizar_trama_lbl(i)
             node.enviar_flippers(self.flip_rad)
@@ -344,7 +381,8 @@ def main(argv=None):
             node.enviar_tracks([izq, der, izq, der])  # orden fl, fr, rl, rr
 
         def _parar_orugas(self):
-            self.sp_izq.setValue(0); self.sp_der.setValue(0)
+            self.sp_izq.setValue(0)
+            self.sp_der.setValue(0)
             node.enviar_tracks([0.0, 0.0, 0.0, 0.0])
 
         # ---------------------------- refresco ---------------------------- #
@@ -386,7 +424,8 @@ def main(argv=None):
             ahora = time.monotonic()
             if ahora - self._t_rate >= 1.0:
                 rate = self._cuenta_ventana / (ahora - self._t_rate)
-                self._cuenta_ventana = 0; self._t_rate = ahora
+                self._cuenta_ventana = 0
+                self._t_rate = ahora
                 estado = 'PAUSA' if self.chk_pausa.isChecked() else 'en vivo'
                 self.lbl.setText(f'{self.total} tramas · {rate:.0f} tramas/s · '
                                  f'{args.canal} · {estado}')
@@ -406,7 +445,8 @@ def main(argv=None):
                       ID_A_NOMBRE.get(mid, ''), tipo, valor, data.hex()]
             color = AZUL if sentido == '-> motor' else VERDE
             for c, txt in enumerate(celdas):
-                it = QTableWidgetItem(txt); it.setForeground(color)
+                it = QTableWidgetItem(txt)
+                it.setForeground(color)
                 self.log.setItem(r, c, it)
             while self.log.rowCount() > args.max_log:
                 self.log.removeRow(0)

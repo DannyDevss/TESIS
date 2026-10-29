@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""flipper_node.py — Puente ROS 2 <-> hardware de motores (orugas + flippers) + IMU.
+"""
+flipper_node.py — Puente ROS 2 <-> hardware de motores (orugas + flippers) + IMU.
 
 Bucle de control de alta frecuencia (por defecto 100 Hz) que:
   1. lee los últimos comandos de la política (RL o teleop),
@@ -44,18 +45,18 @@ Para RL determinista, subir a 200 Hz y afinar QoS/prioridad de CPU.
 """
 import math
 
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 import rclpy
 from rclpy.exceptions import ParameterUninitializedException
 from rclpy.node import Node
-from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
-from sensor_msgs.msg import JointState, Imu
+from sensor_msgs.msg import Imu, JointState
 from std_msgs.msg import Float64MultiArray
 
 from ugv_bridge.driver_movimiento import (
-    RMD_Hardware,
-    IDS_ORUGAS,
-    IDS_FLIPPERS,
     ID_A_NOMBRE,
+    IDS_FLIPPERS,
+    IDS_ORUGAS,
+    RMD_Hardware,
 )
 
 
@@ -193,7 +194,8 @@ class FlipperNode(Node):
     # ------------------------------------------------------------------ #
     # Entrada de comandos
     def _motores_presentes(self):
-        """IDs cableados de verdad, o None si están los 8.
+        """
+        Devuelve los IDs cableados de verdad, o None si están los 8.
 
         `motores_presentes` se declara por TIPO y sin valor por defecto (de una
         lista vacía rclpy deduciría BYTE_ARRAY y rechazaría los enteros que manda
@@ -242,7 +244,8 @@ class FlipperNode(Node):
             self.get_logger().info('Comunicación con los motores restablecida.')
 
     def publicar_diagnostico(self):
-        """Una fila por motor en /diagnostics: quién está y quién no.
+        """
+        Una fila por motor en /diagnostics: quién está y quién no.
 
         Es la "ventanita" de estado del banco de pruebas. Distingue los tres
         casos que desde fuera se parecen demasiado:
@@ -325,7 +328,8 @@ class FlipperNode(Node):
         self.diag_pub.publish(msg)
 
     def revisar_armado(self):
-        """Avisa si algún eje se quedó fuera de lazo cerrado.
+        """
+        Avisa si algún eje se quedó fuera de lazo cerrado.
 
         Es el fallo silencioso de ODrive: el eje acepta la consigna, no se mueve
         y no devuelve error, así que sin este aviso el síntoma es "mando

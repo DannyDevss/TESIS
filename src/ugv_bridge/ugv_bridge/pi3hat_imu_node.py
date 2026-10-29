@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""pi3hat_imu_node.py — Nodo SUELTO para probar la IMU física del pi3hat.
+"""
+pi3hat_imu_node.py — Nodo SUELTO para probar la IMU física del pi3hat.
 
 Publica /imu/data y, opcionalmente, imprime roll/pitch/yaw en la terminal. Sirve
 para validar la placa (permisos SPI, montaje, offsets) sin levantar todo el

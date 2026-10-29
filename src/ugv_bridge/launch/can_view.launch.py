@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""can_view.launch.py — Sliders + visor (Foxglove o RViz) sobre la simulación CAN real.
+"""
+can_view.launch.py — Sliders + visor (Foxglove o RViz) sobre la simulación CAN real.
 
 Une view.launch.py con can_sim.launch.py sin el conflicto de /joint_states:
 aquí los sliders NO publican /joint_states; se remapean a /gui/joint_states y

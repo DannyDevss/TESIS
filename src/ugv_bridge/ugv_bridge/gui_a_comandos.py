@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""gui_a_comandos.py — Puente sliders (joint_state_publisher_gui) -> /cmd_flippers.
+"""
+gui_a_comandos.py — Puente sliders (joint_state_publisher_gui) -> /cmd_flippers.
 
 En view.launch.py la GUI de sliders publica /joint_states directamente: "dibuja" el
 robot sin pasar por el driver. Este nodo invierte el flujo para can_view.launch.py:

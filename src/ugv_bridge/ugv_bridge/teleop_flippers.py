@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""teleop_flippers.py — Mover los flippers "a mano" desde Foxglove, sin sliders.
+"""
+teleop_flippers.py — Mover los flippers "a mano" desde Foxglove, sin sliders.
 
 POR QUÉ ESTE NODO EXISTE
 ------------------------
@@ -42,9 +43,9 @@ PARÁMETROS
 import math
 import time
 
+from geometry_msgs.msg import Twist
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
@@ -94,7 +95,8 @@ class TeleopFlippers(Node):
 
     # ------------------------------------------------------------------ #
     def on_joint_states(self, msg: JointState):
-        """Semilla de la pose: solo la PRIMERA vez.
+        """
+        Semilla de la pose: solo la PRIMERA vez.
 
         Después no se vuelve a leer: el objetivo lo manda este nodo y el flipper
         lo persigue. Si se resincronizara en cada mensaje, el error de

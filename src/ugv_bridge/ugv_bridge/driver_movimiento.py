@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""driver_movimiento.py — Gemelo digital del hardware de motores + IMU.
+"""
+driver_movimiento.py — Gemelo digital del hardware de motores + IMU.
 
 Capa de abstracción sobre la placa mjbots pi3hat (SPI -> CAN + IMU) y los 8
 motores SteadyWin (GIM6010-8 / GDS68) del UGV con orugas articuladas:
@@ -108,7 +109,8 @@ def _clamp(v, lo, hi):
 
 
 class RMD_Hardware:
-    """Interfaz única al hardware de movimiento (real o simulado).
+    """
+    Interfaz única al hardware de movimiento (real o simulado).
 
     Parameters
     ----------
@@ -140,6 +142,7 @@ class RMD_Hardware:
         Inyección de dependencia para modo='pi3hat'. None -> se abre la placa de
         verdad. Los tests le pasan un transporte en memoria para ejercitar el
         protocolo completo sin hardware.
+
     """
 
     def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0',
@@ -276,12 +279,15 @@ class RMD_Hardware:
             pass
 
     def _intercambiar(self, peticiones, timeout=0.004):
-        """Manda un LOTE de mensajes y devuelve lo que llegó, por motor.
+        """
+        Manda un LOTE de mensajes y devuelve lo que llegó, por motor.
 
         Parameters
         ----------
         peticiones : list[tuple[int, int, bytes]]
             [(node_id, cmd_id, datos), ...]
+        timeout : float
+            Segundos que se escucha el bus esperando respuestas.
 
         Returns
         -------
@@ -295,6 +301,7 @@ class RMD_Hardware:
 
         Es el único punto donde 'can' y 'pi3hat' difieren: SocketCAN manda por el
         socket y drena el buffer; el pi3hat lo hace todo en UN ciclo SPI.
+
         """
         if self.modo == 'pi3hat':
             return self._transporte.intercambiar(peticiones, timeout=timeout)
@@ -328,7 +335,8 @@ class RMD_Hardware:
         return recibido
 
     def _armar_motores(self, ids=None):
-        """Deja cada motor sin errores, en su modo de control y en LAZO CERRADO.
+        """
+        Deja cada motor sin errores, en su modo de control y en LAZO CERRADO.
 
         Es OBLIGATORIO con ODrive y no lo era con el protocolo anterior: un eje en
         IDLE acepta los comandos de velocidad/posición y NO HACE NADA, sin
@@ -411,7 +419,8 @@ class RMD_Hardware:
         return estado
 
     def _vigilar_armado(self):
-        """Vigila que los ejes sigan en LAZO CERRADO, y rearma los que no.
+        """
+        Vigila que los ejes sigan en LAZO CERRADO, y rearma los que no.
 
         POR QUÉ HACE FALTA
         ------------------
@@ -460,7 +469,8 @@ class RMD_Hardware:
         self._armar_motores(desarmados)
 
     def _vigilar_comunicacion(self, recibido):
-        """Watchdog de seguridad: detecta motores que dejaron de emitir.
+        """
+        Watchdog de seguridad: detecta motores que dejaron de emitir.
 
         Un motor mudo con una consigna de velocidad ya aceptada seguiría girando:
         por eso, al superar `ciclos_watchdog` ciclos sin oír nada de él se para
@@ -494,7 +504,8 @@ class RMD_Hardware:
             self._armar_motores()
 
     def resumen_motores(self):
-        """Foto del estado de cada motor, para diagnóstico (NO para el control).
+        """
+        Foto del estado de cada motor, para diagnóstico (NO para el control).
 
         La consume `flipper_node` para publicar /diagnostics, que es lo que se
         ve en el panel Diagnostics de Foxglove: de un vistazo, qué motores están
@@ -530,7 +541,8 @@ class RMD_Hardware:
         return resumen
 
     def parar_motores(self):
-        """Paro de emergencia: consigna cero y ejes a IDLE (best effort).
+        """
+        Paro de emergencia: consigna cero y ejes a IDLE (best effort).
 
         IDLE deja el driver energizado pero sin par, que es el equivalente al
         'paro' del protocolo anterior. Para volver a mover hay que rearmar
@@ -598,7 +610,8 @@ class RMD_Hardware:
     # Hardware real: motores por los buses CAN del pi3hat
     # ------------------------------------------------------------------ #
     def _init_hardware_real(self):
-        """Abre el Pi3HatRouter y deja listo el transporte CAN de los motores.
+        """
+        Abre el Pi3HatRouter y deja listo el transporte CAN de los motores.
 
         El mapa de buses sale de `mapa_buses` (config/geometria_robot.yaml o
         parámetro del nodo), NO está clavado en el código: si cambia el cableado,
@@ -628,7 +641,8 @@ class RMD_Hardware:
     # API que consume el nodo de ROS
     # ------------------------------------------------------------------ #
     def enviar_y_leer_estado(self, comandos_orugas, comandos_flippers):
-        """Función MAESTRA (llamada ~100 Hz): comanda los 8 motores y devuelve su estado.
+        """
+        Función MAESTRA (llamada ~100 Hz): comanda los 8 motores y devuelve su estado.
 
         Parameters
         ----------
@@ -641,6 +655,7 @@ class RMD_Hardware:
         -------
         dict[int, dict]
             {id: {posicion_rad, velocidad_rad_s, torque_nm, temperatura_c}}
+
         """
         if self.modo in ('can', 'pi3hat'):
             estado = self._estado_via_bus(comandos_orugas, comandos_flippers)
@@ -654,7 +669,8 @@ class RMD_Hardware:
         return estado
 
     def _actualizar_actitud(self, estado):
-        """Sintetiza la actitud del chasis (roll/pitch/yaw) desde el estado de los motores.
+        """
+        Sintetiza la actitud del chasis (roll/pitch/yaw) desde el estado de los motores.
 
         - yaw: integra el giro skid-steer de las orugas (mismo modelo que la
           odometría), así el rumbo de la IMU es COHERENTE con /odom en vez de
@@ -739,7 +755,8 @@ class RMD_Hardware:
         return estado
 
     def leer_imu(self):
-        """Lee la IMU. Devuelve dict con actitud + aceleración.
+        """
+        Lee la IMU. Devuelve dict con actitud + aceleración.
 
         Ángulos en RADIANES. Con la IMU real se incluye además 'quat' (x,y,z,w),
         que es lo que el nodo publica directamente: evita el rodeo

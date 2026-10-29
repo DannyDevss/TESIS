@@ -1,5 +1,5 @@
-import os
 from glob import glob
+import os
 
 from setuptools import find_packages, setup
 
@@ -21,7 +21,7 @@ setup(
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
         (os.path.join('share', package_name, 'scripts'),
             glob('scripts/*.sh') + glob('scripts/*.py')),
-        
+
         # --- AQUÍ ESTÁ LA LÍNEA MÁGICA PARA EL MODELO 3D DE DARPA ---
         (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),
         # Los .dae piden sus texturas como ../textures/*.png. Sin esto, Foxglove

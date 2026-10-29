@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""motor_emulator.py — Emula los 8 motores SteadyWin al otro lado del bus CAN.
+"""
+motor_emulator.py — Emula los 8 motores SteadyWin al otro lado del bus CAN.
 
 Proceso independiente SIN ROS: escucha el bus (vcan0 por defecto), decodifica las
 tramas con `protocolo_can`, integra un modelo físico simple por motor y EMITE los
@@ -35,7 +36,7 @@ import sys
 import time
 
 from ugv_bridge import protocolo_can as proto
-from ugv_bridge.driver_movimiento import IDS_ORUGAS, IDS_FLIPPERS, ID_A_NOMBRE
+from ugv_bridge.driver_movimiento import ID_A_NOMBRE, IDS_FLIPPERS, IDS_ORUGAS
 
 # Periodos de los mensajes periódicos, en segundos (valores de fábrica).
 PERIODO_ENCODER_S = 0.010
@@ -117,7 +118,8 @@ class MotorEmulado:
 
 
 def atender(motor, comando, verbose=False):
-    """Aplica un mensaje host->motor al motor emulado.
+    """
+    Aplica un mensaje host->motor al motor emulado.
 
     A diferencia del protocolo anterior, NO devuelve una respuesta: en ODrive el
     motor contesta emitiendo sus mensajes periódicos, no trama a trama.

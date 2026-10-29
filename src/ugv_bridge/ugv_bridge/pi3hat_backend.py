@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""pi3hat_backend.py — Acceso al hardware mjbots pi3hat: buses CAN + IMU.
+"""
+pi3hat_backend.py — Acceso al hardware mjbots pi3hat: buses CAN + IMU.
 
 Este módulo concentra TODO lo que depende de `moteus_pi3hat`, para que el resto
 del código (driver_movimiento, flipper_node, pi3hat_imu_node) no sepa de SPI ni
@@ -94,7 +95,8 @@ def _importar():
 
 
 def obtener_loop():
-    """Event loop persistente para las llamadas async de moteus_pi3hat.
+    """
+    Event loop persistente para las llamadas async de moteus_pi3hat.
 
     Se crea UNO solo y se reutiliza: `asyncio.run()` por ciclo de control
     (100 Hz) construiría y destruiría un loop 100 veces por segundo.
@@ -113,7 +115,8 @@ BITRATE_CAN = 500000
 
 
 def config_can_clasico(buses):
-    """{bus: CanConfiguration} para hablar CAN 2.0 CLÁSICO a 1 Mbps.
+    """
+    {bus: CanConfiguration} para hablar CAN 2.0 CLÁSICO a 1 Mbps.
 
     POR QUÉ HACE FALTA
     ------------------
@@ -147,7 +150,8 @@ def config_can_clasico(buses):
 
 
 def abrir_router(mapa_buses=None):
-    """Abre (una sola vez por proceso) el Pi3HatRouter y lo devuelve.
+    """
+    Abre (una sola vez por proceso) el Pi3HatRouter y lo devuelve.
 
     Parameters
     ----------
@@ -156,6 +160,7 @@ def abrir_router(mapa_buses=None):
 
     La placa admite UN solo dueño del bus SPI, así que motores e IMU comparten
     esta instancia.
+
     """
     global _router_cacheado
     if _router_cacheado is not None:
@@ -211,7 +216,8 @@ TIMEOUT_CICLO_MIN_S = 0.025
 
 
 class TransportePi3Hat:
-    """Envía tramas CAN a los motores por el pi3hat y recoge lo que emiten.
+    """
+    Envía tramas CAN a los motores por el pi3hat y recoge lo que emiten.
 
     Expone la MISMA interfaz `intercambiar()` que el transporte SocketCAN, de
     modo que `driver_movimiento` usa el mismo código de protocolo en modo 'can'
@@ -231,6 +237,7 @@ class TransportePi3Hat:
         La placa SÍ se abre con el mapa COMPLETO: `abrir_router` es quien pone
         los buses en CAN 2.0 clásico a 500 kbps, y eso conviene dejarlo hecho en
         los cuatro aunque hoy sólo se use uno.
+
     """
 
     def __init__(self, mapa_buses, ids_presentes=None):
@@ -249,7 +256,8 @@ class TransportePi3Hat:
                 self._mascara_buses |= (1 << bus)
 
     def intercambiar(self, peticiones, timeout=0.004):
-        """Manda todas las tramas en UN ciclo del pi3hat y recoge lo que llegue.
+        """
+        Manda todas las tramas en UN ciclo del pi3hat y recoge lo que llegue.
 
         Parameters
         ----------
@@ -281,6 +289,7 @@ class TransportePi3Hat:
         buffer de los buses. Un solo ciclo para los 8 motores es la razón de ser
         del pi3hat: hacerlo motor por motor costaría 8 transacciones SPI por
         iteración del bucle de control.
+
         """
         from ugv_bridge import protocolo_can as proto
 
@@ -404,7 +413,8 @@ def _rotar_vector(q, v):
 
 
 class LectorImuPi3Hat:
-    """Lee la IMU real del pi3hat y la entrega ya en el marco del robot.
+    """
+    Lee la IMU real del pi3hat y la entrega ya en el marco del robot.
 
     La rotación de MONTAJE de la placa (imu_montaje_roll/pitch/yaw de
     config/geometria_robot.yaml) se aplica aquí, de modo que quien consume esta
@@ -418,6 +428,7 @@ class LectorImuPi3Hat:
     mapa_buses : dict | None
         Si el mismo proceso también habla con los motores, pasar el mismo mapa
         para que se comparta un único Pi3HatRouter.
+
     """
 
     def __init__(self, montaje_rpy=(0.0, 0.0, 0.0), mapa_buses=None):
@@ -437,7 +448,8 @@ class LectorImuPi3Hat:
 
     # ------------------------------------------------------------------ #
     def leer(self):
-        """Devuelve {'quat': (x,y,z,w), 'roll','pitch','yaw', 'accel_x/y/z'}.
+        """
+        Devuelve {'quat': (x,y,z,w), 'roll','pitch','yaw', 'accel_x/y/z'}.
 
         La estructura del objeto que devuelve `attitude()` cambia entre versiones
         de moteus_pi3hat (a veces `imu.w`, a veces `imu.attitude.w`), igual que ya
@@ -471,7 +483,8 @@ class LectorImuPi3Hat:
 
     # ------------------------------------------------------------------ #
     def _leer_aceleracion(self, imu, roll, pitch):
-        """Aceleración lineal cruda si el firmware la expone; si no, la calcula.
+        """
+        Aceleración lineal cruda si el firmware la expone; si no, la calcula.
 
         El firmware del pi3hat publica `accel_mps2` en algunas versiones y sólo el
         cuaternión en otras. Se prueba una vez qué hay y se recuerda. Sin dato

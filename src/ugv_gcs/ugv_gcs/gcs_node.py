@@ -6,20 +6,22 @@ Prueba el puente Qt <-> ROS: corre rclpy en un hilo y, vía señales Qt,
 dibuja en vivo un mini-mapa 2D del robot a partir de /odom y /scan.
 Es el esqueleto sobre el que luego se enchufa la GUI completa (simu.py).
 """
-import sys
 import math
+import sys
 import threading
+
+from nav_msgs.msg import Odometry
+from PySide6.QtCore import QObject, QPointF, Qt, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen
+from PySide6.QtWidgets import QApplication, QWidget
 import rclpy
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from PySide6.QtWidgets import QApplication, QWidget
-from PySide6.QtCore import QObject, Signal, Qt, QTimer, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush
 
 
 class RosSignals(QObject):
     """Puente: los callbacks de ROS (otro hilo) emiten estas señales Qt."""
+
     pose_ready = Signal(float, float, float)            # x, y, yaw (rad)
     scan_ready = Signal(list, float, float, float)      # ranges, amin, ainc, rmax
 

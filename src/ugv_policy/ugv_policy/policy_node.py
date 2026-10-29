@@ -12,11 +12,11 @@ robot real. Su entrada y salida son idénticas en ambos casos.
 Para usar el modelo RL entrenado, lánzalo con el parámetro model_path:
     ros2 run ugv_policy policy_node --ros-args -p model_path:=/ruta/modelo_robot.zip
 """
+from geometry_msgs.msg import Twist
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist
 
 from ugv_core.robot_env import HeuristicBrain, RLBrain
 

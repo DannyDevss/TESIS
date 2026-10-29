@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""flipper.launch.py — Levanta el puente de motores (flipper_node), la odometría de
-orugas, el modelo del robot (robot_state_publisher) y, opcionalmente, el EKF y RViz.
+"""
+flipper.launch.py — Puente de motores, odometría, modelo y, opcional, EKF y RViz.
+
+Levanta el puente de motores (flipper_node), la odometría de orugas, el modelo
+del robot (robot_state_publisher) y, opcionalmente, el EKF y RViz.
 
 Uso:
     ros2 launch ugv_bridge flipper.launch.py
