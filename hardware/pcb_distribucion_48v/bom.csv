@@ -1,0 +1,11 @@
+Ref,Cant,Valor,Huella,Descripcion,Nota
+J1,1,AMASS XT60 macho,Connector_AMASS:AMASS_XT60-M_1x02_P7.20mm_Vertical,entrada de bateria,"de cable, soldado vertical; pad 1 = - (chaflan), pad 2 = +"
+J2-J9,8,AMASS XT30U hembra,Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical,salida a cada motor,"de cable, soldado vertical; pad 1 = - (chaflan), pad 2 = +"
+F1-F8 F10,18,clip Littelfuse 0445 0001 / 0030 0210 (serie 445-030),Fuse:Fuseholder_Clip-5x20mm_Littelfuse_445-030_Inline_P20.50x5.20mm_D1.30mm_Horizontal,clips para fusible 5x20 (dos por fusible),"10 A 250 V; 2 patas por clip a 5.2 mm"
+-,8,fusible ceramico 5x20 T10A 250V,-,uno por motor (F1-F8),"ceramico (no vidrio), retardado (T); comprar repuestos"
+-,1,fusible ceramico 5x20 T2A 250V,-,entrada del reductor (F10),viene en el mismo kit
+F9,1,Bel Fuse 0ZRE0005FF,Fuse:Fuse_BelFuse_0ZRE0005FF_L8.3mm_W3.8mm,PTC radial de la linea de sensado,protege el cable al medidor
+J10 J12 J13,3,Phoenix MSTBA 2.5/2-G-5.08,Connector_Phoenix_MSTB:PhoenixContact_MSTBA_2;5_2-G-5;08_1x02_P5.08mm_Horizontal,J10 sensado / J12 5V Pi / J13 5V medidor,"1 = +, 2 = GND; enchufe MSTB 2.5/2-ST-5.08"
+J11,1,Phoenix MSTBA 2.5/4-G-5.08,Connector_Phoenix_MSTB:PhoenixContact_MSTBA_2;5_4-G-5;08_1x04_P5.08mm_Horizontal,conexion al reductor externo,"IN+, -, 5V, -; enchufe MSTB 2.5/4-ST-5.08"
+-,1,modulo DC-DC 48V a 5V,-,reductor externo,"entrada 60 V o mas, 5 V fijos a 5 A o mas"
+H1-H4,4,M3,MountingHole:MountingHole_3.2mm_M3,agujeros de montaje,sin pad: no conectan el chasis a GND
