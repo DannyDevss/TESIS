@@ -23,6 +23,7 @@ Bel Fuse, Phoenix): las cotas vienen del fabricante, no reconstruidas.
 | `preview.png` | Cara superior: cobre y serigrafía. |
 | `render3d.png` | Vista 3D de KiCad (sin modelo 3D de los XT30 ni de los clips). |
 | `PENDIENTES.md` | Lo que hay que comprobar antes de fabricar. |
+| `COMPRAS.md` | Lista de compras con cantidades. |
 
 ## Cómo está armada
 
