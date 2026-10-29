@@ -3,12 +3,32 @@
 #
 # Objetivo: fusionar la odometría de las orugas (que PATINAN) con la IMU del
 # pi3hat (que sufre DRIFT) y entregar a la política de RL una pose/orientación
-# limpia. Publica /odometry/filtered y el TF world_frame -> base_link_frame.
+# limpia. Publica /odometry/filtered y el TF odom -> base_link.
 #
 # Ejecutar (dentro del launch, o suelto):
+#   ros2 launch ugv_bridge can_sim.launch.py use_ekf:=true
 #   ros2 run robot_localization ekf_node --ros-args --params-file config/ekf.yaml
 #
-# ¡ESQUELETO! Ajustar frames, matrices *_config y covarianzas al hardware real.
+# ------------------------------------------------------------------------- #
+# POR QUÉ ESTE FILTRO ES LO QUE INCLINA EL MODELO 3D EN FOXGLOVE
+# ------------------------------------------------------------------------- #
+# robot_state_publisher SÓLO dibuja la geometría INTERNA del robot: mueve los
+# flippers respecto a base_link a partir de /joint_states. NUNCA mueve base_link
+# dentro del mundo. Por eso, aunque /imu/data_raw traiga una orientación perfecta,
+# el modelo se ve plano: nadie está publicando dónde está el chasis.
+#
+# Quien lo publica es este EKF, con el TF odom -> base_link. Las dos cadenas son
+# COMPLEMENTARIAS y no se pisan:
+#
+#     odom --[EKF]--> base_link --[robot_state_publisher]--> flippers, imu_link
+#
+# Regla que hay que respetar: track_odometry_node debe correr con publish_tf=false
+# mientras el EKF esté activo. Si ambos publican odom -> base_link, base_link
+# tiene dos padres y el árbol TF queda inválido (en Foxglove: el modelo tiembla o
+# desaparece). El launch ya lo resuelve: publish_tf sigue a "not use_ekf".
+#
+# En Foxglove: panel 3D con "Display frame" = odom para ver el robot moverse e
+# inclinarse; = base_link para verlo fijo y sólo mover los flippers.
 ekf_filter_node:
   ros__parameters:
     frequency: 30.0             # Hz; tasa de publicación del EKF. 100 Hz satura
@@ -29,9 +49,9 @@ ekf_filter_node:
     # ------------------------------------------------------------------ #
     # Fuente 0: ODOMETRÍA DE ORUGAS  (nav_msgs/Odometry)
     # ------------------------------------------------------------------ #
-    # TODO: aún NO existe un nodo que publique /odom a partir de las velocidades
-    # de las orugas (JointState de flipper_node -> cinemática diferencial ->
-    # nav_msgs/Odometry). Hay que crearlo; aquí se deja el enganche.
+    # Lo publica track_odometry_node: /joint_states -> cinemática diferencial
+    # skid-steer -> nav_msgs/Odometry, con covarianzas altas porque las orugas
+    # patinan. (El TODO que decía que este nodo no existía quedó obsoleto.)
     odom0: /odom
     # Orden: [x, y, z, roll, pitch, yaw,
     #         vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
@@ -48,17 +68,32 @@ ekf_filter_node:
     # ------------------------------------------------------------------ #
     # Fuente 1: IMU del pi3hat  (sensor_msgs/Imu)  -> ya la publica flipper_node
     # ------------------------------------------------------------------ #
+    # OJO con el tópico: /imu/data_raw es el de flipper_node (el driver, con
+    # covarianzas puestas). El nodo suelto pi3hat_imu_node publica en /imu/data y
+    # es sólo para pruebas de banco: NO es el que alimenta al filtro.
     imu0: /imu/data_raw
     # De la IMU confiamos en la ORIENTACIÓN (roll, pitch, yaw) y aceleración lineal.
+    # roll/pitch son la clave para que el modelo 3D se incline en terreno irregular:
+    # por eso two_d_mode sigue en false y estas tres entradas en true.
     imu0_config: [false, false, false,
                   true,  true,  true,
                   false, false, false,
                   false, false, false,
-                  true,  true,  false]
+                  false, false, false]
     imu0_differential: false
     imu0_relative: false
     imu0_queue_size: 10
     imu0_remove_gravitational_acceleration: true
+
+    # Por qué ax/ay están en FALSE (antes estaban en true):
+    # el acelerómetro de este robot, quieto o a velocidad casi constante, sólo ve
+    # la GRAVEDAD. Al fusionarlo, cualquier desajuste transitorio entre la
+    # orientación estimada y la real deja un residuo de aceleración que el filtro
+    # integra a velocidad y de ahí a posición — y no hay ninguna medición de
+    # posición que lo corrija. En pruebas se traducía en el robot hundiéndose
+    # decenas de centímetros en Z mientras avanzaba.
+    # La velocidad lineal ya la aportan las orugas (odom0/vx), que es una medición
+    # mucho mejor. De la IMU se usa lo que sólo ella sabe: la ORIENTACIÓN.
 
     # Covarianza inicial / de proceso: usar las de robot_localization por defecto
     # hasta caracterizar el ruido real de encoders e IMU. TODO: medir y afinar.

@@ -1,0 +1,575 @@
+<?xml version="1.0"?>
+<!-- GENERADO por scripts/fusion_a_urdf.py desde cad/rescate_export-v1. No editar a mano. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rescate">
+  <xacro:property name="mesh_dir" value="package://rmd_description/meshes/rescate" />
+  <material name="base">
+    <color rgba="0.70 0.70 0.72 1.0" />
+  </material>
+  <material name="eje">
+    <color rgba="0.75 0.25 0.20 1.0" />
+  </material>
+  <material name="brazo">
+    <color rgba="0.29 0.50 0.75 1.0" />
+  </material>
+  <material name="motriz">
+    <color rgba="0.15 0.15 0.15 1.0" />
+  </material>
+  <material name="loca">
+    <color rgba="0.85 0.75 0.38 1.0" />
+  </material>
+  <link name="base_footprint" />
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="base_footprint" />
+    <origin xyz="0 0 -0.015" rpy="0 0 0" />
+  </joint>
+  <link name="chassis_inertial_link">
+    <inertial>
+      <origin xyz="-2.778633031518703e-16 -1.8061114704871568e-16 0.04246915510214385" rpy="0.0 0.0 0.0" />
+      <mass value="10.277763674342083" />
+      <inertia ixx="0.11047830531909522" iyy="0.18803643972012854" izz="0.2737639609964174" ixy="-6.397021934390063e-16" iyz="-2.1718320170726293e-17" ixz="-3.383257963111934e-16" />
+    </inertial>
+  </link>
+  <joint name="chassis_inertial_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="chassis_inertial_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="imu_link" />
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="base_link">
+    <visual name="base_link-v1_1_visual">
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0" />
+      <geometry>
+        <mesh filename="${mesh_dir}/base_link.dae" />
+      </geometry>
+      <material name="base" />
+    </visual>
+    <collision name="base_link-v1_1_collision">
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0" />
+      <geometry>
+        <mesh filename="${mesh_dir}/base_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_fl_brazo">
+    <inertial>
+      <origin xyz="0.09123865799497416 -1.7763568394002505e-17 -0.04354155263925225" rpy="0.0 -0.0 0.0" />
+      <mass value="5.344025956262499" />
+      <inertia ixx="0.006790467419641594" iyy="0.042647035843646264" izz="0.04042077975918318" ixy="2.7755575615628914e-17" iyz="1.3877787807814457e-17" ixz="0.010532715411061266" />
+    </inertial>
+    <visual name="Flipper-v1_3_visual">
+      <origin xyz="-0.17500000000000007 0.054999999999999966 0.1545002804570198" rpy="1.5707963267948966 -1.2931560315090898e-29 -9.860761315262648e-32" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fl_brazo.dae" />
+      </geometry>
+      <material name="brazo" />
+    </visual>
+    <collision name="Flipper-v1_3_collision">
+      <origin xyz="-0.17500000000000007 0.054999999999999966 0.1545002804570198" rpy="1.5707963267948966 -1.2931560315090898e-29 -9.860761315262648e-32" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fl_brazo.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_fl_link">
+    <inertial>
+      <origin xyz="-3.552713678800501e-17 0.0 0.04837150032506351" rpy="0.0 -0.0 0.0" />
+      <mass value="0.5879672078169048" />
+      <inertia ixx="0.0004971403927182781" iyy="0.0004971403927182989" izz="0.00026051747051180144" ixy="-8.673617379884035e-19" iyz="-1.734723475976807e-18" ixz="-1.734723475976807e-18" />
+    </inertial>
+    <visual name="Eje_LR-v2_2_visual">
+      <origin xyz="0.17500000000000002 0.055 -0.075" rpy="1.5707963267948966 -0.0 0.0" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fl_link.dae" />
+      </geometry>
+      <material name="eje" />
+    </visual>
+    <collision name="Eje_LR-v2_2_collision">
+      <origin xyz="0.17500000000000002 0.055 -0.075" rpy="1.5707963267948966 -0.0 0.0" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fl_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_fr_brazo">
+    <inertial>
+      <origin xyz="0.09123865799497334 2.6645352591003756e-17 0.04354155263925232" rpy="0.0 9.58807317440962e-94 0.0" />
+      <mass value="5.344025956262499" />
+      <inertia ixx="0.006790467419641871" iyy="0.0426470358436456" izz="0.04042077975918257" ixy="1.3877787807814455e-17" iyz="-2.596514816751544e-34" ixz="-0.010532715411061377" />
+    </inertial>
+    <visual name="Flipper-v1_1_visual">
+      <origin xyz="-0.1750000000000009 -0.054999999999999986 -0.15450028045701958" rpy="-1.5707963267948966 1.5777218104420233e-30 2.449293598294706e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fr_brazo.dae" />
+      </geometry>
+      <material name="brazo" />
+    </visual>
+    <collision name="Flipper-v1_1_collision">
+      <origin xyz="-0.1750000000000009 -0.054999999999999986 -0.15450028045701958" rpy="-1.5707963267948966 1.5777218104420233e-30 2.449293598294706e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fr_brazo.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_fr_link">
+    <inertial>
+      <origin xyz="-4.263256414560601e-16 0.0 -0.04837150032506351" rpy="0.0 -0.0 0.0" />
+      <mass value="0.5879672078169048" />
+      <inertia ixx="0.000497140392718266" iyy="0.0004971403927182365" izz="0.00026051747051184307" ixy="1.734723475976807e-18" iyz="0.0" ixz="-3.469446951953614e-18" />
+    </inertial>
+    <visual name="Eje_LR-v2_3_visual">
+      <origin xyz="-0.1749999999999992 0.05499999999999996 0.07500000000000179" rpy="-1.5707963267948966 -9.728329253277933e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fr_link.dae" />
+      </geometry>
+      <material name="eje" />
+    </visual>
+    <collision name="Eje_LR-v2_3_collision">
+      <origin xyz="-0.1749999999999992 0.05499999999999996 0.07500000000000179" rpy="-1.5707963267948966 -9.728329253277933e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_fr_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_rl_brazo">
+    <inertial>
+      <origin xyz="-0.0912386579949742 2.6645352591003756e-17 -0.04354155263925218" rpy="0.0 -0.0 0.0" />
+      <mass value="5.344025956262499" />
+      <inertia ixx="0.006790467419642288" iyy="0.04264703584364693" izz="0.0404207797591819" ixy="-1.3877787807814457e-17" iyz="-3.469446951953614e-17" ixz="-0.010532715411061377" />
+    </inertial>
+    <visual name="Flipper-v1_4_visual">
+      <origin xyz="0.17500000000000046 -0.055000000000000084 0.15450028045701988" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rl_brazo.dae" />
+      </geometry>
+      <material name="brazo" />
+    </visual>
+    <collision name="Flipper-v1_4_collision">
+      <origin xyz="0.17500000000000046 -0.055000000000000084 0.15450028045701988" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rl_brazo.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_rl_link">
+    <inertial>
+      <origin xyz="-3.552713678800501e-17 0.0 -0.04837150032506351" rpy="0.0 -0.0 0.0" />
+      <mass value="0.5879672078169048" />
+      <inertia ixx="0.0004971403927182781" iyy="0.0004971403927182989" izz="0.00026051747051179797" ixy="0.0" iyz="-1.734723475976807e-18" ixz="0.0" />
+    </inertial>
+    <visual name="Eje_LR-v2_1_visual">
+      <origin xyz="0.17500000000000002 -0.055 0.075" rpy="-1.5707963267948966 -0.0 0.0" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rl_link.dae" />
+      </geometry>
+      <material name="eje" />
+    </visual>
+    <collision name="Eje_LR-v2_1_collision">
+      <origin xyz="0.17500000000000002 -0.055 0.075" rpy="-1.5707963267948966 -0.0 0.0" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rl_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_rr_brazo">
+    <inertial>
+      <origin xyz="-0.0912386579949748 1.7763568394002505e-17 0.04354155263925254" rpy="0.0 -0.0 0.0" />
+      <mass value="5.344025956262499" />
+      <inertia ixx="0.006790467419642621" iyy="0.042647035843646486" izz="0.04042077975918135" ixy="1.3877787807814457e-17" iyz="2.0816681711721685e-17" ixz="0.010532715411061377" />
+    </inertial>
+    <visual name="Flipper-v1_2_visual">
+      <origin xyz="0.1749999999999994 0.05500000000000016 -0.15450028045702" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rr_brazo.dae" />
+      </geometry>
+      <material name="brazo" />
+    </visual>
+    <collision name="Flipper-v1_2_collision">
+      <origin xyz="0.1749999999999994 0.05500000000000016 -0.15450028045702" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rr_brazo.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="flipper_rr_link">
+    <inertial>
+      <origin xyz="-2.1316282072803005e-16 -3.552713678800501e-17 0.04837150032506351" rpy="0.0 -0.0 0.0" />
+      <mass value="0.5879672078169048" />
+      <inertia ixx="0.0004971403927182278" iyy="0.0004971403927182018" izz="0.00026051747051192287" ixy="-1.734723475976807e-18" iyz="1.734723475976807e-18" ixz="0.0" />
+    </inertial>
+    <visual name="Eje_LR-v2_4_visual">
+      <origin xyz="-0.17499999999999893 -0.05499999999999977 -0.07500000000000143" rpy="1.570796326794896 7.393031115511251e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rr_link.dae" />
+      </geometry>
+      <material name="eje" />
+    </visual>
+    <collision name="Eje_LR-v2_4_collision">
+      <origin xyz="-0.17499999999999893 -0.05499999999999977 -0.07500000000000143" rpy="1.570796326794896 7.393031115511251e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/flipper_rr_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_fl_1">
+    <inertial>
+      <origin xyz="0.0 -8.881784197001253e-18 -0.014499999999999994" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092584534" iyy="0.0004950262092589253" izz="0.0008872516223261406" ixy="-6.938893903907228e-18" iyz="-4.5102810375396984e-17" ixz="-6.958676745712975e-78" />
+    </inertial>
+    <visual name="RuedaL-v1_6_visual">
+      <origin xyz="-0.43099999999999933 -0.05499999999999986 -0.26950028045701985" rpy="-1.5707963267948968 1.296401223465379e-29 9.860761315262665e-32" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fl_1.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_6_collision">
+      <origin xyz="-0.43099999999999933 -0.05499999999999986 -0.26950028045701985" rpy="-1.5707963267948968 1.296401223465379e-29 9.860761315262665e-32" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fl_1.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_fl_2">
+    <inertial>
+      <origin xyz="0.0 5.329070518200751e-17 -0.014499999999999886" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092587032" iyy="0.0004950262092590085" izz="0.000887251622325419" ixy="1.0408340855860843e-17" iyz="3.469446951953614e-18" ixz="-2.7755575615628914e-17" />
+    </inertial>
+    <visual name="RuedaL-v1_5_visual">
+      <origin xyz="-0.4310000000000001 0.054999999999999986 0.24050028045701993" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fl_2.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_5_collision">
+      <origin xyz="-0.4310000000000001 0.054999999999999986 0.24050028045701993" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fl_2.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_fr_1">
+    <inertial>
+      <origin xyz="-8.526512829121202e-16 -1.7763568394002505e-17 0.014499999999999923" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092585575" iyy="0.0004950262092585644" izz="0.0008872516223258631" ixy="3.469446951953614e-18" iyz="3.469446951953614e-18" ixz="0.0" />
+    </inertial>
+    <visual name="RuedaL-v1_2_visual">
+      <origin xyz="-0.43100000000000016 0.05499999999999988 0.2695002804570196" rpy="1.5707963267948966 8.717412843332556e-47 -2.4492935982947054e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fr_1.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_2_collision">
+      <origin xyz="-0.43100000000000016 0.05499999999999988 0.2695002804570196" rpy="1.5707963267948966 8.717412843332556e-47 -2.4492935982947054e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fr_1.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_fr_2">
+    <inertial>
+      <origin xyz="-8.526512829121202e-16 1.0658141036401502e-16 0.0145000000000001" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092587449" iyy="0.0004950262092588142" izz="0.0008872516223252247" ixy="1.0408340855860843e-17" iyz="-1.734723475976807e-18" ixz="0.0" />
+    </inertial>
+    <visual name="RuedaL-v1_1_visual">
+      <origin xyz="-0.43100000000000094 0.054999999999999896 0.2695002804570198" rpy="1.5707963267948966 2.0762805858447885e-46 2.4492935982947054e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fr_2.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_1_collision">
+      <origin xyz="-0.43100000000000094 0.054999999999999896 0.2695002804570198" rpy="1.5707963267948966 2.0762805858447885e-46 2.4492935982947054e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_fr_2.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_rl_1">
+    <inertial>
+      <origin xyz="-4.263256414560601e-16 1.7763568394002505e-17 -0.01450000000000017" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092585367" iyy="0.0004950262092589808" izz="0.0008872516223259741" ixy="-1.0408340855860843e-17" iyz="-1.734723475976807e-17" ixz="1.853598059607201e-48" />
+    </inertial>
+    <visual name="RuedaL-v1_8_visual">
+      <origin xyz="0.43099999999999916 0.054999999999999945 -0.26950028045702007" rpy="-1.5707963267948966 -1.2682441276783952e-29 -3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rl_1.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_8_collision">
+      <origin xyz="0.43099999999999916 0.054999999999999945 -0.26950028045702007" rpy="-1.5707963267948966 -1.2682441276783952e-29 -3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rl_1.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_rl_2">
+    <inertial>
+      <origin xyz="-4.263256414560601e-16 -1.7763568394002505e-17 -0.014499999999999852" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092589253" iyy="0.0004950262092591473" izz="0.0008872516223248084" ixy="6.938893903907228e-18" iyz="-5.204170427930421e-18" ixz="4.163336342344337e-17" />
+    </inertial>
+    <visual name="RuedaL-v1_7_visual">
+      <origin xyz="0.43100000000000044 -0.05500000000000009 0.24050028045702002" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rl_2.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_7_collision">
+      <origin xyz="0.43100000000000044 -0.05500000000000009 0.24050028045702002" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rl_2.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_rr_1">
+    <inertial>
+      <origin xyz="-2.1316282072803005e-16 1.1546319456101628e-16 0.014500000000000669" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092589808" iyy="0.000495026209258953" izz="0.0008872516223246973" ixy="-3.469446951953614e-18" iyz="3.469446951953614e-18" ixz="-5.551115123125783e-17" />
+    </inertial>
+    <visual name="RuedaL-v1_3_visual">
+      <origin xyz="0.43099999999999994 0.05500000000000023 -0.24050028045701996" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rr_1.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_3_collision">
+      <origin xyz="0.43099999999999994 0.05500000000000023 -0.24050028045701996" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rr_1.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="rueda_loca_rr_2">
+    <inertial>
+      <origin xyz="-6.394884621840901e-16 0.0 0.014499999999999388" rpy="0.0 -0.0 0.0" />
+      <mass value="0.9868876434467114" />
+      <inertia ixx="0.0004950262092583979" iyy="0.0004950262092583424" izz="0.0008872516223263627" ixy="3.469446951953614e-18" iyz="-3.469446951953614e-18" ixz="2.7755575615628914e-17" />
+    </inertial>
+    <visual name="RuedaL-v1_4_visual">
+      <origin xyz="0.43099999999999755 -0.054999999999999875 0.26950028045702" rpy="1.570796326794896 2.335298137766703e-15 -3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rr_2.dae" />
+      </geometry>
+      <material name="loca" />
+    </visual>
+    <collision name="RuedaL-v1_4_collision">
+      <origin xyz="0.43099999999999755 -0.054999999999999875 0.26950028045702" rpy="1.570796326794896 2.335298137766703e-15 -3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/rueda_loca_rr_2.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="track_fl_link">
+    <inertial>
+      <origin xyz="0.0 -2.6645352591003756e-17 -0.04199999999999992" rpy="0.0 -0.0 0.0" />
+      <mass value="6.279900522432612" />
+      <inertia ixx="0.008874294099811941" iyy="0.008874294099812552" izz="0.01105002764236368" ixy="8.724932387616802e-108" iyz="1.3877787807814457e-17" ixz="-3.0072257565466726e-77" />
+    </inertial>
+    <visual name="RuedaM-v1_3_visual">
+      <origin xyz="-0.1750000000000001 0.054999999999999966 0.18950028045702" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_fl_link.dae" />
+      </geometry>
+      <material name="motriz" />
+    </visual>
+    <collision name="RuedaM-v1_3_collision">
+      <origin xyz="-0.1750000000000001 0.054999999999999966 0.18950028045702" rpy="1.5707963267948966 -1.2931560315090898e-29 -1.9721522630525295e-31" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_fl_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="track_fr_link">
+    <inertial>
+      <origin xyz="-8.171241461241152e-16 8.881784197001253e-18 0.04200000000000017" rpy="0.0 -0.0 0.0" />
+      <mass value="6.279900522432612" />
+      <inertia ixx="0.008874294099812274" iyy="0.008874294099812219" izz="0.01105002764236343" ixy="1.3877787807814457e-17" iyz="1.3877787807814457e-17" ixz="5.551115123125783e-17" />
+    </inertial>
+    <visual name="RuedaM-v1_1_visual">
+      <origin xyz="-0.17500000000000093 -0.054999999999999986 -0.1895002804570196" rpy="-1.5707963267948966 -8.717412843332556e-47 2.4492935982947054e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_fr_link.dae" />
+      </geometry>
+      <material name="motriz" />
+    </visual>
+    <collision name="RuedaM-v1_1_collision">
+      <origin xyz="-0.17500000000000093 -0.054999999999999986 -0.1895002804570196" rpy="-1.5707963267948966 -8.717412843332556e-47 2.4492935982947054e-16" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_fr_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="track_rl_link">
+    <inertial>
+      <origin xyz="7.105427357601002e-17 8.881784197001253e-18 -0.04199999999999985" rpy="0.0 -0.0 0.0" />
+      <mass value="6.279900522432612" />
+      <inertia ixx="0.008874294099813107" iyy="0.008874294099813551" izz="0.01105002764236293" ixy="-6.938893903907228e-18" iyz="1.0780671116471236e-61" ixz="-5.551115123125783e-17" />
+    </inertial>
+    <visual name="RuedaM-v1_4_visual">
+      <origin xyz="0.1750000000000005 -0.055000000000000084 0.18950028045702003" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_rl_link.dae" />
+      </geometry>
+      <material name="motriz" />
+    </visual>
+    <collision name="RuedaM-v1_4_collision">
+      <origin xyz="0.1750000000000005 -0.055000000000000084 0.18950028045702003" rpy="1.5707963267948966 1.1609313111771977e-29 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_rl_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="track_rr_link">
+    <inertial>
+      <origin xyz="-1.4210854715202004e-16 2.3980817331903383e-16 0.0420000000000001" rpy="0.0 -0.0 0.0" />
+      <mass value="6.279900522432612" />
+      <inertia ixx="0.008874294099813274" iyy="0.008874294099813107" izz="0.011050027642362764" ixy="-6.938893903907228e-18" iyz="1.3877787807814457e-17" ixz="-5.551115123125783e-17" />
+    </inertial>
+    <visual name="RuedaM-v1_2_visual">
+      <origin xyz="0.1749999999999997 0.05500000000000041 -0.18950028045702003" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_rr_link.dae" />
+      </geometry>
+      <material name="motriz" />
+    </visual>
+    <collision name="RuedaM-v1_2_collision">
+      <origin xyz="0.1749999999999997 0.05500000000000041 -0.18950028045702003" rpy="-1.5707963267948972 -2.3352981377666806e-15 3.141592653589793" />
+      <geometry>
+        <mesh filename="${mesh_dir}/track_rr_link.dae" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="flipper_fr" type="continuous">
+    <parent link="base_link" />
+    <child link="flipper_fr_link" />
+    <origin xyz="0.175 -0.075 0.055" rpy="-1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 1.0" />
+    <limit effort="30.0" velocity="3.0" />
+  </joint>
+  <joint name="flipper_fl" type="continuous">
+    <parent link="base_link" />
+    <child link="flipper_fl_link" />
+    <origin xyz="0.175 0.075 0.055" rpy="-1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 1.0" />
+    <limit effort="30.0" velocity="3.0" />
+  </joint>
+  <joint name="flipper_rl" type="continuous">
+    <parent link="base_link" />
+    <child link="flipper_rl_link" />
+    <origin xyz="-0.175 0.075 0.055" rpy="1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 1.0" />
+    <limit effort="30.0" velocity="3.0" />
+  </joint>
+  <joint name="flipper_rr" type="continuous">
+    <parent link="base_link" />
+    <child link="flipper_rr_link" />
+    <origin xyz="-0.175 -0.075 0.055" rpy="1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 1.0" />
+    <limit effort="30.0" velocity="3.0" />
+  </joint>
+  <joint name="flipper_fl_brazo_joint" type="fixed">
+    <parent link="flipper_fl_link" />
+    <child link="flipper_fl_brazo" />
+    <origin xyz="0.0 0.0 0.0795" rpy="3.141593 0.0 0.0" />
+  </joint>
+  <joint name="flipper_fr_brazo_joint" type="fixed">
+    <parent link="flipper_fr_link" />
+    <child link="flipper_fr_brazo" />
+    <origin xyz="0.0 0.0 -0.0795" rpy="3.141593 0.0 0.0" />
+  </joint>
+  <joint name="flipper_rr_brazo_joint" type="fixed">
+    <parent link="flipper_rr_link" />
+    <child link="flipper_rr_brazo" />
+    <origin xyz="0.0 0.0 0.0795" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="flipper_rl_brazo_joint" type="fixed">
+    <parent link="flipper_rl_link" />
+    <child link="flipper_rl_brazo" />
+    <origin xyz="0.0 0.0 -0.0795" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="track_fl" type="continuous">
+    <parent link="base_link" />
+    <child link="track_fl_link" />
+    <origin xyz="0.175 0.1905 0.055" rpy="1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 -1.0" />
+    <limit effort="30.0" velocity="30.0" />
+  </joint>
+  <joint name="track_fr" type="continuous">
+    <parent link="base_link" />
+    <child link="track_fr_link" />
+    <origin xyz="0.175 -0.1905 0.055" rpy="1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 -1.0" />
+    <limit effort="30.0" velocity="30.0" />
+  </joint>
+  <joint name="track_rl" type="continuous">
+    <parent link="base_link" />
+    <child link="track_rl_link" />
+    <origin xyz="-0.175 0.1905 0.055" rpy="1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 -1.0" />
+    <limit effort="30.0" velocity="30.0" />
+  </joint>
+  <joint name="track_rr" type="continuous">
+    <parent link="base_link" />
+    <child link="track_rr_link" />
+    <origin xyz="-0.175 -0.1905 0.055" rpy="1.570796 0.0 0.0" />
+    <axis xyz="0.0 0.0 -1.0" />
+    <limit effort="30.0" velocity="30.0" />
+  </joint>
+  <joint name="rueda_loca_fr_1_joint" type="fixed">
+    <parent link="flipper_fr_brazo" />
+    <child link="rueda_loca_fr_1" />
+    <origin xyz="0.256 0.0 0.062" rpy="-3.141593 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_fr_2_joint" type="fixed">
+    <parent link="flipper_fr_brazo" />
+    <child link="rueda_loca_fr_2" />
+    <origin xyz="0.256 0.0 0.087" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_fl_1_joint" type="fixed">
+    <parent link="flipper_fl_brazo" />
+    <child link="rueda_loca_fl_1" />
+    <origin xyz="0.256 0.0 -0.062" rpy="3.141593 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_fl_2_joint" type="fixed">
+    <parent link="flipper_fl_brazo" />
+    <child link="rueda_loca_fl_2" />
+    <origin xyz="0.256 0.0 -0.087" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_rl_1_joint" type="fixed">
+    <parent link="flipper_rl_brazo" />
+    <child link="rueda_loca_rl_1" />
+    <origin xyz="-0.256 0.0 -0.062" rpy="3.141593 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_rl_2_joint" type="fixed">
+    <parent link="flipper_rl_brazo" />
+    <child link="rueda_loca_rl_2" />
+    <origin xyz="-0.256 0.0 -0.087" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_rr_1_joint" type="fixed">
+    <parent link="flipper_rr_brazo" />
+    <child link="rueda_loca_rr_1" />
+    <origin xyz="-0.256 0.0 0.087" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="rueda_loca_rr_2_joint" type="fixed">
+    <parent link="flipper_rr_brazo" />
+    <child link="rueda_loca_rr_2" />
+    <origin xyz="-0.256 0.0 0.062" rpy="-3.141593 0.0 0.0" />
+  </joint>
+</robot>

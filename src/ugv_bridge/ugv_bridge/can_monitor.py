@@ -13,15 +13,16 @@ Resuelve dos problemas de un candump corriendo:
   2. EDITOR DE FLIPPERS FÁCIL. Un panel con un control por flipper (slider +
      grados) que mueve el flipper DE VERDAD: publica /cmd_flippers -> flipper_node
      -> tramas CAN (vcan0) -> motor_emulator -> RViz. Junto a cada flipper se ve
-     la TRAMA exacta (bytes 0xA4…) que genera, así editar el flipper es editar su
+     la TRAMA exacta (Set_Input_Pos de ODrive) que genera, así editar el flipper es
+     editar su
      trama y verla al instante.
 
 Flujo:
 
-    editor de flippers ─▶ /cmd_flippers ─▶ flipper_node ─▶ vcan0 (0x14x)
+    editor de flippers ─▶ /cmd_flippers ─▶ flipper_node ─▶ vcan0 (Set_Input_Pos)
                                                             │
                                         motor_emulator ◀────┘
-                                        └─▶ vcan0 (0x24x) ─▶ flipper_node ─▶ RViz
+                                        └─▶ vcan0 (encoder) ─▶ flipper_node ─▶ RViz
                                                     │
                                         can_monitor ┘  (panel por motor + log)
 
@@ -46,14 +47,25 @@ from ugv_bridge.driver_movimiento import (
     ID_A_NOMBRE, IDS_ORUGAS, IDS_FLIPPERS, NOMBRES_FLIPPERS,
 )
 
-# Nombre legible de cada código de comando (byte 0 de la trama).
+# Nombre legible de cada cmd_id (los 5 bits bajos del ID de arbitraje).
 NOMBRE_CMD = {
-    proto.CMD_VELOCIDAD: 'VELOCIDAD',
-    proto.CMD_POSICION: 'POSICION',
-    proto.CMD_LEER_ESTADO: 'LEER_ESTADO',
-    proto.CMD_LEER_MULTIVUELTA: 'LEER_MULTIV',
-    proto.CMD_PARO: 'PARO',
-    proto.CMD_APAGADO: 'APAGADO',
+    proto.CMD_HEARTBEAT: 'HEARTBEAT',
+    proto.CMD_ESTOP: 'ESTOP',
+    proto.CMD_SET_AXIS_STATE: 'SET_ESTADO',
+    proto.CMD_GET_ENCODER_ESTIMATES: 'ENCODER',
+    proto.CMD_SET_CONTROLLER_MODE: 'SET_MODO',
+    proto.CMD_SET_INPUT_POS: 'POSICION',
+    proto.CMD_SET_INPUT_VEL: 'VELOCIDAD',
+    proto.CMD_SET_LIMITS: 'SET_LIMITES',
+    proto.CMD_GET_IQ: 'IQ',
+    proto.CMD_CLEAR_ERRORS: 'CLEAR_ERR',
+}
+
+# Qué mensajes van del host al motor; el resto los emite el motor.
+CMDS_AL_MOTOR = {
+    proto.CMD_ESTOP, proto.CMD_SET_AXIS_STATE, proto.CMD_SET_CONTROLLER_MODE,
+    proto.CMD_SET_INPUT_POS, proto.CMD_SET_INPUT_VEL, proto.CMD_SET_LIMITS,
+    proto.CMD_CLEAR_ERRORS,
 }
 
 
@@ -64,36 +76,48 @@ def _rad2deg(r):
 def decodificar(arb_id, data):
     """Trama CAN cruda -> (sentido, id_motor, tipo, valor_str) para la tabla.
 
-    sentido: '-> motor' (comando 0x14x) o '<- motor' (respuesta 0x24x).
+    sentido: '-> motor' (comando del host) o '<- motor' (lo que emite el driver).
     Devuelve None si el ID no corresponde a ningún motor conocido.
     """
-    id_cmd = proto.motor_de_id_comando(arb_id)              # comando 0x140+id
-    id_resp = arb_id - proto.ID_RESP_BASE                    # respuesta 0x240+id
-    todos = IDS_ORUGAS + IDS_FLIPPERS
+    nodo = proto.nodo_de_id(arb_id)
+    if nodo not in IDS_ORUGAS + IDS_FLIPPERS:
+        return None
+    cmd_id = proto.cmd_de_id(arb_id)
+    tipo = NOMBRE_CMD.get(cmd_id, f'cmd 0x{cmd_id:03X}')
 
-    if id_cmd in todos:
-        info = proto.parsear_comando(data)
-        tipo = NOMBRE_CMD.get(info['cmd'], f"0x{info['cmd']:02X}") if info else '??'
-        if info and info['cmd'] == proto.CMD_VELOCIDAD:
+    if cmd_id in CMDS_AL_MOTOR:
+        info = proto.parsear_comando(cmd_id, data)
+        if info is None:
+            valor = '—'
+        elif cmd_id == proto.CMD_SET_INPUT_VEL:
             valor = f"{info['velocidad_rad_s']:+.2f} rad/s"
-        elif info and info['cmd'] == proto.CMD_POSICION:
+        elif cmd_id == proto.CMD_SET_INPUT_POS:
             valor = f"{_rad2deg(info['posicion_rad']):+.1f}°"
+        elif cmd_id == proto.CMD_SET_AXIS_STATE:
+            valor = 'LAZO CERRADO' if info['estado'] == proto.ESTADO_CLOSED_LOOP else \
+                    ('IDLE' if info['estado'] == proto.ESTADO_IDLE else str(info['estado']))
+        elif cmd_id == proto.CMD_SET_CONTROLLER_MODE:
+            valor = f"control={info['control_mode']} entrada={info['input_mode']}"
         else:
             valor = '—'
-        return ('-> motor', id_cmd, tipo, valor)
+        return ('-> motor', nodo, tipo, valor)
 
-    if id_resp in todos:
-        info = proto.parsear_respuesta(data)
-        if info and info['cmd'] == proto.CMD_LEER_MULTIVUELTA:
-            return ('<- motor', id_resp, 'RESP_MULTIV',
-                    f"{_rad2deg(info['posicion_rad']):+.1f}°")
-        if info and 'velocidad_rad_s' in info:
-            return ('<- motor', id_resp, 'RESP_ESTADO',
-                    f"v={info['velocidad_rad_s']:+.2f}  τ={info['torque_nm']:.2f}  "
-                    f"T={info['temperatura_c']:.0f}°C")
-        return ('<- motor', id_resp, 'RESP', '—')
-
-    return None
+    info = proto.parsear(cmd_id, data)
+    if info is None:
+        return ('<- motor', nodo, tipo, '—')
+    if cmd_id == proto.CMD_GET_ENCODER_ESTIMATES:
+        return ('<- motor', nodo, tipo,
+                f"pos={_rad2deg(info['posicion_rad']):+.1f}°  "
+                f"v={info['velocidad_rad_s']:+.2f} rad/s")
+    if cmd_id == proto.CMD_HEARTBEAT:
+        estado = info['estado_eje']
+        nombre = {proto.ESTADO_IDLE: 'IDLE',
+                  proto.ESTADO_CLOSED_LOOP: 'LAZO CERRADO'}.get(estado, str(estado))
+        err = '' if not info['error_eje'] else f"  ERROR 0x{info['error_eje']:X}"
+        return ('<- motor', nodo, tipo, f'{nombre}{err}')
+    if cmd_id == proto.CMD_GET_IQ:
+        return ('<- motor', nodo, tipo, f"Iq={info['iq_medido_a']:+.2f} A")
+    return ('<- motor', nodo, tipo, '—')
 
 
 class MonitorNode(Node):
@@ -211,7 +235,8 @@ def main(argv=None):
             self.tbl.setFont(QFont('monospace', 9))
             self.tbl.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             for r, mid in enumerate(TODOS):
-                base = [ID_A_NOMBRE[mid], f'0x{proto.id_comando(mid):03X}',
+                base = [ID_A_NOMBRE[mid],
+                        f'0x{proto.id_arbitraje(mid, proto.CMD_SET_INPUT_POS):03X}',
                         '—', '—', '—', '—', '—', '—', '0']
                 for c, txt in enumerate(base):
                     it = QTableWidgetItem(txt)
@@ -285,9 +310,10 @@ def main(argv=None):
 
         # ---------------------------- callbacks --------------------------- #
         def _actualizar_trama_lbl(self, i):
-            hexstr = proto.trama_cmd_posicion(self.flip_rad[i]).hex()
+            hexstr = proto.trama_set_input_pos(self.flip_rad[i]).hex()
             par = ' '.join(hexstr[j:j + 2] for j in range(0, len(hexstr), 2))
-            self.tramas_lbl[i].setText(f'0x{proto.id_comando(IDS_FLIPPERS[i]):03X}  {par}')
+            arb = proto.id_arbitraje(IDS_FLIPPERS[i], proto.CMD_SET_INPUT_POS)
+            self.tramas_lbl[i].setText(f'0x{arb:03X}  {par}')
 
         def _set_flip(self, i, grados):
             self.flip_rad[i] = math.radians(grados)

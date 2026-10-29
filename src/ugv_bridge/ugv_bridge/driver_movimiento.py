@@ -17,15 +17,34 @@ a alta frecuencia (100-200 Hz) sin saber qué backend hay detrás. Hay tres modo
                       ejercita el empaquetado/desempaquetado de bytes del
                       protocolo (protocolo_can.py) sin hardware. Sirve igual con
                       un adaptador CAN físico (can0).
-    modo='pi3hat'  -> pi3hat/SPI reales (TODO: sin implementar).
+    modo='pi3hat'  -> motores reales por los buses CAN del pi3hat (SPI).
 
-La IMU vive en el pi3hat y llega por SPI, NO por el bus CAN: en modos 'gemelo'
-y 'can' se entrega una IMU sintética. Esa IMU sintética NO es ruido suelto: su
-actitud (roll/pitch/yaw) se integra a partir del estado de los motores
-(`_actualizar_actitud`), de modo que el rumbo (yaw) coincide con la odometría de
-las orugas y el cabeceo/alabeo (pitch/roll) responden a la asimetría de los
-flippers. Así el pipeline (EKF, RViz, GCS) ve una actitud que refleja el
-movimiento de verdad.
+Los modos 'can' y 'pi3hat' comparten EXACTAMENTE el mismo código de protocolo
+(`_estado_via_bus`): sólo cambia el transporte que lleva los bytes. Lo que se
+valida hoy contra `motor_emulator` es lo que correrá contra los motores.
+
+--------------------------------------------------------------------------
+FUENTE DE LA IMU (independiente del modo de motor)
+--------------------------------------------------------------------------
+La IMU vive en el pi3hat y llega por SPI, NO por el bus CAN. Por eso su fuente es
+un parámetro aparte, combinable con cualquier modo de motor:
+
+    imu_fuente='sintetica'   -> IMU modelada desde el estado de los motores.
+    imu_fuente='pi3hat_real' -> IMU física de la placa (moteus_pi3hat).
+
+Combinaciones útiles:
+
+    modo='can'    + imu_fuente='sintetica'    -> todo emulado (desarrollo en PC).
+    modo='can'    + imu_fuente='pi3hat_real'  -> SITUACIÓN ACTUAL: el pi3hat ya
+                                                 está montado y su IMU funciona,
+                                                 pero los motores no han llegado.
+    modo='pi3hat' + imu_fuente='pi3hat_real'  -> estado final, todo real.
+
+La IMU sintética NO es ruido suelto: su actitud (roll/pitch/yaw) se integra a
+partir del estado de los motores (`_actualizar_actitud`), de modo que el rumbo
+(yaw) coincide con la odometría de las orugas y el cabeceo/alabeo (pitch/roll)
+responden a la asimetría de los flippers. Así el pipeline (EKF, RViz, GCS) ve una
+actitud que refleja el movimiento de verdad.
 
 La clase devuelve **diccionarios Python planos**, NO mensajes ROS. El mapeo a
 `sensor_msgs/JointState` e `Imu` (con conversión Euler->cuaternión) vive en el nodo.
@@ -47,10 +66,35 @@ NOMBRES_FLIPPERS = ['flipper_fl', 'flipper_fr', 'flipper_rl', 'flipper_rr']
 ID_A_NOMBRE = dict(zip(IDS_ORUGAS + IDS_FLIPPERS, NOMBRES_ORUGAS + NOMBRES_FLIPPERS))
 
 MODOS_VALIDOS = ('gemelo', 'can', 'pi3hat')
+FUENTES_IMU_VALIDAS = ('sintetica', 'pi3hat_real')
+
+# Cableado de los motores a los buses CAN del pi3hat: DOS MOTORES POR BUS,
+# emparejados POR ESQUINA del robot. La oruga y el flipper de una misma esquina
+# comparten bus porque ahí es donde cae el empalme del arnés, y así los cuatro
+# ramales salen idénticos y cortos.
+# TODO(hardware): confirmar contra el cableado físico antes de energizar.
+MAPA_BUSES_POR_DEFECTO = {1: 1, 5: 1,   # esquina delantera izquierda
+                          2: 2, 6: 2,   # esquina delantera derecha
+                          3: 3, 7: 3,   # esquina trasera izquierda
+                          4: 4, 8: 4}   # esquina trasera derecha
+
+# Ciclos consecutivos sin respuesta de un motor antes de declarar fallo de
+# comunicación y forzar el paro. A 100 Hz, 10 ciclos = 0.1 s.
+CICLOS_WATCHDOG = 10
+
+# Cada cuánto se reintenta armar un eje que el heartbeat reporta FUERA de lazo
+# cerrado. El heartbeat llega cada 100 ms, así que medio segundo son cinco
+# oportunidades de oírlo antes de volver a insistir.
+PERIODO_REARMADO_S = 0.5
 
 # --- Modelo de actitud de la IMU sintética (gemelo/can) ---
 # La IMU real vive en el pi3hat; en 'gemelo'/'can' se sintetiza a partir del
 # estado de los motores para que roll/pitch/yaw reflejen de verdad el movimiento.
+#
+# OJO: radio y ancho de orugas son GEOMETRÍA, no constantes del modelo: su fuente
+# de verdad es config/geometria_robot.yaml y `flipper_node` los inyecta por el
+# constructor. Los valores de abajo son sólo el respaldo para usar la clase suelta
+# (tests, scripts) sin ROS.
 RADIO_ORUGA_M = 0.05        # radio efectivo de la oruga (coincide con la odometría)
 ANCHO_ORUGAS_M = 0.30       # separación entre orugas izq/der (idem odometría)
 GANANCIA_PITCH = 0.6        # rad de cabeceo por rad de asimetría flippers frente-atrás
@@ -75,18 +119,66 @@ class RMD_Hardware:
         'gemelo' (default), 'can' (SocketCAN, p.ej. vcan0) o 'pi3hat' (TODO).
     canal_can : str
         Interfaz SocketCAN para modo='can' (default 'vcan0'; con hardware: 'can0').
+    radio_oruga : float
+        Radio efectivo de la rueda motriz (m). Fuente: config/geometria_robot.yaml.
+    ancho_orugas : float
+        Separación entre orugas izquierda y derecha (m). Misma fuente.
+    imu_fuente : str
+        'sintetica' (default) o 'pi3hat_real'. Independiente de `modo`.
+    imu_montaje_rpy : tuple[float, float, float]
+        Rotación de la placa pi3hat respecto a base_link (rad). Sólo aplica a
+        imu_fuente='pi3hat_real'.
+    mapa_buses : dict[int, int] | None
+        {id_motor: bus del pi3hat} para modo='pi3hat'. None -> MAPA_BUSES_POR_DEFECTO.
+    motores_presentes : list[int] | None
+        IDs realmente cableados. None -> los 8. Para probar en el banco con uno
+        o dos motores sueltos sin que el watchdog declare fallo por los ausentes.
+    ciclos_watchdog : int
+        Ciclos consecutivos sin respuesta de un motor antes de declarar fallo de
+        comunicación y forzar el paro.
+    transporte : objeto con intercambiar()/cerrar() | None
+        Inyección de dependencia para modo='pi3hat'. None -> se abre la placa de
+        verdad. Los tests le pasan un transporte en memoria para ejercitar el
+        protocolo completo sin hardware.
     """
 
-    def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0'):
+    def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0',
+                 radio_oruga=RADIO_ORUGA_M, ancho_orugas=ANCHO_ORUGAS_M,
+                 imu_fuente='sintetica', imu_montaje_rpy=(0.0, 0.0, 0.0),
+                 mapa_buses=None, ciclos_watchdog=CICLOS_WATCHDOG,
+                 motores_presentes=None, transporte=None):
         if modo is None:
             modo = 'gemelo' if modo_simulacion else 'pi3hat'
         if modo not in MODOS_VALIDOS:
             raise ValueError(f"modo '{modo}' inválido; usar uno de {MODOS_VALIDOS}")
+        if imu_fuente not in FUENTES_IMU_VALIDAS:
+            raise ValueError(
+                f"imu_fuente '{imu_fuente}' inválida; usar una de {FUENTES_IMU_VALIDAS}")
         self.modo = modo
+        self.imu_fuente = imu_fuente
         self.modo_simulacion = (modo != 'pi3hat')  # compat con código existente
         self.canal_can = canal_can
+        self.mapa_buses = dict(mapa_buses or MAPA_BUSES_POR_DEFECTO)
+        self.ciclos_watchdog = int(ciclos_watchdog)
+        self.radio_oruga = float(radio_oruga)
+        self.ancho_orugas = float(ancho_orugas)
         self.ids_orugas = list(IDS_ORUGAS)
         self.ids_flippers = list(IDS_FLIPPERS)
+
+        # BANCO DE PRUEBAS: motores realmente cableados. El resto sigue existiendo
+        # en /joint_states (el URDF necesita las 8 juntas) pero NO se le habla ni
+        # se le exige respuesta. Sin esto, probar con un motor suelto es imposible:
+        # los 7 ausentes nunca contestan, el watchdog declara fallo de comunicación
+        # y fuerza TODOS los comandos a cero, incluido el motor que sí está.
+        todos = self.ids_orugas + self.ids_flippers
+        if motores_presentes:
+            self.ids_presentes = [m for m in todos if m in set(motores_presentes)]
+            if not self.ids_presentes:
+                raise ValueError(
+                    f'motores_presentes={motores_presentes} no contiene ningún ID '
+                    f'válido (los IDs son {todos})')
+        else:
+            self.ids_presentes = list(todos)
 
         # Estado interno del gemelo digital: posición/velocidad por motor.
         self._pos = {mid: 0.0 for mid in self.ids_orugas + self.ids_flippers}
@@ -104,22 +196,62 @@ class RMD_Hardware:
         # Modo 'can': último estado conocido por motor (respaldo ante timeouts).
         self._bus = None
         self._ultimo_estado = {
+            # temperatura_c se queda en 0: ODrive no la publica por CAN (sólo por
+            # USB). estado_eje/error_eje los rellena el heartbeat del motor.
             mid: {'posicion_rad': 0.0, 'velocidad_rad_s': 0.0,
-                  'torque_nm': 0.0, 'temperatura_c': 0.0}
+                  'torque_nm': 0.0, 'temperatura_c': 0.0,
+                  'estado_eje': 0, 'error_eje': 0}
             for mid in self.ids_orugas + self.ids_flippers
         }
         self.timeouts_can = 0          # contador acumulado de respuestas perdidas
         self._t_ultimo_aviso = 0.0
 
+        # Watchdog de seguridad: ciclos consecutivos sin respuesta, por motor.
+        self._sin_respuesta = {mid: 0 for mid in self.ids_orugas + self.ids_flippers}
+        self.fallo_comunicacion = False
+
+        # Vigilancia del ARMADO (ver _vigilar_armado). Lista de motores que el
+        # heartbeat reporta fuera de lazo cerrado: aceptan las consignas y no se
+        # mueven. En modo 'gemelo' no hay ejes que armar y se queda vacía; con
+        # bus empieza con TODOS, porque hasta el primer heartbeat no consta que
+        # ninguno esté armado.
+        self.motores_desarmados = (
+            list(self.ids_presentes) if self.modo in ('can', 'pi3hat') else [])
+        self._t_ultimo_rearmado = 0.0
+
+        # Transporte del pi3hat (sólo modo='pi3hat'; en 'can' se usa el socket).
+        self._transporte = None
+        # Lector de la IMU física (None si imu_fuente='sintetica').
+        self._imu_real = None
+
         if self.modo == 'gemelo':
-            print('[HARDWARE] pi3hat + CAN + IMU en MODO GEMELO DIGITAL (sin bus)')
+            print('[HARDWARE] Motores en MODO GEMELO DIGITAL (sin bus)')
         elif self.modo == 'can':
-            print(f'[HARDWARE] Motores vía SocketCAN "{canal_can}" '
-                  f'(tramas reales; IMU sintética)')
+            print(f'[HARDWARE] Motores vía SocketCAN "{canal_can}" (tramas reales)')
             self._init_can()
+        elif transporte is not None:
+            self._transporte = transporte   # inyectado (tests)
         else:
-            print('[HARDWARE] Inicializando pi3hat + CAN + IMU REALES')
+            print('[HARDWARE] Motores REALES por los buses CAN del pi3hat')
             self._init_hardware_real()
+
+        if len(self.ids_presentes) != len(self.ids_orugas + self.ids_flippers):
+            ausentes = [m for m in self.ids_orugas + self.ids_flippers
+                        if m not in self.ids_presentes]
+            print(f'[HARDWARE] MODO BANCO: sólo se habla con '
+                  f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in self.ids_presentes)}. '
+                  f'Ausentes (ignorados por el watchdog): '
+                  f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in ausentes)}.')
+
+        # Con ODrive no basta con abrir el bus: hay que armar los ejes o los
+        # comandos se ignoran en silencio.
+        if self.modo in ('can', 'pi3hat'):
+            self._armar_motores()
+
+        if self.imu_fuente == 'pi3hat_real':
+            self._init_imu_real(imu_montaje_rpy)
+        else:
+            print('[HARDWARE] IMU SINTÉTICA (modelada desde el estado de los motores)')
 
     # ------------------------------------------------------------------ #
     # Backend SocketCAN (vcan0 con emulador, o can0 con adaptador físico)
@@ -143,81 +275,354 @@ class RMD_Hardware:
         while self._bus.recv(timeout=0.0) is not None:
             pass
 
-    def _transferir(self, id_motor, datos, timeout=0.004):
-        """Envía una trama al motor y espera SU respuesta (0x240+id).
+    def _intercambiar(self, peticiones, timeout=0.004):
+        """Manda un LOTE de mensajes y devuelve lo que llegó, por motor.
 
-        Devuelve los bytes de datos de la respuesta, o None si venció el timeout
-        (motor/emulador ausente). Descartar respuestas ajenas es seguro porque
-        el ciclo es estrictamente pregunta-respuesta.
+        Parameters
+        ----------
+        peticiones : list[tuple[int, int, bytes]]
+            [(node_id, cmd_id, datos), ...]
+
+        Returns
+        -------
+        dict[int, dict[int, bytes]]
+            {node_id: {cmd_id: datos}}. Diccionario vacío = ese motor no dijo nada.
+
+        Con ODrive esto NO es pregunta-respuesta: el motor emite posición y
+        velocidad cada 10 ms por su cuenta (ver protocolo_can). Lo que se recoge
+        aquí es "lo que haya llegado desde el ciclo anterior", que a 100 Hz es
+        justo una trama de encoder por motor.
+
+        Es el único punto donde 'can' y 'pi3hat' difieren: SocketCAN manda por el
+        socket y drena el buffer; el pi3hat lo hace todo en UN ciclo SPI.
         """
-        self._bus.send(self._can.Message(
-            arbitration_id=proto.id_comando(id_motor),
-            data=datos,
-            is_extended_id=False,
-        ))
+        if self.modo == 'pi3hat':
+            return self._transporte.intercambiar(peticiones, timeout=timeout)
+        return self._intercambiar_socketcan(peticiones, timeout=timeout)
+
+    def _intercambiar_socketcan(self, peticiones, timeout=0.004):
+        """Versión SocketCAN: enviar todo y luego escuchar el bus `timeout` segundos."""
+        for node_id, cmd_id, datos in peticiones:
+            self._bus.send(self._can.Message(
+                arbitration_id=proto.id_arbitraje(node_id, cmd_id),
+                data=datos,
+                is_extended_id=False,
+            ))
+
+        recibido = {node_id: {} for node_id, _, _ in peticiones}
         limite = time.monotonic() + timeout
         while True:
             restante = limite - time.monotonic()
             if restante <= 0:
-                self.timeouts_can += 1
-                return None
+                break
             msg = self._bus.recv(timeout=restante)
-            if msg is not None and msg.arbitration_id == proto.id_respuesta(id_motor):
-                return msg.data
+            if msg is None:
+                continue
+            nodo = proto.nodo_de_id(msg.arbitration_id)
+            if nodo is None:
+                continue
+            recibido.setdefault(nodo, {})[proto.cmd_de_id(msg.arbitration_id)] = \
+                bytes(msg.data)
 
-    def _estado_via_can(self, comandos_orugas, comandos_flippers):
+        self.timeouts_can += sum(1 for m in recibido.values() if not m)
+        return recibido
+
+    def _armar_motores(self, ids=None):
+        """Deja cada motor sin errores, en su modo de control y en LAZO CERRADO.
+
+        Es OBLIGATORIO con ODrive y no lo era con el protocolo anterior: un eje en
+        IDLE acepta los comandos de velocidad/posición y NO HACE NADA, sin
+        devolver ningún error. Sin este paso el robot parece muerto aunque el bus
+        esté perfecto.
+
+        Orugas en control de VELOCIDAD (passthrough) y flippers en POSICIÓN (con
+        filtro de entrada, que suaviza el salto cuando llega una consigna nueva).
+
+        `ids` limita a qué motores se le manda la secuencia. Lo usa
+        `_vigilar_armado` para insistir SÓLO con los que siguen en IDLE, sin
+        tocar el modo de control de los que ya están trabajando.
+        """
+        if self.modo not in ('can', 'pi3hat'):
+            return
+        objetivo = list(self.ids_presentes) if ids is None else list(ids)
+        if not objetivo:
+            return
+
+        self._t_ultimo_rearmado = time.monotonic()
+        orugas = set(self.ids_orugas)
+        peticiones = []
+        for mid in objetivo:
+            if mid in orugas:
+                control, entrada = proto.CONTROL_VELOCIDAD, proto.ENTRADA_PASSTHROUGH
+            else:
+                control, entrada = proto.CONTROL_POSICION, proto.ENTRADA_POS_FILTER
+            peticiones += [
+                (mid, proto.CMD_CLEAR_ERRORS, proto.trama_clear_errors()),
+                (mid, proto.CMD_SET_CONTROLLER_MODE,
+                 proto.trama_set_controller_mode(control, entrada)),
+                (mid, proto.CMD_SET_AXIS_STATE,
+                 proto.trama_set_axis_state(proto.ESTADO_CLOSED_LOOP)),
+            ]
+        try:
+            self._intercambiar(peticiones, timeout=0.005)
+            print(f'[HARDWARE] Secuencia de armado enviada a '
+                  f'{", ".join(f"{m}({ID_A_NOMBRE[m]})" for m in objetivo)}.')
+        except Exception as e:
+            print(f'[HARDWARE] No se pudieron armar los motores: {e}')
+
+    def _estado_via_bus(self, comandos_orugas, comandos_flippers):
+        """Ciclo de comunicación con los motores (común a 'can' y 'pi3hat')."""
         estado = {}
 
-        # 1. Comandar cada motor y leer su trama de estado (temp/torque/vel).
-        for mid in self.ids_orugas:
-            trama = proto.trama_cmd_velocidad(float(comandos_orugas.get(mid, 0.0)))
-            self._aplicar_respuesta_estado(mid, self._transferir(mid, trama))
-        for mid in self.ids_flippers:
-            objetivo = float(comandos_flippers.get(
-                mid, self._ultimo_estado[mid]['posicion_rad']))
-            trama = proto.trama_cmd_posicion(objetivo)
-            self._aplicar_respuesta_estado(mid, self._transferir(mid, trama))
+        # Si el watchdog detectó fallo de comunicación, no se sigue mandando
+        # velocidad a ciegas: las orugas van a cero y los flippers se quedan
+        # donde están hasta que el bus vuelva.
+        if self.fallo_comunicacion:
+            comandos_orugas = {mid: 0.0 for mid in self.ids_orugas}
+            comandos_flippers = {
+                mid: self._ultimo_estado[mid]['posicion_rad'] for mid in self.ids_flippers}
 
-        # 2. Leer posición multivuelta (la de 1 vuelta de la respuesta anterior
-        #    no sirve para odometría: se enrolla cada 360°).
+        # Comandar. Sólo a los presentes: en modo banco los ausentes ni siquiera
+        # se consultan. Ya no hay una segunda ronda para leer la posición: la
+        # trama de encoder de ODrive es multivuelta y llega sola.
+        presentes = set(self.ids_presentes)
+        peticiones = [
+            (mid, proto.CMD_SET_INPUT_VEL,
+             proto.trama_set_input_vel(float(comandos_orugas.get(mid, 0.0))))
+            for mid in self.ids_orugas if mid in presentes
+        ]
+        peticiones += [
+            (mid, proto.CMD_SET_INPUT_POS,
+             proto.trama_set_input_pos(float(comandos_flippers.get(
+                 mid, self._ultimo_estado[mid]['posicion_rad']))))
+            for mid in self.ids_flippers if mid in presentes
+        ]
+
+        recibido = self._intercambiar(peticiones)
+        for mid, mensajes in recibido.items():
+            self._aplicar_mensajes(mid, mensajes)
+
         for mid in self.ids_orugas + self.ids_flippers:
-            datos = self._transferir(mid, proto.trama_leer_multivuelta())
-            resp = proto.parsear_respuesta(datos) if datos is not None else None
-            if resp is not None and 'posicion_rad' in resp:
-                self._ultimo_estado[mid]['posicion_rad'] = resp['posicion_rad']
             estado[mid] = dict(self._ultimo_estado[mid])
 
+        self._vigilar_comunicacion(recibido)
+        self._vigilar_armado()
         self._avisar_timeouts()
         return estado
 
-    def _aplicar_respuesta_estado(self, id_motor, datos):
-        if datos is None:
+    def _vigilar_armado(self):
+        """Vigila que los ejes sigan en LAZO CERRADO, y rearma los que no.
+
+        POR QUÉ HACE FALTA
+        ------------------
+        Armar los ejes era un disparo ÚNICO y a ciegas en el constructor: se
+        mandaba la secuencia y se daba por hecho que había llegado. Con ODrive
+        eso no basta, porque un eje en IDLE acepta las consignas y no se mueve
+        SIN dar ningún error, y además sigue emitiendo su trama de encoder cada
+        10 ms — o sea que el watchdog de comunicación lo ve perfectamente vivo y
+        nunca se entera. El síntoma era exactamente "mando /cmd_flippers desde
+        Foxglove, la orden llega, y el robot no hace nada, sin un solo error".
+
+        Pasaba en los dos mundos:
+
+          - vcan0: `can_sim.launch.py` arranca `motor_emulator` y `flipper_node`
+            a la vez. Si el emulador todavía no ha abierto su socket, el kernel
+            TIRA las tramas de armado (no hay buffer para un socket que no
+            existe) y los 8 motores se quedan en IDLE para siempre. Se reconoce
+            en la línea de estadísticas del emulador: `armados=0/8`.
+          - pi3hat: si los motores no están energizados cuando arranca el nodo,
+            o si un eje se cae a IDLE más tarde por un error (sobrecorriente,
+            encoder, temperatura), nadie lo vuelve a armar nunca.
+
+        LA SEÑAL DE VERDAD ES EL HEARTBEAT
+        ----------------------------------
+        `_aplicar_mensajes` ya guardaba `estado_eje` de cada heartbeat en
+        `_ultimo_estado`... y nadie lo leía jamás. Aquí se usa: cualquier motor
+        cuyo último heartbeat NO diga CLOSED_LOOP se rearma, como mucho una vez
+        cada `PERIODO_REARMADO_S`. Al que ya está armado no se le manda nada, así
+        que su consigna de posición no se toca.
+
+        Durante un fallo de comunicación no se rearma: ahí los ejes están en IDLE
+        A PROPÓSITO (paro de emergencia) y de eso se encarga `_vigilar_comunicacion`
+        al recuperarse.
+        """
+        desarmados = [mid for mid in self.ids_presentes
+                      if self._ultimo_estado[mid]['estado_eje'] != proto.ESTADO_CLOSED_LOOP]
+        self.motores_desarmados = desarmados
+        if not desarmados or self.fallo_comunicacion:
             return
-        resp = proto.parsear_respuesta(datos)
-        if resp is None or 'velocidad_rad_s' not in resp:
+
+        if time.monotonic() - self._t_ultimo_rearmado < PERIODO_REARMADO_S:
             return
-        u = self._ultimo_estado[id_motor]
-        u['velocidad_rad_s'] = resp['velocidad_rad_s']
-        u['torque_nm'] = resp['torque_nm']
-        u['temperatura_c'] = resp['temperatura_c']
+        nombres = ', '.join(f'{m}({ID_A_NOMBRE[m]})' for m in desarmados)
+        print(f'[HARDWARE] Fuera de lazo cerrado (aceptan órdenes y no se mueven): '
+              f'{nombres}. Reintentando armado.')
+        self._armar_motores(desarmados)
+
+    def _vigilar_comunicacion(self, recibido):
+        """Watchdog de seguridad: detecta motores que dejaron de emitir.
+
+        Un motor mudo con una consigna de velocidad ya aceptada seguiría girando:
+        por eso, al superar `ciclos_watchdog` ciclos sin oír nada de él se para
+        todo y se entra en modo fallo (comandos forzados a cero) hasta que el bus
+        se recupere.
+
+        Con ODrive "responder" es emitir: el motor manda su trama de encoder cada
+        10 ms sin que nadie se la pida, así que un silencio de varios ciclos
+        significa de verdad que ese motor no está.
+        """
+        mudos = []
+        for mid in self.ids_presentes:
+            if not recibido.get(mid):
+                self._sin_respuesta[mid] += 1
+                if self._sin_respuesta[mid] >= self.ciclos_watchdog:
+                    mudos.append(mid)
+            else:
+                self._sin_respuesta[mid] = 0
+
+        if mudos and not self.fallo_comunicacion:
+            self.fallo_comunicacion = True
+            nombres = ', '.join(f'{m}({ID_A_NOMBRE[m]})' for m in mudos)
+            print(f'[HARDWARE] ¡FALLO DE COMUNICACIÓN! Sin señal de: {nombres}. '
+                  f'Paro de emergencia; comandos forzados a cero.')
+            self.parar_motores()
+        elif not mudos and self.fallo_comunicacion:
+            self.fallo_comunicacion = False
+            print(f'[HARDWARE] Comunicación restablecida con '
+                  f'{len(self.ids_presentes)} motor(es).')
+            # El paro los dejó en IDLE: sin rearmar, ignorarían los comandos.
+            self._armar_motores()
+
+    def resumen_motores(self):
+        """Foto del estado de cada motor, para diagnóstico (NO para el control).
+
+        La consume `flipper_node` para publicar /diagnostics, que es lo que se
+        ve en el panel Diagnostics de Foxglove: de un vistazo, qué motores están
+        cableados, cuáles contestan y cuáles siguen fuera de lazo cerrado.
+
+        Devuelve {id: {...}} para los OCHO motores, presentes o no: los ausentes
+        también hay que verlos, precisamente para no confundir "no está cableado"
+        con "está cableado y mudo", que son problemas muy distintos.
+
+        En modo 'gemelo' no hay bus ni ejes que armar, así que todo sale como
+        presente, respondiendo y armado: no hay nada que diagnosticar ahí.
+        """
+        hay_bus = self.modo in ('can', 'pi3hat')
+        presentes = set(self.ids_presentes)
+        resumen = {}
+        for mid in self.ids_orugas + self.ids_flippers:
+            u = self._ultimo_estado[mid]
+            presente = mid in presentes
+            resumen[mid] = {
+                'nombre': ID_A_NOMBRE[mid],
+                'tipo': 'oruga' if mid in self.ids_orugas else 'flipper',
+                'bus': self.mapa_buses.get(mid),
+                'presente': presente,
+                # "Responde" es sobre el watchdog: un motor con ciclos mudos
+                # acumulados pero todavía por debajo del umbral ya es sospechoso.
+                'responde': (not hay_bus) or (
+                    presente and self._sin_respuesta[mid] < self.ciclos_watchdog),
+                'ciclos_mudo': self._sin_respuesta[mid] if hay_bus else 0,
+                'armado': (not hay_bus) or u['estado_eje'] == proto.ESTADO_CLOSED_LOOP,
+                'estado_eje': u['estado_eje'],
+                'error_eje': u['error_eje'],
+            }
+        return resumen
+
+    def parar_motores(self):
+        """Paro de emergencia: consigna cero y ejes a IDLE (best effort).
+
+        IDLE deja el driver energizado pero sin par, que es el equivalente al
+        'paro' del protocolo anterior. Para volver a mover hay que rearmar
+        (lo hace `_armar_motores`, que llama el watchdog al recuperarse).
+        """
+        orugas = set(self.ids_orugas)
+        try:
+            peticiones = [
+                (mid, proto.CMD_SET_INPUT_VEL, proto.trama_set_input_vel(0.0))
+                for mid in self.ids_presentes if mid in orugas
+            ]
+            peticiones += [
+                (mid, proto.CMD_SET_AXIS_STATE,
+                 proto.trama_set_axis_state(proto.ESTADO_IDLE))
+                for mid in self.ids_presentes
+            ]
+            self._intercambiar(peticiones, timeout=0.002)
+        except Exception as e:
+            print(f'[HARDWARE] No se pudo enviar el paro: {e}')
+
+    def _aplicar_mensajes(self, id_motor, mensajes):
+        """Vuelca en el último estado conocido lo que haya emitido un motor."""
+        u = self._ultimo_estado.get(id_motor)
+        if not u or not mensajes:
+            return
+
+        datos = mensajes.get(proto.CMD_GET_ENCODER_ESTIMATES)
+        if datos is not None:
+            enc = proto.parsear_encoder(datos)
+            if enc is not None:
+                u['posicion_rad'] = enc['posicion_rad']
+                u['velocidad_rad_s'] = enc['velocidad_rad_s']
+
+        datos = mensajes.get(proto.CMD_GET_IQ)
+        if datos is not None:
+            iq = proto.parsear_iq(datos)
+            if iq is not None:
+                u['torque_nm'] = iq['iq_medido_a'] * proto.KT_NM_POR_A
+
+        datos = mensajes.get(proto.CMD_HEARTBEAT)
+        if datos is not None:
+            hb = proto.parsear_heartbeat(datos)
+            if hb is not None:
+                u['estado_eje'] = hb['estado_eje']
+                u['error_eje'] = hb['error_eje']
 
     def _avisar_timeouts(self):
         """Advierte (máx. 1 vez/s) si hay respuestas perdidas en el bus."""
+        if self.modo == 'pi3hat' and self._transporte is not None:
+            # En pi3hat el contador lo lleva el transporte (un ciclo SPI puede
+            # perder varias respuestas a la vez).
+            self.timeouts_can = self._transporte.timeouts
+            donde = 'los buses del pi3hat'
+            pista = '(¿motores energizados? ¿mapa_buses correcto?)'
+        else:
+            donde = f'"{self.canal_can}"'
+            pista = '(¿está corriendo motor_emulator?)'
+
         if self.timeouts_can and time.monotonic() - self._t_ultimo_aviso > 1.0:
             self._t_ultimo_aviso = time.monotonic()
             print(f'[HARDWARE] AVISO: {self.timeouts_can} timeouts CAN acumulados '
-                  f'en "{self.canal_can}" (¿está corriendo motor_emulator?)')
+                  f'en {donde} {pista}')
 
     # ------------------------------------------------------------------ #
-    # Hardware real (pendiente)
+    # Hardware real: motores por los buses CAN del pi3hat
     # ------------------------------------------------------------------ #
     def _init_hardware_real(self):
-        # TODO: abrir moteus_pi3hat.Pi3HatRouter, mapear IDs a buses CAN y
-        # configurar la IMU. Hasta entonces, no arrancar en modo real.
-        raise NotImplementedError(
-            "modo='pi3hat' aún no implementado: falta la integración con "
-            "moteus_pi3hat / CAN / IMU. Usa modo='gemelo' o modo='can'."
-        )
+        """Abre el Pi3HatRouter y deja listo el transporte CAN de los motores.
+
+        El mapa de buses sale de `mapa_buses` (config/geometria_robot.yaml o
+        parámetro del nodo), NO está clavado en el código: si cambia el cableado,
+        se cambia el YAML.
+        """
+        from ugv_bridge.pi3hat_backend import TransportePi3Hat
+
+        self._transporte = TransportePi3Hat(self.mapa_buses, self.ids_presentes)
+        por_bus = {}
+        for mid, bus in sorted(self.mapa_buses.items()):
+            por_bus.setdefault(bus, []).append(f'{mid}({ID_A_NOMBRE.get(mid, "?")})')
+        for bus, motores in sorted(por_bus.items()):
+            print(f'[HARDWARE]   bus CAN {bus}: {", ".join(motores)}')
+
+    def _init_imu_real(self, montaje_rpy):
+        """Abre la IMU física de la placa (comparte router con los motores)."""
+        from ugv_bridge.pi3hat_backend import LectorImuPi3Hat
+
+        # Si los motores también van por el pi3hat, se comparte la MISMA placa:
+        # se le pasa el mapa de buses para que el router se abra una sola vez.
+        mapa = self.mapa_buses if self.modo == 'pi3hat' else None
+        self._imu_real = LectorImuPi3Hat(montaje_rpy=montaje_rpy, mapa_buses=mapa)
+        grados = tuple(round(math.degrees(a), 1) for a in montaje_rpy)
+        print(f'[HARDWARE] IMU REAL del pi3hat (montaje rpy={grados} grados)')
 
     # ------------------------------------------------------------------ #
     # API que consume el nodo de ROS
@@ -237,16 +642,15 @@ class RMD_Hardware:
         dict[int, dict]
             {id: {posicion_rad, velocidad_rad_s, torque_nm, temperatura_c}}
         """
-        if self.modo == 'can':
-            estado = self._estado_via_can(comandos_orugas, comandos_flippers)
-        elif self.modo == 'pi3hat':
-            # TODO: ciclo pi3hat real (moteus_pi3hat) con los mismos comandos.
-            raise NotImplementedError('modo pi3hat sin implementar')
+        if self.modo in ('can', 'pi3hat'):
+            estado = self._estado_via_bus(comandos_orugas, comandos_flippers)
         else:
             estado = self._simular_estado(comandos_orugas, comandos_flippers)
         # Con el estado de los 8 motores ya resuelto, integramos la actitud del
-        # chasis (para la IMU sintética). Único punto: sirve a 'gemelo' y 'can'.
-        self._actualizar_actitud(estado)
+        # chasis. Sólo hace falta si la IMU es sintética: con la IMU real la
+        # actitud la mide la placa.
+        if self.imu_fuente == 'sintetica':
+            self._actualizar_actitud(estado)
         return estado
 
     def _actualizar_actitud(self, estado):
@@ -269,9 +673,11 @@ class RMD_Hardware:
 
         # yaw: velocidad angular skid-steer de las orugas -> integrar el rumbo.
         # IDs: izq = fl(1), rl(3);  der = fr(2), rr(4).
-        v_izq = RADIO_ORUGA_M * (estado[1]['velocidad_rad_s'] + estado[3]['velocidad_rad_s']) / 2.0
-        v_der = RADIO_ORUGA_M * (estado[2]['velocidad_rad_s'] + estado[4]['velocidad_rad_s']) / 2.0
-        self._yaw += (v_der - v_izq) / ANCHO_ORUGAS_M * dt
+        v_izq = self.radio_oruga * (
+            estado[1]['velocidad_rad_s'] + estado[3]['velocidad_rad_s']) / 2.0
+        v_der = self.radio_oruga * (
+            estado[2]['velocidad_rad_s'] + estado[4]['velocidad_rad_s']) / 2.0
+        self._yaw += (v_der - v_izq) / self.ancho_orugas * dt
 
         # roll/pitch: asimetría de los flippers -> actitud objetivo saturada.
         # IDs: frente = fl(5), fr(6);  atrás = rl(7), rr(8);
@@ -280,8 +686,16 @@ class RMD_Hardware:
         atras = (estado[7]['posicion_rad'] + estado[8]['posicion_rad']) / 2.0
         izq = (estado[5]['posicion_rad'] + estado[7]['posicion_rad']) / 2.0
         der = (estado[6]['posicion_rad'] + estado[8]['posicion_rad']) / 2.0
-        pitch_obj = _clamp(GANANCIA_PITCH * (frente - atras), -INCLINACION_MAX, INCLINACION_MAX)
-        roll_obj = _clamp(GANANCIA_ROLL * (der - izq), -INCLINACION_MAX, INCLINACION_MAX)
+
+        # Signos según REP-103 (X adelante, Y IZQUIERDA, Z arriba), que NO es la
+        # convención aeronáutica: como Y apunta a la izquierda, un pitch POSITIVO
+        # es morro ABAJO, y un roll POSITIVO baja el costado DERECHO.
+        # Un flipper con ángulo positivo gira su punta hacia abajo (rotación sobre
+        # +Y), o sea empuja contra el suelo y LEVANTA ese extremo del chasis:
+        #   flippers delanteros arriba -> morro arriba  -> pitch NEGATIVO
+        #   flippers derechos  arriba -> costado der. arriba -> roll NEGATIVO
+        pitch_obj = _clamp(GANANCIA_PITCH * (atras - frente), -INCLINACION_MAX, INCLINACION_MAX)
+        roll_obj = _clamp(GANANCIA_ROLL * (izq - der), -INCLINACION_MAX, INCLINACION_MAX)
 
         # El chasis se asienta hacia la actitud objetivo (1er orden, ~0.2 s).
         alpha = min(dt * 5.0, 1.0)
@@ -325,26 +739,40 @@ class RMD_Hardware:
         return estado
 
     def leer_imu(self):
-        """Lee la IMU del pi3hat. Devuelve dict con actitud + aceleración.
+        """Lee la IMU. Devuelve dict con actitud + aceleración.
 
-        Ángulos en RADIANES (el nodo los convierte a cuaternión para ROS).
-        En modos 'gemelo' y 'can' la IMU es sintética: la real llega por SPI
-        del pi3hat, no por el bus CAN. La actitud NO es ruido: se integra en
-        `_actualizar_actitud` (yaw de las orugas, pitch/roll de los flippers),
-        así refleja el movimiento real. Aquí solo se le suma un pequeño ruido de
+        Ángulos en RADIANES. Con la IMU real se incluye además 'quat' (x,y,z,w),
+        que es lo que el nodo publica directamente: evita el rodeo
+        cuaternión -> Euler -> cuaternión, que pierde información cerca de
+        pitch = ±90° (el robot volcado sobre un flanco es un caso real aquí).
+
+        La fuente la decide `imu_fuente`, NO el modo de motor: con el pi3hat ya
+        montado se puede usar la IMU física mientras los motores siguen emulados.
+
+        Con IMU sintética la actitud no es ruido: se integra en
+        `_actualizar_actitud` (yaw de las orugas, pitch/roll de los flippers), así
+        refleja el movimiento real. Aquí sólo se le suma un pequeño ruido de
         sensor y se proyecta la gravedad en el acelerómetro según la actitud.
         """
-        if self.modo == 'pi3hat':
-            raise NotImplementedError('modo pi3hat sin implementar')
+        if self.imu_fuente == 'pi3hat_real':
+            return self._imu_real.leer()
 
         roll = self._roll + random.uniform(-0.003, 0.003)
         pitch = self._pitch + random.uniform(-0.003, 0.003)
         yaw = self._yaw + random.uniform(-0.003, 0.003)
 
-        # Acelerómetro en reposo = gravedad proyectada al cuerpo (x adelante,
-        # y izquierda, z arriba, REP-103). Coherente con la actitud estimada.
-        accel_x = GRAVEDAD * math.sin(pitch)
-        accel_y = -GRAVEDAD * math.sin(roll) * math.cos(pitch)
+        # Acelerómetro en reposo: mide FUERZA ESPECÍFICA (la reacción que lo
+        # sostiene), no el vector gravedad. Nivelado da (0, 0, +9.81), no
+        # (0, 0, -9.81). Proyectada al cuerpo (REP-103: X adelante, Y izquierda,
+        # Z arriba) queda:
+        #     f = ( -g*sin(pitch), +g*sin(roll)*cos(pitch), +g*cos(roll)*cos(pitch) )
+        # Los signos de X e Y estaban invertidos: con pitch positivo (morro abajo)
+        # el modelo entregaba accel_x positiva, cuando un acelerómetro real
+        # entrega negativa. La Z sí estaba bien, y por eso en reposo nivelado no
+        # se notaba. Corregido para que la IMU sintética y la real coincidan en
+        # convención el día que se cambie imu_fuente.
+        accel_x = -GRAVEDAD * math.sin(pitch)
+        accel_y = GRAVEDAD * math.sin(roll) * math.cos(pitch)
         accel_z = GRAVEDAD * math.cos(roll) * math.cos(pitch)
         return {
             'roll': roll,
@@ -356,14 +784,17 @@ class RMD_Hardware:
         }
 
     def cerrar(self):
-        """Libera el hardware. En modo 'can' detiene los motores y cierra el bus."""
+        """Libera el hardware. Antes de soltar el bus, DETIENE los motores."""
+        if self.modo in ('can', 'pi3hat'):
+            self.parar_motores()
+
         if self.modo == 'can' and self._bus is not None:
-            for mid in self.ids_orugas + self.ids_flippers:
-                try:
-                    self._transferir(mid, proto.trama_paro(), timeout=0.002)
-                except Exception:
-                    break  # el bus ya no responde; no bloquear el cierre
             self._bus.shutdown()
             self._bus = None
-        elif self.modo == 'pi3hat':
-            pass  # TODO: cerrar pi3hat / buses CAN limpiamente.
+        elif self.modo == 'pi3hat' and self._transporte is not None:
+            self._transporte.cerrar()
+            self._transporte = None
+
+        if self._imu_real is not None:
+            self._imu_real.cerrar()
+            self._imu_real = None

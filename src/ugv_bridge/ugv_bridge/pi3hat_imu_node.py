@@ -1,92 +1,130 @@
+#!/usr/bin/env python3
+"""pi3hat_imu_node.py — Nodo SUELTO para probar la IMU física del pi3hat.
+
+Publica /imu/data y, opcionalmente, imprime roll/pitch/yaw en la terminal. Sirve
+para validar la placa (permisos SPI, montaje, offsets) sin levantar todo el
+sistema de motores.
+
+CUÁNDO USAR ESTE NODO Y CUÁNDO NO
+---------------------------------
+  - Banco de pruebas / verificar la placa  -> este nodo (pi_view.launch.py).
+  - Sistema en marcha                      -> NO: usar flipper_node con
+    `imu_fuente:=pi3hat_real`, que publica /imu/data_raw (el tópico que consume
+    el EKF) por el mismo camino que los motores y con las covarianzas puestas.
+
+Correr los dos a la vez es redundante, pero no conflictivo: son tópicos distintos
+(/imu/data aquí, /imu/data_raw en flipper_node). Eso sí, ambos abren la placa, y
+el pi3hat admite un solo dueño del bus SPI por proceso: el segundo en arrancar
+fallará. Uno u otro.
+
+La lectura real vive en pi3hat_backend.LectorImuPi3Hat, compartida con el driver:
+un solo lugar donde arreglar la IMU si cambia la librería o el montaje.
+
+Parámetros:
+    imu_montaje_roll|pitch|yaw (double, 0.0) rotación de la placa respecto a
+        base_link (rad). Fuente: config/geometria_robot.yaml.
+    frecuencia_hz (double, 50.0) tasa de publicación.
+    imprimir      (bool, true)   eco de roll/pitch/yaw en la terminal.
+"""
+import math
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Imu
-import asyncio
-import math
-import moteus_pi3hat
 
-def cuaternion_a_euler(w, x, y, z):
-    
-    sinr_cosp = 2 * (w * x + y * z)
-    cosr_cosp = 1 - 2 * (x * x + y * y)
-    roll = math.atan2(sinr_cosp, cosr_cosp)
+from ugv_bridge.pi3hat_backend import LectorImuPi3Hat
 
-    sinp = 2 * (w * y - z * x)
-    if abs(sinp) >= 1:
-        pitch = math.copysign(math.pi / 2, sinp)
-    else:
-        pitch = math.asin(sinp)
+# Covarianzas de la IMU del pi3hat. NO se dejan en cero (cero significa
+# "medición perfecta" y degenera cualquier filtro que la consuma) ni en -1
+# (que significa "este dato no existe" y haría que robot_localization descarte
+# la orientación, justo lo que necesita el EKF para inclinar el modelo 3D).
+# TODO(caracterizar): medir el ruido real de la placa en reposo y ajustar.
+VAR_ORIENTACION = 0.01     # rad^2  (~5.7 grados de sigma)
+VAR_VEL_ANGULAR = 0.01     # (rad/s)^2
+VAR_ACELERACION = 0.05     # (m/s^2)^2
 
-    siny_cosp = 2 * (w * z + x * y)
-    cosy_cosp = 1 - 2 * (y * y + z * z)
-    yaw = math.atan2(siny_cosp, cosy_cosp)
-
-    return math.degrees(roll), math.degrees(pitch), math.degrees(yaw)
 
 class Pi3HatImuNode(Node):
     def __init__(self):
         super().__init__('pi3hat_imu_node')
-        # Foxglove lee automáticamente el tipo Imu en este tópico
+
+        self.declare_parameter('imu_montaje_roll', 0.0)
+        self.declare_parameter('imu_montaje_pitch', 0.0)
+        self.declare_parameter('imu_montaje_yaw', 0.0)
+        self.declare_parameter('frecuencia_hz', 50.0)
+        self.declare_parameter('imprimir', True)
+
+        montaje = (
+            self.get_parameter('imu_montaje_roll').value,
+            self.get_parameter('imu_montaje_pitch').value,
+            self.get_parameter('imu_montaje_yaw').value,
+        )
+        self.imprimir = self.get_parameter('imprimir').value
+        frecuencia = self.get_parameter('frecuencia_hz').value
+
+        # Foxglove reconoce el tipo Imu en este tópico.
         self.publisher_ = self.create_publisher(Imu, '/imu/data', 10)
 
-    def publish_imu_data(self, w, x, y, z):
+        self.lector = LectorImuPi3Hat(montaje_rpy=montaje)
+        self.get_logger().info(
+            f'IMU del pi3hat lista a {frecuencia:.0f} Hz -> /imu/data '
+            f'(montaje rpy={tuple(round(math.degrees(a), 1) for a in montaje)} grados)')
+
+        self.create_timer(1.0 / frecuencia, self.publicar)
+
+    def publicar(self):
+        try:
+            d = self.lector.leer()
+        except Exception as e:
+            self.get_logger().error(f'Error leyendo la IMU: {e}', throttle_duration_sec=2.0)
+            return
+
         msg = Imu()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'imu_link' # Crucial para el 3D en Foxglove
+        msg.header.frame_id = 'imu_link'  # crucial para el 3D en Foxglove
 
-        msg.orientation.w = float(w)
+        x, y, z, w = d['quat']
         msg.orientation.x = float(x)
         msg.orientation.y = float(y)
         msg.orientation.z = float(z)
+        msg.orientation.w = float(w)
+        msg.linear_acceleration.x = float(d['accel_x'])
+        msg.linear_acceleration.y = float(d['accel_y'])
+        msg.linear_acceleration.z = float(d['accel_z'])
 
-        # Desactivamos covarianzas (confianza ciega en el sensor)
-        msg.orientation_covariance[0] = -1.0
-        msg.angular_velocity_covariance[0] = -1.0
-        msg.linear_acceleration_covariance[0] = -1.0
+        for i in (0, 4, 8):
+            msg.orientation_covariance[i] = VAR_ORIENTACION
+            msg.angular_velocity_covariance[i] = VAR_VEL_ANGULAR
+            msg.linear_acceleration_covariance[i] = VAR_ACELERACION
 
         self.publisher_.publish(msg)
 
-async def main_loop(args=None):
-    rclpy.init(args=args)
-    node = Pi3HatImuNode()
-    node.get_logger().info("Nodo IMU iniciado. Publicando en /imu/data")
+        if self.imprimir:
+            print(f"\r[IMU] Roll:{math.degrees(d['roll']): 6.1f} | "
+                  f"Pitch:{math.degrees(d['pitch']): 6.1f} | "
+                  f"Yaw:{math.degrees(d['yaw']): 6.1f}   ", end='', flush=True)
 
-    try:
-        # Esto fallará si se ejecuta en Distrobox (sin hardware), pero funcionará en la Pi
-        pi3hat = moteus_pi3hat.Pi3HatRouter(servo_bus_map={})
-        await pi3hat.cycle([])
-    except Exception as e:
-        node.get_logger().error(f"Hardware Pi3Hat no detectado. Si estás en Distrobox, esto es normal. Detalle: {e}")
-        return # Detenemos el nodo si no hay hardware
-
-    try:
-        while rclpy.ok():
-            await pi3hat.cycle([])
-            imu = await pi3hat.attitude()
-
-            try:
-                w, x, y, z = imu.w, imu.x, imu.y, imu.z
-            except AttributeError:
-                w, x, y, z = imu.attitude.w, imu.attitude.x, imu.attitude.y, imu.attitude.z
-
-            # 1. Enviar a Foxglove (Cuaterniones)
-            node.publish_imu_data(w, x, y, z)
-
-            # 2. Imprimir en Terminal (Euler + Cuaterniones)
-            roll, pitch, yaw = cuaternion_a_euler(w, x, y, z)
-            print(f"\r[IMU] Roll:{roll: 6.1f} | Pitch:{pitch: 6.1f} | Yaw:{yaw: 6.1f}  (W:{w: .2f} X:{x: .2f} Y:{y: .2f} Z:{z: .2f})    ", end="", flush=True)
-
-            rclpy.spin_once(node, timeout_sec=0)
-            await asyncio.sleep(0.02) # 50 Hz
-            
-    except KeyboardInterrupt:
-        print("\n\nTest finalizado.")
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
 
 def main(args=None):
-    asyncio.run(main_loop(args))
+    rclpy.init(args=args)
+    try:
+        node = Pi3HatImuNode()
+    except Exception as e:
+        # Sin placa (p.ej. dentro de Distrobox en el PC) esto es lo esperado.
+        print(f'[pi3hat_imu_node] No se pudo abrir la IMU del pi3hat: {e}')
+        rclpy.shutdown()
+        return
+
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        print('\nTest finalizado.')
+    finally:
+        node.lector.cerrar()
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

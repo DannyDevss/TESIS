@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<!--
+  ugv.urdf.xacro — Modelo del UGV con orugas + 4 flippers.
+
+  TODAS las dimensiones salen de config/geometria_robot.yaml (única fuente de
+  verdad, compartida con kinematic_guardian y la odometría). NO escribir números
+  de geometría aquí: van en el YAML.
+
+  Los 4 flippers son una macro instanciada 4 veces, en vez de 4 bloques copiados.
+
+  Generar el URDF plano:  bash scripts/generar_urdf.sh
+  Ver el árbol procesado: xacro urdf/ugv.urdf.xacro
+-->
+<robot name="ugv_MARV" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ================================================================== -->
+  <!-- Carga de la geometría desde el YAML                                -->
+  <!-- ================================================================== -->
+  <!-- Por defecto se lee el YAML INSTALADO (share/ugv_bridge/config), que es lo
+       correcto en tiempo de launch. scripts/generar_urdf.sh sobreescribe la ruta
+       con geometria:=<ruta> para poder trabajar desde el árbol de fuentes sin
+       tener que compilar primero. -->
+  <xacro:arg name="geometria" default="$(find ugv_bridge)/config/geometria_robot.yaml"/>
+
+  <xacro:property name="cfg"
+    value="${xacro.load_yaml('$(arg geometria)')['/**']['ros__parameters']}"/>
+
+  <!-- Chasis -->
+  <xacro:property name="chasis_largo" value="${cfg['chasis_largo']}"/>
+  <xacro:property name="chasis_ancho" value="${cfg['chasis_ancho']}"/>
+  <xacro:property name="chasis_alto" value="${cfg['chasis_alto']}"/>
+  <xacro:property name="chasis_masa" value="${cfg['chasis_masa']}"/>
+  <xacro:property name="chasis_visual_offset_z" value="${cfg['chasis_visual_offset_z']}"/>
+
+  <!-- Flippers -->
+  <xacro:property name="dx" value="${cfg['distancia_motor_x']}"/>
+  <xacro:property name="dy" value="${cfg['distancia_motor_y']}"/>
+  <xacro:property name="dz" value="${cfg['distancia_motor_z']}"/>
+  <xacro:property name="largo_flipper" value="${cfg['largo_flipper']}"/>
+  <xacro:property name="radio_rueda" value="${cfg['radio_rueda_flipper']}"/>
+  <xacro:property name="ancho_flipper" value="${cfg['ancho_flipper']}"/>
+  <xacro:property name="offset_lateral" value="${cfg['offset_lateral_flipper']}"/>
+  <xacro:property name="flipper_masa" value="${cfg['flipper_masa']}"/>
+
+  <!-- Alto de la caja de colisión: DERIVADO del radio de las ruedas, no es un
+       número independiente. Es el mismo valor que usa el umbral del guardián. -->
+  <xacro:property name="alto_colision" value="${2 * radio_rueda}"/>
+
+  <!-- ================================================================== -->
+  <!-- BASE (chasis)                                                      -->
+  <!-- ================================================================== -->
+  <!-- base_link NO lleva <inertial>: KDL (kdl_parser, dentro de
+       robot_state_publisher) no admite inercia en el link raíz y avisa en cada
+       arranque. La masa del chasis vive en chassis_inertial_link, un hijo fijo.
+
+       Por qué NO se usa el truco habitual del "dummy_link" como raíz: el EKF
+       (robot_localization) publica el TF odom -> base_link. Si base_link fuese
+       hijo de un dummy_link, tendría DOS padres y el árbol TF quedaría inválido.
+       Sacar la inercia a un hijo silencia el mismo warning sin tocar el TF. -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${chasis_visual_offset_z}" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://ugv_bridge/meshes/chassis.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chasis_largo} ${chasis_ancho} ${chasis_alto}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="chassis_inertial_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="chassis_inertial_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="chassis_inertial_link">
+    <inertial>
+      <mass value="${chasis_masa}"/>
+      <!-- TODO(CAD): tensor de inercia estimado. Reemplazar con el del modelo
+           CAD real cuando esté disponible. -->
+      <inertia ixx="0.2" ixy="0" ixz="0" iyy="1.0" iyz="0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <!-- ================================================================== -->
+  <!-- IMU (pi3hat)                                                       -->
+  <!-- ================================================================== -->
+  <!-- imu_link se define ALINEADO con base_link (rpy 0 0 0) a propósito: la
+       rotación física de montaje de la placa (imu_montaje_roll/pitch/yaw del
+       YAML) se aplica en el DRIVER, de modo que /imu/data_raw ya sale en el
+       marco del robot. Poner la rotación también aquí la contaría dos veces. -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link"/>
+
+  <!-- ================================================================== -->
+  <!-- MACRO DE FLIPPER                                                   -->
+  <!-- ================================================================== -->
+  <!--
+    nombre : sufijo de la junta/link (fl, fr, rl, rr)
+    sx     : +1 delantero, -1 trasero
+    sl     : +1 izquierdo, -1 derecho
+
+    Los traseros llevan yaw=pi en la junta (el flipper apunta hacia atrás), lo
+    que invierte su eje Y local. Por eso el offset lateral local es sl*sx: así
+    los cuatro flippers quedan desplazados hacia AFUERA del chasis.
+  -->
+  <xacro:macro name="flipper" params="nombre sx sl">
+    <xacro:property name="sy" value="${sl * sx}"/>
+    <xacro:property name="y_local" value="${sy * offset_lateral}"/>
+
+    <joint name="flipper_${nombre}" type="continuous">
+      <parent link="base_link"/>
+      <child link="flipper_${nombre}_link"/>
+      <origin xyz="${sx * dx} ${sl * dy} ${dz}" rpy="0 0 ${0 if sx > 0 else pi}"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="30.0" velocity="3.0"/>
+    </joint>
+
+    <link name="flipper_${nombre}_link">
+      <visual>
+        <origin xyz="0 ${y_local} 0" rpy="0 0 ${-pi/2}"/>
+        <geometry>
+          <mesh filename="package://ugv_bridge/meshes/flipper.dae" scale="1 1 1"/>
+        </geometry>
+      </visual>
+
+      <!-- Colisión "óvalo rectangular": caja central + una rueda en cada extremo.
+           Es exactamente la forma que modela el guardián de colisiones (una
+           cápsula de radio radio_rueda alrededor del segmento motor->punta). -->
+      <collision>
+        <origin xyz="${largo_flipper / 2} ${y_local} 0.001" rpy="0 0 0"/>
+        <geometry>
+          <box size="${largo_flipper} ${ancho_flipper} ${alto_colision}"/>
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0 ${y_local} 0.001" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${radio_rueda}" length="${ancho_flipper}"/>
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="${largo_flipper} ${y_local} 0.001" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${radio_rueda}" length="${ancho_flipper}"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <mass value="${flipper_masa}"/>
+        <!-- TODO(CAD): tensor estimado, reemplazar con el del CAD real. -->
+        <inertia ixx="0.002" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <!-- ================================================================== -->
+  <!-- LOS 4 FLIPPERS                                                     -->
+  <!-- ================================================================== -->
+  <xacro:flipper nombre="fl" sx="1"  sl="1"/>   <!-- frontal izquierdo -->
+  <xacro:flipper nombre="fr" sx="1"  sl="-1"/>  <!-- frontal derecho   -->
+  <xacro:flipper nombre="rl" sx="-1" sl="1"/>   <!-- trasero izquierdo -->
+  <xacro:flipper nombre="rr" sx="-1" sl="-1"/>  <!-- trasero derecho   -->
+
+</robot>

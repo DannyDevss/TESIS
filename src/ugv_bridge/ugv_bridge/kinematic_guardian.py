@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+"""kinematic_guardian.py — Filtro de seguridad que impide que los flippers choquen.
+
+Escucha lo que el operador/IA PIDE en /joint_states_raw y publica en /joint_states
+sólo lo que es geométricamente seguro; si un comando haría chocar el flipper
+delantero con el trasero del mismo lado, se congela ese lado en la última pose
+segura conocida.
+
+La geometría (posición de los motores, largo del flipper, radio de las ruedas)
+NO está hardcodeada: se declara como parámetros ROS 2 y se carga desde
+config/geometria_robot.yaml, el MISMO archivo del que sale el URDF. Así el
+guardián nunca protege contra una geometría distinta a la que se dibuja.
+
+    ros2 run ugv_bridge kinematic_guardian --ros-args \
+        --params-file src/ugv_bridge/config/geometria_robot.yaml
+"""
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -7,7 +22,33 @@ import math
 class KinematicGuardian(Node):
     def __init__(self):
         super().__init__('kinematic_guardian')
-        
+
+        # --- Geometría (config/geometria_robot.yaml) ---
+        # Los defaults replican la geometría actual, para que el nodo siga
+        # funcionando si se lanza suelto sin --params-file.
+        self.declare_parameter('distancia_motor_x', 0.23)
+        self.declare_parameter('distancia_motor_z', -0.03)
+        self.declare_parameter('largo_flipper', 0.26)
+        self.declare_parameter('radio_rueda_flipper', 0.09)
+
+        self.motor_x = self.get_parameter('distancia_motor_x').value
+        self.motor_z = self.get_parameter('distancia_motor_z').value
+        self.largo_flipper = self.get_parameter('largo_flipper').value
+        self.radio_rueda = self.get_parameter('radio_rueda_flipper').value
+
+        # Umbral de proximidad: los flippers se modelan como cápsulas de radio
+        # radio_rueda alrededor del segmento motor->punta. Se tocan cuando la
+        # distancia entre segmentos baja de la SUMA de radios (2*radio_rueda),
+        # que es justo el alto de la caja de colisión del URDF. Al cuadrado para
+        # ahorrarse la raíz cuadrada en el bucle.
+        self.threshold_sq = (2.0 * self.radio_rueda) ** 2
+
+        self.get_logger().info(
+            f'kinematic_guardian: motor_x={self.motor_x} m, motor_z={self.motor_z} m, '
+            f'largo_flipper={self.largo_flipper} m, radio_rueda={self.radio_rueda} m '
+            f'(umbral {2.0 * self.radio_rueda:.3f} m)'
+        )
+
         # 1. Escuchamos lo que el Humano/IA QUIERE hacer
         self.sub_raw = self.create_subscription(
             JointState,
@@ -81,13 +122,13 @@ class KinematicGuardian(Node):
 
     def is_collision(self, front_angle, rear_angle):
         """Motor de colisiones geométrico 2D exacto basado en URDF"""
-        # 1. Definir los puntos base de los motores (Desde el URDF)
-        p1_x, p1_z = 0.23, -0.03   # Motor Delantero
-        p2_x, p2_z = -0.23, -0.03  # Motor Trasero
-        
+        # 1. Definir los puntos base de los motores (parámetros = mismo YAML que el URDF)
+        p1_x, p1_z = self.motor_x, self.motor_z    # Motor Delantero
+        p2_x, p2_z = -self.motor_x, self.motor_z   # Motor Trasero
+
         # 2. Calcular la posición de las puntas en el espacio (Geometría Analítica)
-        L = 0.265 # Largo exacto del flipper en metros
-        
+        L = self.largo_flipper  # Largo exacto del flipper en metros
+
         # El delantero mira hacia adelante (+0 radianes base)
         t1_x = p1_x + L * math.cos(front_angle)
         t1_z = p1_z + L * math.sin(front_angle)
@@ -101,10 +142,9 @@ class KinematicGuardian(Node):
             return True
             
         # 4. Prueba 2: ¿Se están rozando los bordes físicos?
-        # La caja mide 0.18 de alto. Si la distancia entre centros < 0.18, las caras se tocan.
-        # Elevamos el límite al cuadrado (0.18 * 0.18 = 0.0324) por optimización.
-        threshold_sq = 0.0324 
-        
+        # Umbral = (2 * radio_rueda)^2, calculado una sola vez en __init__.
+        threshold_sq = self.threshold_sq
+
         # Calculamos las 4 distancias posibles de punta a cuerpo
         d1 = self._point_to_segment_sq_dist(p1_x, p1_z, p2_x, p2_z, t2_x, t2_z)
         d2 = self._point_to_segment_sq_dist(t1_x, t1_z, p2_x, p2_z, t2_x, t2_z)

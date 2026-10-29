@@ -38,6 +38,35 @@ flipper_node  ──►  RMD_Hardware (real pi3hat/CAN  o  gemelo digital)
 - **Sim-to-real**: el mismo nodo sirve para simulación y hardware; solo cambia el
   parámetro `modo_simulacion`. El modo hardware real (pi3hat + CAN + IMU) queda como TODO.
 
+## Geometría del robot: una sola fuente de verdad
+
+Todas las dimensiones físicas (posición de los motores de flipper, largo del
+flipper, radio de las ruedas, radio y separación de las orugas, montaje de la IMU)
+viven en **[`src/ugv_bridge/config/geometria_robot.yaml`](src/ugv_bridge/config/geometria_robot.yaml)**.
+De ahí las leen, sin duplicar un solo número:
+
+```
+config/geometria_robot.yaml          <-- editar SOLO aquí
+        |
+        +--> urdf/ugv.urdf.xacro     (xacro.load_yaml)  --> modelo 3D, colisiones, TF
+        +--> kinematic_guardian      (declare_parameter) --> prevención de colisiones
+        +--> track_odometry_node     (radio/ancho de orugas)
+        +--> flipper_node / driver   (IMU sintética, montaje de la IMU)
+```
+
+Cuando lleguen las medidas reales del chasis:
+
+```bash
+# 1. Editar config/geometria_robot.yaml
+# 2. Refrescar el URDF plano (para Foxglove y herramientas que no procesan xacro)
+bash src/ugv_bridge/scripts/generar_urdf.sh
+# 3. Recompilar
+colcon build
+```
+
+Los launch procesan el `.xacro` en caliente, así que el modelo **nunca** queda
+desfasado del YAML. El `.urdf` plano es un artefacto generado: no editarlo a mano.
+
 ## Compilar
 
 ```bash
