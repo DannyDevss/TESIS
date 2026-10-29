@@ -1,0 +1,124 @@
+NETLIST - medidor de bateria 48V con ESP32-S3-WROOM-1 (version pasante)
+======================================================================
+
++3V3
+    U1.2  [3V3]
+    U2.2
+    C4.1
+    C5.1
+    C6.1
+    R8.1
+    R9.1
+    D5B.2
+    J3.5
+    J4.1
+
++5V
+    J2.1
+    U2.3
+    C3.1
+
+AN_AMBAR
+    R5.2
+    D2.1
+
+AN_ROJO
+    R6.2
+    D3.1
+
+AN_VERDE
+    R4.2
+    D1.1
+
+BAT+
+    J1.1
+    R1.1
+
+BAT_ADC
+    R3.2
+    D5A.2
+    D5B.1
+    C2.1
+    U1.4  [IO4]
+
+BAT_DIV
+    R1.2
+    R2.1
+    C1.1
+    R3.1
+
+BUZZER_PWM
+    U1.23  [IO21]
+    R7.1
+
+BZ_COL
+    Q1.3
+    BZ1.2
+    D4.1
+
+BZ_PWR
+    J4.2
+    BZ1.1
+    D4.2
+
+EN
+    U1.3  [EN]
+    R8.2
+    C7.1
+    SW1.1
+    J3.4
+
+GND
+    U1.1  [GND]
+    U1.40  [GND]
+    U1.41  [GND]
+    J1.2
+    J2.2
+    U2.1
+    C3.2
+    C4.2
+    C5.2
+    C6.2
+    C1.2
+    C2.2
+    R2.2
+    D5A.1
+    D1.2
+    D2.2
+    D3.2
+    Q1.1
+    SW1.2
+    SW2.2
+    J3.6
+    C7.2
+
+IO0
+    U1.27  [IO0]
+    R9.2
+    SW2.1
+    J3.3
+
+LED_AMBAR
+    U1.32  [IO39]
+    R5.1
+
+LED_ROJO
+    U1.33  [IO40]
+    R6.1
+
+LED_VERDE
+    U1.31  [IO38]
+    R4.1
+
+Q1_BASE
+    R7.2
+    Q1.2
+
+RXD0
+    U1.36  [IO44]
+    J3.2
+
+TXD0
+    U1.37  [IO43]
+    J3.1
+

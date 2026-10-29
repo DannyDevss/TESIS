@@ -1,0 +1,24 @@
+ASIGNACION DE PINES DEL MODULO
+==================================================================
+
+  pad  4  IO4    -> BAT_ADC      GPIO4 = ADC1_CH3. ADC1 sigue funcionando con WiFi activo.
+  pad 23  IO21   -> BUZZER_PWM   IO21 libre, en la fila inferior: sale hacia el bloque del buzzer.
+  pad 31  IO38   -> LED_VERDE    IO38 libre, sin strapping, en la columna derecha.
+  pad 32  IO39   -> LED_AMBAR    IO39 libre (MTCK por defecto, se pierde JTAG por pines).
+  pad 33  IO40   -> LED_ROJO     IO40 libre (MTDO por defecto).
+
+
+PINES RESERVADOS (no usarlos para otra cosa)
+------------------------------------------------------------------
+  pad  3  EN  - reset
+  pad 13  IO19 - USB D-
+  pad 14  IO20 - USB D+
+  pad 15  IO3  - strapping (JTAG source)
+  pad 16  IO46 - strapping, solo entrada
+  pad 26  IO45 - strapping (VDD_SPI)
+  pad 27  IO0  - strapping (boot)
+  pad 28  IO35 - PSRAM octal en variantes R8
+  pad 29  IO36 - PSRAM octal en variantes R8
+  pad 30  IO37 - PSRAM octal en variantes R8
+  pad 36  IO44 - RXD0 consola
+  pad 37  IO43 - TXD0 consola

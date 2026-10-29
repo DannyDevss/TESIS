@@ -1,0 +1,15 @@
+(version 1)
+
+# Reglas propias para la seccion de 48 V.
+# IPC-2221 pide ~0.6 mm entre 31 y 50 V en cobre externo sin recubrir;
+# 1 mm deja margen para 58 V (16S LiFePO4) y para tolerancias de fabricacion.
+
+(rule "separacion 48V"
+  (constraint clearance (min 1.0mm))
+  (condition "A.NetName == '/BAT+' || B.NetName == '/BAT+' ||
+              A.NetName == 'BAT+'  || B.NetName == 'BAT+'  ||
+              A.NetName == 'BAT_DIV' || B.NetName == 'BAT_DIV'"))
+
+(rule "ancho minimo 48V"
+  (constraint track_width (min 0.5mm))
+  (condition "A.NetName == 'BAT+' || A.NetName == 'BAT_DIV'"))
