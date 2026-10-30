@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 4.2 Protocolo CANopen</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>4.2 Protocolo CANopen</h1>
+<p class="origen">Traducción de la sección 4.2 del manual GIM6010-8 rev 2.2 (págs. 54–56 del original).</p>
+
+<p>CANopen es una especificación de protocolo de comunicación para el ámbito de la automatización. Este producto la implementa conforme a las normas CiA 301, CiA 302 y CiA 402. Antes de usar el protocolo CANopen del producto, cambie el protocolo del CAN a CANopen con el siguiente comando de <code>odrivetool</code>:</p>
+<pre>odrv0.can.config.protocol = 2</pre>
+
+<h2>4.2.1 Archivo de descripción del dispositivo (EDS)</h2>
+<p>El archivo EDS describe las funciones y los parámetros de comunicación del dispositivo. Para comunicarse con este producto por CANopen hay que importar su archivo EDS, que puede descargarse en: <code>https://bl.cyberbeast.cn/actuator/cb_0.1.eds</code></p>
+
+<h2>4.2.2 Formato de las tramas del protocolo</h2>
+<p>CANopen se basa en el CAN estándar: su ID de 11 bits se divide en un código de función de 4 bits y un ID de nodo (<code>node_id</code>) de 7 bits, lo que permite hasta 127 nodos en el bus (el 0 se reserva para la difusión). El formato de trama es el siguiente:</p>
+<table>
+<tr><th>Campo</th><th colspan="2">COB-ID / CAN ID (11 bits)</th><th>Datos (8 bytes)</th></tr>
+<tr><td>Segmento</td><td>Bit10 ~ Bit7</td><td>Bit6 ~ Bit0</td><td>Byte0 ~ Byte7</td></tr>
+<tr><td>Descripción</td><td>Código de función</td><td><code>node_id</code></td><td>Datos de la comunicación</td></tr>
+</table>
+<p>La tabla de códigos de función es:</p>
+<table>
+<tr><th style="width:24%">Función de comunicación</th><th style="width:38%">COB-ID</th><th>Descripción</th></tr>
+<tr><td>NMT</td><td>0x000</td><td>Gestión de red</td></tr>
+<tr><td>SYNC</td><td>0x080</td><td>Sincronización</td></tr>
+<tr><td>EMCY</td><td>0x080 + node_id</td><td>Gestión de emergencias</td></tr>
+<tr><td>TPDO1 ~ TPDO4</td><td>0x180 / 0x280 / 0x380 / 0x480 + node_id</td><td>Envío de datos de proceso en tiempo real</td></tr>
+<tr><td>RPDO1 ~ RPDO4</td><td>0x200 / 0x300 / 0x400 / 0x500 + node_id</td><td>Recepción de datos de proceso en tiempo real</td></tr>
+<tr><td>TSDO</td><td>0x600 + node_id</td><td>Envío de datos de servicio</td></tr>
+<tr><td>RSDO</td><td>0x580 + node_id</td><td>Recepción de datos de servicio</td></tr>
+<tr><td>NMT (latido)</td><td>0x700 + node_id</td><td>Latido (<em>heartbeat</em>)</td></tr>
+</table>
+
+<h2>4.2.3 Mensajes</h2>
+<p>El formato de los mensajes varía según el CAN ID (COB-ID).</p>
+
+<h3>4.2.3.1 NMT (gestión de red)</h3>
+<p>NMT sirve para ordenar cambios de estado a todos los nodos del bus o a uno concreto. Su COB-ID es siempre 0 y sus datos ocupan 2 bytes:</p>
+<table>
+<tr><th style="width:20%">COB-ID</th><th style="width:40%">Data Byte0</th><th>Data Byte1</th></tr>
+<tr><td>0x000</td><td>Palabra de comando de estado</td><td><code>node_id</code></td></tr>
+</table>
+<p>Las palabras de comando de estado son:</p>
+<table>
+<tr><th style="width:30%">Palabra de comando</th><th>Descripción</th></tr>
+<tr><td>0x01</td><td>Cambiar al estado «operational»</td></tr>
+<tr><td>0x02</td><td>Cambiar al estado «stopped»</td></tr>
+<tr><td>0x80</td><td>Cambiar al estado «pre-operational»</td></tr>
+<tr><td>0x81</td><td>Reiniciar el nodo («reset node»)</td></tr>
+<tr><td>0x82</td><td>Reiniciar la comunicación («reset communication»)</td></tr>
+</table>
+<p>Por ejemplo, tras conectarse al driver, el usuario envía primero el siguiente comando NMT para poner en marcha todos los nodos del bus:</p>
+<table>
+<tr><th style="width:30%">COB-ID</th><th>Datos</th></tr>
+<tr><td>0x000</td><td><code>01 00</code></td></tr>
+</table>
+
+<h3>4.2.3.2 SYNC</h3>
+<p>La función de sincronización sirve para sincronizar todos los nodos del bus; se usa sobre todo para sincronizar los mensajes PDO. Su COB-ID es siempre 0x80 y el campo de datos va vacío.</p>
+<p>Por ejemplo, después de poner en marcha los nodos con el comando NMT, lo habitual es enviar el mensaje SYNC para que los nodos empiecen a transmitir datos PDO.</p>
+
+<h3>4.2.3.3 PDO</h3>
+<p>El PDO es el mecanismo de comunicación pensado para la transmisión de datos en tiempo real: se emplea tanto cuando el usuario quiere obtener datos del nodo de forma periódica como cuando quiere que este los notifique por eventos. El PDO solo puede usarse cuando el nodo está en estado «operational», así que primero hay que cambiar su estado con un mensaje NMT.</p>
+<p>El formato del campo de datos de los mensajes PDO depende de su estructura de mapeo, que no es estándar, sino que la define el archivo EDS.</p>
+
+<h3>4.2.3.4 SDO</h3>
+<p>La comunicación SDO permite acceder a los datos del diccionario de objetos del producto (diccionario definido por el EDS). Esos datos pueden entenderse como la información de parámetros del producto. En general, el SDO se usa solo durante la configuración y no para el intercambio de datos en marcha; para el intercambio de datos en tiempo real se recomienda el PDO.</p>
+<p>El SDO distingue dos procesos, lectura y escritura. La tabla siguiente corresponde al proceso de escritura (también llamado <em>upload</em>):</p>
+<table>
+<tr><th></th><th>COB-ID</th><th>Byte0</th><th colspan="2">Byte1–Byte2</th><th>Byte3</th><th>Byte4</th><th>Byte5</th><th>Byte6</th><th>Byte7</th></tr>
+<tr><td rowspan="4">write</td><td rowspan="4">0x600 + node_id</td><td>0x23</td><td colspan="2">index</td><td>subindex</td><td colspan="4">data</td></tr>
+<tr><td>0x27</td><td colspan="2">index</td><td>subindex</td><td colspan="3">data</td><td>/</td></tr>
+<tr><td>0x2B</td><td colspan="2">index</td><td>subindex</td><td colspan="2">data</td><td>/</td><td>/</td></tr>
+<tr><td>0x2F</td><td colspan="2">index</td><td>subindex</td><td>data</td><td>/</td><td>/</td><td>/</td></tr>
+<tr><td rowspan="2">response</td><td rowspan="2">0x580 + node_id</td><td>0x60</td><td colspan="2">index</td><td>subindex</td><td>/</td><td>/</td><td>/</td><td>/</td></tr>
+<tr><td>0x80</td><td colspan="2">index</td><td>subindex</td><td colspan="4">código de aborto</td></tr>
+</table>
+<p>Proceso de lectura (también llamado <em>download</em>):</p>
+<table>
+<tr><th></th><th>COB-ID</th><th>Byte0</th><th colspan="2">Byte1–Byte2</th><th>Byte3</th><th>Byte4</th><th>Byte5</th><th>Byte6</th><th>Byte7</th></tr>
+<tr><td>read</td><td>0x600 + node_id</td><td>0x40</td><td colspan="2">index</td><td>subindex</td><td>/</td><td>/</td><td>/</td><td>/</td></tr>
+<tr><td rowspan="5">response</td><td rowspan="5">0x580 + node_id</td><td>0x43</td><td colspan="2">index</td><td>subindex</td><td colspan="4">data</td></tr>
+<tr><td>0x47</td><td colspan="2">index</td><td>subindex</td><td colspan="3">data</td><td>/</td></tr>
+<tr><td>0x4B</td><td colspan="2">index</td><td>subindex</td><td colspan="2">data</td><td>/</td><td>/</td></tr>
+<tr><td>0x4F</td><td colspan="2">index</td><td>subindex</td><td>data</td><td>/</td><td>/</td><td>/</td></tr>
+<tr><td>0x80</td><td colspan="2">index</td><td>subindex</td><td colspan="4">código de aborto</td></tr>
+</table>
+
+<h3>4.2.3.5 NMT (latido)</h3>
+<p>El mensaje de latido se limita a anunciar en el bus el estado del nodo, indicando que funciona con normalidad. Su formato de trama es:</p>
+<table>
+<tr><th style="width:35%">COB-ID</th><th>Data Byte0</th></tr>
+<tr><td>0x700 + node_id</td><td>Estado</td></tr>
+</table>
+
+</body></html>

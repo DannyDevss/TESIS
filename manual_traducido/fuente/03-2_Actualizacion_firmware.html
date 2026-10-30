@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 3.2 Actualización del firmware</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>3.2 Descarga y actualización del firmware</h1>
+<p class="origen">Traducción de la sección 3.2 del manual GIM6010-8 rev 2.2 (págs. 39–40 del original).</p>
+<p>El firmware puede grabarse por la interfaz SWD (apartado 2.4.4) o por el conector Type-C (apartado 2.4.2). Se ofrecen las tres vías siguientes.</p>
+
+<h2>3.2.1 Software de descarga de Nations</h2>
+
+<h3>1. Grabación por USB (DFU)</h3>
+<p>Tenga en cuenta que el software de Nations puede grabar tanto por el conector Type-C como por la interfaz SWD (solo con JLink y DAP); este apartado toma como ejemplo la grabación por Type-C.</p>
+<p>Primero, descargue el driver USB del software de grabación de Nations (<code>https://www.cyberbeast.cn/filedownload/789489</code>) e instale el correspondiente a su sistema. Después descargue el propio software (<code>https://cyberbeast.cn/filedownload/766844</code>), descomprímalo en cualquier carpeta y ejecútelo.</p>
+<p>A continuación conecte el cable Type-C, entre en <code>odrivetool</code> y ejecute el comando siguiente para poner el driver en modo DFU:</p>
+<pre>odrv0.enter_dfu_mode()</pre>
+<p>Por último, grabe el firmware con el software de Nations, como muestra la figura. Cuando termine la grabación, pulse «常用操作» (operaciones habituales) y después «复位» (reset) para reiniciar el driver y poder conectarse de nuevo con <code>odrivetool</code>.</p>
+<figure><img src="figuras/p40_1.png"><figcaption>Nations MCU Download Tool. Pasos señalados en rojo: 1. seleccionar el modo DFU (接口 = interfaz, USB(DFU)); 2. conectar el dispositivo (连接设备); 3. elegir el archivo .bin (浏览 = examinar); 4. pulsar 下载 para grabar. 起始地址 = dirección de inicio (0x08000000); 擦除模式 = modo de borrado.</figcaption></figure>
+
+<h3>2. Grabación por SWD (JLink o DAP)</h3>
+<p>La descarga por SWD es similar a la del modo DFU, pero la conexión se hace por la interfaz SWD de depuración (apartado 2.4.4) y en la pantalla anterior hay que seleccionar la herramienta de depuración correspondiente (JLink o DAP).</p>
+
+<h2>3.2.2 pyocd</h2>
+<p><code>pyocd</code> es la versión en Python de OpenOCD y admite herramientas de depuración habituales como STLink, JLink o DAP para borrar, grabar, reiniciar, etc. Tenga en cuenta que la conexión con el driver debe hacerse por la interfaz SWD; el orden de los pines SWD se indica en el apartado 2.4.4.</p>
+<div class="aviso"><strong>Atención:</strong> la interfaz SWD lleva alimentación de 3,3 V; no invierta el orden de los cables, o podría destruir el driver.</div>
+
+<h3>1. Instalación</h3>
+<pre>pip install pyocd</pre>
+
+<h3>2. Grabación</h3>
+<p>Primero, liste las herramientas de depuración conectadas:</p>
+<pre>pyocd list</pre>
+<figure><img src="figuras/p40_2.png"><figcaption>Salida de <code>pyocd list</code>: se detecta una sonda STM32 STLink.</figcaption></figure>
+<p>Después, ejecute el comando siguiente para grabar el archivo .bin:</p>
+<pre>pyocd load .\ODrive_N32G455.bin -a 0x8000000</pre>
+<figure><img src="figuras/p41_1.png"><figcaption>Salida de <code>pyocd load</code> tras grabar correctamente el firmware.</figcaption></figure>
+
+</body></html>

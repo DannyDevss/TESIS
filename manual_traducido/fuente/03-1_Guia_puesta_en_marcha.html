@@ -1,0 +1,495 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 3.1 Guía de puesta en marcha</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>3 Ajuste y puesta a punto — 3.1 Guía de puesta en marcha</h1>
+<p class="origen">Traducción de la sección 3.1 del manual GIM6010-8 rev 2.2 (págs. 15–38 del original). En las capturas de pantalla, la interfaz aparece en chino; los pies de figura traducen las etiquetas relevantes.</p>
+
+<h2>3.1.1 Preparativos</h2>
+<p>Para poner el motor en funcionamiento necesita:</p>
+
+<h3>✓ Una fuente de alimentación</h3>
+<p>Consulte en el capítulo 1 los requisitos de tensión de alimentación; se recomienda una fuente estabilizada o una batería. Una duda frecuente de los usuarios es cómo elegir la fuente. A continuación se dan algunas recomendaciones sencillas, solo a título orientativo.</p>
+<p><strong>Puntos a tener en cuenta al elegir la fuente:</strong></p>
+<h4>◆ Corriente necesaria</h4>
+<p>En general debe ser de al menos 5 A. El valor concreto depende de la potencia que necesite el sistema y de la tensión.</p>
+<h4>◆ Tensión necesaria</h4>
+<p>La tensión necesaria depende de dos factores: la Kv del motor y la velocidad máxima que requiera el sistema, RPM<sub>máx</sub>. La tensión máxima de alimentación puede estimarse con la fórmula:</p>
+<pre>V_máx = (RPM_máx / Kv) × 1,25</pre>
+<p>donde 1,25 es un coeficiente empírico que deja al sistema un margen de tensión seguro.</p>
+<h4>◆ Potencia necesaria</h4>
+<p>En cuanto a la potencia, dicho de forma sencilla, depende de la corriente máxima I<sub>máx</sub> a la velocidad más alta; puede estimarse con la fórmula:</p>
+<pre>P_máx = I_máx × (RPM_máx / Kv) × 1,25</pre>
+
+<h3>✓ Cable de alimentación y comunicación</h3>
+<p>El 6010-8 lleva un conector 2+2 de alimentación y comunicación; pida al servicio posventa que le recomiende un cable 2+2 adecuado. Consulte el apartado 2.4.1 y conecte sin falta correctamente el positivo y el negativo de la alimentación: de lo contrario existe riesgo de quemar el driver, porque no tiene protección contra inversión de polaridad. Fíjese además en el orden de las dos líneas de comunicación (el orden de CANH/CANL): si se invierten, la comunicación no funcionará correctamente.</p>
+<div class="aviso"><strong>Advertencia</strong>
+<ul>
+<li>Evite siempre tocar con las manos el bus de comunicación, para que la electricidad estática no dañe el chip de interfaz del driver, sobre todo en zonas y estaciones secas.</li>
+<li>No conecte ni desconecte nunca el terminal de alimentación con tensión presente.</li>
+<li>Evite usar un magnetotérmico como interruptor de la alimentación: hay riesgo de destruir el chip de alimentación del driver.</li>
+<li>La tensión de alimentación no debe superar los 72 V.</li>
+</ul>
+</div>
+
+<h3>✓ Un cable de datos Type-C</h3>
+<p>En las primeras fases del ajuste se recomienda encarecidamente probar el motor con un cable de datos USB Type-C. Sirve el típico cable Type-C de teléfono móvil, pero no puede usarse un cable Type-C que sea solo de carga.</p>
+<p>Tenga en cuenta que el cable Type-C no alimenta el driver y, mucho menos, permite mover el motor.</p>
+
+<h3>✓ Dar tensión</h3>
+<p>Apague primero la fuente, conecte el cable de alimentación y encienda después. No conecte ni desconecte con tensión, ni use un magnetotérmico para cortar solo el cable positivo o solo el negativo: eso provoca una corriente de arranque excesiva que quema el driver.</p>
+<p>Una vez alimentado, el cable USB Type-C puede conectarse y desconectarse en cualquier momento.</p>
+
+<h2>3.1.2 Empezar con el software de PC</h2>
+
+<h3>◆ Motor Wizard (电机精灵, «Motor Genie»)</h3>
+<h4>1. Instalar Motor Wizard</h4>
+<p>Descargue el instalador para Windows (<code>https://bl.cyberbeast.cn/actuator/steadywin_motorwizard.exe</code>) e instálelo siguiendo los pasos por defecto.</p>
+<h4>2. Instalar el driver USB</h4>
+<p>Entre en <code>https://zadig.akeo.ie</code> y descargue la herramienta de drivers USB Zadig. Conecte el driver del motor al ordenador con el cable Type-C —se encenderá el led de alimentación del driver—, abra Zadig y seleccione en la lista desplegable «CyberBeast Motor Driver Device (Interface 2)»:</p>
+<figure><img src="figuras/p16_1.png"><figcaption>Selección del dispositivo en Zadig.</figcaption></figure>
+<p>Con las flechas arriba/abajo se eligen los distintos drivers USB: para esta interfaz seleccione el driver <strong>libusb</strong> y pulse «Install Driver» o «Replace Driver» para instalarlo:</p>
+<figure><img src="figuras/p17_1.png"><figcaption>Instalación del driver libusb para el Motor Wizard.</figcaption></figure>
+
+<h3>◆ odrivetool</h3>
+<p>El driver es compatible con ODrive (<code>https://github.com/odriverobotics/odrive.git</code>), por lo que se utiliza <code>odrivetool</code> como software de PC para el ajuste.</p>
+<p>Instale <code>odrivetool</code> siguiendo estos pasos:</p>
+
+<h4>➢ Windows</h4>
+<p><strong>1. Instalar Python.</strong> Entre en la web oficial de Python (<code>https://www.python.org</code>), descargue el instalador más reciente e instálelo siguiendo las indicaciones. No descargue versiones de Python de webs de terceros ni de la Microsoft Store.</p>
+<p><strong>2. Instalar las Visual C++ Build Tools.</strong> Instale las herramientas desde <code>https://visualstudio.microsoft.com/visual-cpp-build-tools/</code> y marque durante la instalación la carga de trabajo «Desarrollo para el escritorio con C++», como se ve en la imagen.</p>
+<figure><img src="figuras/p17_2.png"><figcaption>Selección de «Desarrollo para el escritorio con C++» en el instalador de las Build Tools.</figcaption></figure>
+<p><strong>3. Instalar odrivetool.</strong> Ejecute Windows PowerShell como administrador y lance <code>pip install odrive</code>. Si falla a mitad, reinténtelo; si vuelve a fallar varias veces, reinicie el ordenador y pruebe de nuevo.</p>
+<p><strong>4. Instalar el driver USB.</strong> Entre en <code>https://zadig.akeo.ie</code> y descargue Zadig. Conecte el driver al ordenador con el cable Type-C —se encenderá el led de alimentación—, abra Zadig y seleccione en el desplegable «CyberBeast Motor Driver Device (Interface 2)»:</p>
+<figure><img src="figuras/p18_1.png"><figcaption>Selección del dispositivo en Zadig.</figcaption></figure>
+<p>Con las flechas arriba/abajo se eligen los distintos drivers USB: para esta interfaz seleccione el driver <strong>WinUSB</strong> y pulse «Install Driver»:</p>
+<figure><img src="figuras/p18_2.png"><figcaption>Instalación del driver WinUSB para odrivetool.</figcaption></figure>
+<div class="nota"><strong>Nota:</strong> el Motor Wizard necesita el driver <em>libusb</em> y <code>odrivetool</code> el driver <em>WinUSB</em>. Al cambiar de programa hay que volver a asignar el driver correspondiente con Zadig.</div>
+
+<h4>➢ WSL (Subsistema de Windows para Linux)</h4>
+<p><strong>1) Instalar Python, USB y odrivetool.</strong> Si tiene instalado WSL2, abra la línea de comandos de WSL2 y siga estos pasos (se supone que la distribución instalada es Ubuntu):</p>
+<pre>sudo apt install python3 python3-pip
+sudo apt install libusb-1.0-0
+sudo pip install odrive numpy matplotlib</pre>
+<p>La primera orden instala Python, la segunda el driver USB y la tercera el software de PC <code>odrivetool</code>.</p>
+<p><strong>2) Conectar el driver a WSL.</strong> Al enchufar el cable Type-C a Windows, este carga por defecto el driver de ese puerto USB, pero WSL no. Hay que exponer ese puerto USB dentro de WSL; siga la documentación de Microsoft (<code>https://learn.microsoft.com/es-es/windows/wsl/connect-usb</code>).</p>
+
+<h4>➢ Ubuntu</h4>
+<p>La instalación en Ubuntu es muy parecida a la de WSL; consulte el apartado anterior.</p>
+
+<h2>3.1.3 Configurar correctamente los parámetros del motor</h2>
+<div class="aviso"><strong>Advertencia:</strong> se recomienda leer esta sección con mucha atención: es la clave para que el motor funcione correctamente y para no quemarlo.</div>
+<p>Una vez instalado el software de PC (Motor Wizard u <code>odrivetool</code>) según el apartado anterior, con el motor alimentado y el cable USB Type-C conectado:</p>
+
+<h3>◆ Motor Wizard</h3>
+<figure><img src="figuras/p19_1.png" style="max-height:120mm"><figcaption>Pantalla principal del Motor Wizard. Anotaciones: 电机状态 = estado del motor (aquí 空闲, «reposo»); 电压/功率 = tensión/potencia. Botones inferiores: 电机参数 = parámetros del motor, 驱动参数 = parámetros del driver, 数据存储 = almacenamiento de datos, 调试日志 = registro de depuración. Pestañas: 速度模式 = modo velocidad, 力矩控制 = control de par, 位置控制 = control de posición, MIT模式 = modo MIT.</figcaption></figure>
+<figure><img src="figuras/p19_2.png" style="max-height:120mm"><figcaption>Pantalla «参数配置» (configuración de parámetros). El texto rojo señala 硬件版本/固件版本 = versión de hardware / versión de firmware.</figcaption></figure>
+<p>Al abrir el Motor Wizard, si la conexión se ha establecido —imagen de la izquierda— se muestran el estado del motor y la tensión; si no, no aparece una lectura de tensión válida.</p>
+<p>Al pulsar «电机参数» (parámetros del motor) la parte superior de la interfaz muestra la versión de hardware y la de firmware del driver; en la imagen de la derecha, la versión de hardware es la 3.8.3 y la de firmware la 0.5.13.</p>
+
+<h3>◆ odrivetool</h3>
+<p>Ejecute <code>odrivetool</code> en una consola (Windows PowerShell o un terminal de Linux) escribiendo <code>odrivetool</code> y pulsando Intro. La imagen siguiente muestra una conexión correcta en Windows (los datos de conexión se muestran en verde):</p>
+<figure><img src="figuras/p20_1.png"><figcaption>Consola de <code>odrivetool</code> con el driver conectado.</figcaption></figure>
+<p>Ejemplo de comando: <code>odrv0.axis0.controller.input_vel</code>. <code>odrv0</code> designa el motor conectado actualmente: el primero que se conecta se llama <code>odrv0</code>, el segundo <code>odrv1</code>, y así sucesivamente. <code>axis0</code> designa el primer motor conectado al driver; la versión actual solo admite un motor. Ese comando consulta la consigna de velocidad actual del driver.</p>
+<div class="nota"><strong>Consejos de uso</strong>
+<ul>
+<li>Use a menudo el tabulador: ofrece sugerencias de comandos, igual que en Linux, y se navega por ellas con las flechas del teclado.</li>
+<li>Las flechas arriba/abajo muestran el historial de comandos.</li>
+<li>Mientras se escribe se sugieren comandos anteriores parecidos; con la flecha derecha se completan directamente.</li>
+</ul>
+</div>
+
+<h3>➢ Ajustar los límites clave (<em>limits</em>)</h3>
+
+<h4>◆ Motor Wizard</h4>
+<p>Pulse «电机参数» (parámetros del motor) en el Motor Wizard: en el recuadro rojo de la imagen siguiente pueden ajustarse los límites clave: rango de tensión, límite de corriente (corriente máxima), límite de velocidad (velocidad máxima) y corriente de calibración.</p>
+<figure><img src="figuras/p21_1.png"><figcaption>Límites clave: 电压范围 = rango de tensión (15–64 V), 最大电流 = corriente máxima (50,0 A), 最大限速 = velocidad máxima (1800 rpm), 校准电流 = corriente de calibración (2,0 A). Debajo: 电机校准 = calibración del motor, 已校准 = calibrado, 校准 = calibrar.</figcaption></figure>
+<p>El límite de corriente se ve afectado también por la temperatura; consulte la descripción del apartado siguiente (odrivetool).</p>
+<p>El límite de velocidad se refiere normalmente a los modos de control de velocidad y de posición, pero también puede activarse el limitador de velocidad en el modo de control de par. En el Motor Wizard, pulse «驱动参数» (parámetros del driver) para activar ese conmutador, como muestra el recuadro rojo:</p>
+<figure><img src="figuras/p21_2.png"><figcaption>速度限制 = límite de velocidad, con 使能 = habilitar y 力矩模式使能 = habilitar en modo par.</figcaption></figure>
+
+<h4>◆ odrivetool</h4>
+<p><strong>⚫ Límite de corriente</strong></p>
+<pre>odrv0.axis0.motor.config.current_lim = 30</pre>
+<p>El comando anterior fija el límite de corriente en 30 A. Tenga en cuenta que este límite se refiere a la corriente del eje Q, no a la corriente de la fuente de alimentación, y limita directamente el par de salida. <strong>En el 6010-8, no fije este límite por encima de 50 A.</strong></p>
+<div class="nota"><strong>Otros factores que afectan al límite de corriente</strong>
+<ul>
+<li><strong>Temperatura del motor:</strong> si se habilita la protección térmica del motor (<code>odrv0.axis0.motor.motor_thermistor.config.enabled=1</code>), la temperatura actual del motor influye también en la corriente del eje Q.</li>
+<li><strong>Temperatura de la placa del driver:</strong> si se habilita la protección térmica de la placa (<code>odrv0.axis0.motor.fet_thermistor.config.enabled=1</code>), la temperatura actual de la placa influye también en la corriente del eje Q.</li>
+</ul>
+<p>El efecto de ambas temperaturas es muy parecido y puede expresarse con la fórmula:</p>
+<pre>I'_lim = (T − T_l) / (T_u − T_l) × I_lim</pre>
+<p>donde <em>I'<sub>lim</sub></em> es el límite de corriente que acaba aplicándose, <em>I<sub>lim</sub></em> es el límite configurado, <em>T</em> es la temperatura actual (del motor o de la placa), <em>T<sub>l</sub></em> es el límite inferior de temperatura configurado (<code>motor_thermistor.config.temp_limit_lower</code> y <code>fet_thermistor.config.temp_limit_lower</code>) y <em>T<sub>u</sub></em> el límite superior (<code>motor_thermistor.config.temp_limit_upper</code> y <code>fet_thermistor.config.temp_limit_upper</code>).</p>
+</div>
+
+<p><strong>⚫ Límite de velocidad</strong></p>
+<pre>odrv0.axis0.controller.config.vel_limit = 30</pre>
+<p>Es el límite global de velocidad del sistema; el comando anterior lo fija en 30 vueltas/s. Tenga en cuenta que, por defecto, este límite no actúa en el modo de par puro, pero puede habilitarse con el siguiente conmutador:</p>
+<pre>odrv0.axis0.controller.config.enable_torque_mode_vel_limit = 1</pre>
+
+<p><strong>⚫ Corriente de calibración</strong></p>
+<p>Su valor por defecto es 5 A y normalmente no hace falta cambiarlo, pero si la fuente de alimentación del usuario da poca corriente puede reducirse; de lo contrario aparecerá una alarma de subtensión durante la calibración.</p>
+<pre>odrv0.axis0.motor.config.calibration_current = 2</pre>
+
+<h3>➢ Ajustar los parámetros de hardware clave</h3>
+<h4>◆ Motor Wizard</h4>
+<p>Pulse «电机参数» (parámetros del motor) en el Motor Wizard: el recuadro rojo de la imagen siguiente muestra algunos parámetros de hardware importantes.</p>
+<figure><img src="figuras/p22_1.png"><figcaption>Parámetros de hardware: 极对数 = pares de polos, 减速比 = relación de reducción, 相间电阻 = resistencia entre fases, 相间电感 = inductancia entre fases, 转矩常数 = constante de par, 驱动温度/电机温度 = temperatura del driver / del motor con su 保护开关 = interruptor de protección.</figcaption></figure>
+<p>El significado de estos parámetros se explica en el apartado siguiente (odrivetool).</p>
+
+<h4>◆ odrivetool</h4>
+<p><strong>⚫ Corriente máxima de descarga y de carga</strong></p>
+<p>La corriente de descarga es la corriente directa que la fuente entrega al driver y al motor; la de carga es la corriente inversa que vuelve hacia la fuente. Ambos valores dependen de la fuente de alimentación: fije valores adecuados para evitar que la fuente no pueda entregar corriente y la tensión se hunda, o que la fuerza contraelectromotriz la dañe. Ahora bien, si se les da un valor absoluto demasiado pequeño, es muy fácil que salten alarmas.</p>
+<pre>odrv0.config.dc_max_negative_current
+odrv0.config.dc_max_positive_current</pre>
+
+<p><strong>⚫ Pares de polos</strong></p>
+<p>Los pares de polos son el número de polos magnéticos del rotor dividido entre dos. El usuario debe fijar correctamente este valor para que la calibración tenga éxito; de lo contrario dará una alarma de calibración.</p>
+<pre>odrv0.axis0.motor.config.pole_pairs</pre>
+
+<p><strong>⚫ Constante de par</strong></p>
+<p>La constante de par es el par que produce el motor dividido entre la corriente del eje Q; su relación con la Kv del motor es: <code>Torque_Constant = 8,27 / Kv</code>.</p>
+<pre>odrv0.axis0.motor.config.torque_constant</pre>
+<p>Que la constante de par sea correcta no afecta al funcionamiento del motor, pero sí a la conversión de unidades del valor que se introduce al hacer control de par. Si el usuario prefiere trabajar en amperios en lugar de en N·m, basta con poner este valor a 1.</p>
+
+<p><strong>⚫ Sensores de temperatura</strong></p>
+<p>Tanto la placa del driver como el interior del motor llevan sensores NTC. Si se habilitan, el driver regula la corriente de salida (el par) en función de la temperatura, protegiendo así al driver y al motor.</p>
+<pre># Protección térmica del motor
+odrv0.axis0.motor.motor_thermistor.config.enabled = 1
+odrv0.axis0.motor.motor_thermistor.config.temp_limit_lower = 20
+odrv0.axis0.motor.motor_thermistor.config.temp_limit_upper = 100
+# Protección térmica de la placa del driver
+odrv0.axis0.motor.fet_thermistor.config.enabled = 1
+odrv0.axis0.motor.fet_thermistor.config.temp_limit_lower = 20
+odrv0.axis0.motor.fet_thermistor.config.temp_limit_upper = 100
+# Lectura de las temperaturas
+odrv0.axis0.motor.motor_thermistor.temperature   # temperatura del motor
+odrv0.axis0.motor.fet_thermistor.temperature     # temperatura de la placa</pre>
+
+<h3>➢ Ajuste del PID</h3>
+<p>El procedimiento siguiente sirve de referencia para ajustar los parámetros del PID:</p>
+<pre>odrv0.axis0.controller.config.pos_gain=20.0
+odrv0.axis0.controller.config.vel_gain=0.16
+odrv0.axis0.controller.config.vel_integrator_gain=0.32</pre>
+<ol>
+<li>Fije los valores iniciales del PID.</li>
+<li>Ponga <code>vel_integrator_gain</code> a 0:
+<pre>odrv0.axis0.controller.config.vel_integrator_gain=0</pre></li>
+<li>Ajuste <code>vel_gain</code> así:
+<ol>
+<li>Haga girar el motor en modo de control de velocidad; si el giro no es suave, con temblores o vibraciones, reduzca <code>vel_gain</code> hasta que el giro sea suave.</li>
+<li>A continuación, aumente <code>vel_gain</code> un 30 % cada vez hasta que aparezcan vibraciones evidentes.</li>
+<li>En ese punto, reduzca <code>vel_gain</code> aproximadamente un 50 %: así queda estable.</li>
+</ol></li>
+<li>Ajuste <code>pos_gain</code> así:
+<ol>
+<li>Intente mover el motor en modo posición; si el movimiento no es suave, con tirones o vibraciones, reduzca <code>pos_gain</code> hasta que sea suave.</li>
+<li>A continuación, aumente <code>pos_gain</code> un 30 % cada vez hasta que el control de posición presente una sobreoscilación evidente (es decir, el motor rebasa la posición objetivo y vuelve a ella oscilando).</li>
+<li>Después, reduzca <code>pos_gain</code> poco a poco hasta que desaparezca la sobreoscilación.</li>
+</ol></li>
+<li>Tras estos cuatro pasos puede fijarse <code>vel_integrator_gain = 0,5 × ancho_de_banda × vel_gain</code>, donde <em>ancho de banda</em> es el ancho de banda de control del sistema. ¿Qué es el ancho de banda de control? Por ejemplo, si desde que el usuario fija la posición objetivo hasta que el motor llega realmente a ella pasan 10 ms, el ancho de banda es de 100 Hz, y entonces <code>vel_integrator_gain = 0,5 × 100 × vel_gain</code>.</li>
+</ol>
+<p>Durante este proceso de ajuste se recomienda usar las herramientas gráficas del apartado 3.1.8 para ver el efecto en tiempo real y evitar los errores de apreciación a simple vista. Con el Motor Wizard el efecto del ajuste del PID se ve directamente; la imagen siguiente muestra los parámetros del PID:</p>
+<figure><img src="figuras/p25_1.png" style="max-height:120mm"><figcaption>Pestaña «驱动参数» (parámetros del driver): 控制模式 = modo de control (位置模式, modo posición), 输入模式 = modo de entrada (直接输入, entrada directa), 转动惯量 = inercia, 速度限制 = límite de velocidad. 电流环 = lazo de corriente (控制带宽 = ancho de banda de control, Q轴限流 = límite de corriente del eje Q, 斜坡斜率 = pendiente de rampa). 速度环 = lazo de velocidad (KP, KI, pendiente de rampa). 位置环 = lazo de posición (KP, 滤波带宽 = ancho de banda del filtro).</figcaption></figure>
+
+<h2>3.1.4 Calibración al dar tensión</h2>
+<p>La primera vez que se usa el micromotor hay que calibrar el motor y el encoder. Antes de calibrar, fije bien el motor o sujételo con firmeza, con el eje de salida sin carga. El proceso es el siguiente.</p>
+<div class="aviso"><strong>Advertencia:</strong> antes de calibrar, deje el motor sin carga y bien sujeto.</div>
+
+<h3>◆ Motor Wizard</h3>
+<p>Abra el Motor Wizard y pulse «启动电机» (arrancar motor). Si el motor no está calibrado aparecerá este aviso:</p>
+<figure><img src="figuras/p25_2.png" style="max-height:55mm"><figcaption>Aviso de motor sin calibrar; «确定» = aceptar.</figcaption></figure>
+<p>Al pulsar «确定» (aceptar) se entra en el proceso de calibración. También puede pulsar «电机参数» (parámetros del motor) en la pantalla principal: en «基本参数» (parámetros básicos) se muestra el estado de calibración del motor y, si aparece el estado <img src="figuras/p25_3.png" style="height:1.1em;vertical-align:middle"> («未校准», sin calibrar), basta con pulsar el botón «校准» (calibrar) que hay a su derecha para iniciar igualmente la calibración.</p>
+<p>Una vez iniciada, la interfaz avisa:</p>
+<figure><img src="figuras/p26_1.png" style="max-height:50mm"><figcaption>«电机正在校准…» = el motor se está calibrando. Texto: «el motor empieza a girar tras un pitido; pulse “已停止” (se ha detenido) cuando deje de girar; si tarda mucho en pararse o no gira, pulse “取消” (cancelar)».</figcaption></figure>
+<p>En ese momento el motor emite un pitido y empieza a girar. Observe el giro: si tras un rato se detiene, pulse «已停止» (se ha detenido) para terminar la calibración; si no gira, o si pasados 5 minutos sigue sin pararse, pulse «取消» (cancelar).</p>
+<p>Al terminar la calibración el driver se reinicia; espere de 1 a 3 segundos. Después puede volver a «电机参数» (parámetros del motor) y comprobar si aparece <img src="figuras/p26_2.png" style="height:1.1em;vertical-align:middle"> («已校准», calibrado).</p>
+
+<h3>◆ odrivetool</h3>
+<figure><img src="figuras/p26_3.png"><figcaption>Secuencia de calibración ejecutada en <code>odrivetool</code>.</figcaption></figure>
+<pre>odrv0.axis0.requested_state = AXIS_STATE_MOTOR_CALIBRATION
+dump_errors(odrv0)
+odrv0.axis0.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
+dump_errors(odrv0)
+odrv0.axis0.motor.config.pre_calibrated = 1
+odrv0.axis0.encoder.config.pre_calibrated = 1
+odrv0.save_configuration()</pre>
+<p>Explicación paso a paso:</p>
+
+<h4>➢ Paso 1: autoidentificación de los parámetros del motor</h4>
+<p>Se miden la resistencia y la inductancia de fase del motor; se oirá un pitido agudo. Los resultados pueden consultarse con:</p>
+<pre>odrv0.axis0.motor.config.phase_resistance
+odrv0.axis0.motor.config.phase_inductance</pre>
+
+<h4>➢ Paso 2: consultar los códigos de error</h4>
+<p>Consulte los códigos de error del sistema después del paso 1. Si aparece cualquier código de error en rojo, hay que reiniciar el motor y volver a intentarlo, o avisar al servicio posventa.</p>
+
+<h4>➢ Paso 3: calibración del encoder</h4>
+<p>Se calibra el encoder: tanto el ángulo de montaje del encoder respecto al ángulo mecánico del motor como el propio encoder. Durante el proceso el motor gira despacio un cierto ángulo hacia delante y después el mismo ángulo hacia atrás. Si solo gira hacia delante y se detiene, es que ha habido un error; compruébelo con el paso 4.</p>
+
+<h4>➢ Paso 4: consultar los códigos de error</h4>
+<p>Tras la calibración del encoder del paso 3, consulte los códigos de error del sistema. El error más habitual es <code>ERROR_CPR_POLEPAIRS_MISMATCH</code>, que indica que el CPR del encoder está mal configurado o que los pares de polos del motor son incorrectos. Consúltelos o modifíquelos con:</p>
+<pre>odrv0.axis0.encoder.config.cpr
+odrv0.axis0.motor.config.pole_pairs</pre>
+
+<h4>➢ Paso 5: escribir el indicador de calibración correcta del motor</h4>
+<h4>➢ Paso 6: escribir el indicador de calibración correcta del encoder</h4>
+<h4>➢ Paso 7: guardar el resultado de la calibración y reiniciar</h4>
+<pre>odrv0.axis0.encoder.config.pre_calibrated = 1
+odrv0.axis0.motor.config.pre_calibrated = 1
+odrv0.save_configuration()</pre>
+
+<h2>3.1.5 Cambiar el ID</h2>
+<p>El ID del driver es único en el bus, con un rango de 0 a 63 y valor por defecto 0. Si el usuario tiene varios motores conectados al mismo bus, debe asignar un ID distinto a cada uno. El ID puede cambiarse por USB o por el bus.</p>
+
+<h3>➢ Cambiar el ID con el Motor Wizard</h3>
+<p>Abra el Motor Wizard, conéctese al motor, pulse «电机参数» (parámetros del motor), modifique el ID en el apartado «通信参数» (parámetros de comunicación) y pulse «同步» (sincronizar) para guardarlo en el driver.</p>
+<figure><img src="figuras/p28_1.png" style="max-height:85mm"><figcaption>Parámetros de comunicación: 接口类型 = tipo de interfaz, 波特率 = velocidad en baudios, ID, CAN协议 = protocolo CAN, 120Ω阻抗 = resistencia de terminación de 120 Ω.</figcaption></figure>
+
+<h3>➢ Cambiar el ID por USB</h3>
+<p>Con el driver conectado por <code>odrivetool</code>, el ID se cambia con:</p>
+<pre>odrv0.axis0.config.can.node_id = xxx</pre>
+
+<h3>➢ Cambiar el ID por el bus</h3>
+<p>Consulte el mensaje <code>Set_Axis_Node_ID</code> del apartado 4.1.2.</p>
+
+<h2>3.1.6 Guardar y respaldar los parámetros</h2>
+<p>Después de modificar cualquier parámetro, guárdelo sin falta; de lo contrario los cambios se perderán al cortar la alimentación o reiniciar. Tras guardar, el driver se reinicia.</p>
+<pre>odrv0.save_configuration()</pre>
+<p>Copia de seguridad de los parámetros:</p>
+<pre>odrivetool backup-config "d:/test.json"</pre>
+<p>donde <code>d:/test.json</code> es la ruta y el nombre de archivo, que el usuario puede cambiar libremente.</p>
+<p>El comando para restaurar los parámetros es:</p>
+<pre>odrivetool restore-config "d:/test.json"</pre>
+
+<h2>3.1.7 Los cuatro modos de control</h2>
+<p>Tras los preparativos y la configuración anteriores, ya se puede intentar mover el motor en los distintos modos. El 6010-8 admite control de posición, control de velocidad, control de par y modo de control de movimiento.</p>
+<ul>
+<li>Dentro del <strong>control de posición</strong> se admiten el control de posición filtrado (<em>Filtered Position Control</em>), el control por curva trapezoidal (<em>Trajectory Control</em>) y el control de posición cíclico (<em>Circular Position Control</em>).</li>
+<li>Dentro del <strong>control de velocidad</strong> se admiten el control de velocidad directo (<em>Velocity Control</em>) y el control de velocidad en rampa (<em>Ramped Velocity Control</em>).</li>
+<li>Dentro del <strong>control de par</strong> se admiten el control de par directo (<em>Torque Control</em>) y el control de par en rampa (<em>Ramped Torque Control</em>).</li>
+</ul>
+<p>El modo de control de movimiento combina posición, velocidad y par; se usa normalmente en aplicaciones que necesitan mucha fuerza instantánea, como la rodilla de un robot. En el sector también se le llama modo de control MIT, nombre que viene del perro robot de código abierto del MIT, que emplea este modo de control para gobernar sus motores.</p>
+<p>En la descripción detallada de cada modo se usan como ejemplo el software de PC y los comandos por USB, pero puede hacerse exactamente lo mismo mediante un protocolo de comunicación (por ejemplo CAN): la lógica es idéntica.</p>
+
+<div class="nota"><strong>¿Cómo se pone el motor en marcha?</strong>
+<p><strong>◆ Arrancar el motor (entrar en control en lazo cerrado).</strong> En todas las operaciones que siguen, para que el motor gire hay que llevarlo al estado de control en lazo cerrado. En el Motor Wizard basta con pulsar «启动电机» (arrancar motor); en <code>odrivetool</code> el comando es:</p>
+<pre>odrv0.axis0.requested_state = 8</pre>
+<p><strong>◆ Parar el motor (pasar a reposo).</strong> Para detener el motor, o para modificar y guardar parámetros, hay que llevarlo primero al estado de reposo. En el Motor Wizard se pulsa «停止电机» (parar motor); en <code>odrivetool</code>:</p>
+<pre>odrv0.axis0.requested_state = 1</pre>
+</div>
+
+<h3>◆ Motor Wizard</h3>
+<p>Al abrir el Motor Wizard se ven abajo cuatro pestañas que corresponden a los cuatro modos de control: «速度控制» (control de velocidad), «力矩控制» (control de par), «位置控制» (control de posición) y «MIT 模式» (modo MIT).</p>
+
+<h4>➢ Manejo básico de la interfaz</h4>
+<p>Tras arrancar el motor, el dial se ilumina en color; casi todas las operaciones se hacen sobre el dial.</p>
+<p><strong>✓ Clic sobre el dial.</strong> Un clic sobre el dial ordena controlar la velocidad, el par o la posición hasta el valor del dial en ese punto. Cada clic equivale a un comando de control; el usuario puede hacer varios clics seguidos para ir controlando el motor.</p>
+<p><strong>✓ Clic derecho sobre el dial.</strong> Con el botón derecho aparece un cuadro de diálogo donde puede introducirse el valor exacto de velocidad, par o posición y ejecutarlo pulsando Intro; haciendo clic fuera del cuadro se cancela.</p>
+<figure><img src="figuras/p29_1.png" style="max-height:25mm"><figcaption>Cuadro de entrada del valor exacto; «目标位置（度）» = posición objetivo (grados).</figcaption></figure>
+<p><strong>✓ Mantener pulsado y arrastrar sobre el dial.</strong> Mantener pulsado y arrastrar sobre el dial es un control continuo: se envían constantemente comandos de velocidad, par o posición cuyo objetivo es el valor del dial bajo el cursor.</p>
+
+<h4>➢ Modificar los parámetros del driver</h4>
+<p>Pulsando «驱动参数» (parámetros del driver) pueden ajustarse el modo de control, el límite de velocidad, las ganancias de los tres lazos (anchos de banda), etc. Se recomienda parar antes el motor y modificar y sincronizar después los parámetros.</p>
+
+<h3>◆ odrivetool</h3>
+
+<h4>➢ Control de posición filtrado (<em>Filtered Position Control</em>)</h4>
+<p>Si el usuario quiere generar él mismo la trayectoria de posición y enviar comandos de posición a cierta frecuencia, se recomienda el control de posición filtrado, porque este modo encadena esos comandos de forma suave. Si en ese caso se usara el control por curva trapezoidal, el giro del motor podría resultar entrecortado o granuloso.</p>
+<p>En este modo hay que ajustar el ancho de banda del filtro a la frecuencia de envío de comandos; una buena regla empírica es fijarlo a la mitad de esa frecuencia (en Hz). Por ejemplo, si se envían comandos a 50 Hz:</p>
+<pre>odrv0.axis0.controller.config.input_filter_bandwidth = 25</pre>
+<p>Habilitar el control de posición filtrado:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 3
+odrv0.axis0.controller.config.input_mode = 3</pre>
+<p>Y después controlar la posición:</p>
+<pre>odrv0.axis0.controller.input_pos = 10   # unidad: vueltas</pre>
+
+<h4>➢ Control por curva trapezoidal (<em>Trajectory Control</em>)</h4>
+<p>Este modo permite fijar la aceleración, la velocidad de crucero y la deceleración para llevar el motor suavemente de una posición a otra. «Trapezoidal» se refiere a la forma de la curva de velocidad, como se ve en la figura: en naranja la velocidad y en azul la posición.</p>
+<figure><img src="figuras/p30_1.png" style="max-height:75mm"><figcaption>Perfil trapezoidal: velocidad (naranja) y posición (azul).</figcaption></figure>
+<p>Parámetros de control ajustables:</p>
+<pre>odrv0.axis0.trap_traj.config.vel_limit    # velocidad de crucero máxima, en vueltas/s
+odrv0.axis0.trap_traj.config.accel_limit  # aceleración máxima, en vueltas/s²
+odrv0.axis0.trap_traj.config.decel_limit  # deceleración máxima, en vueltas/s²
+odrv0.axis0.controller.config.inertia     # inercia, en N·m/(vueltas/s²)</pre>
+<p>Tenga en cuenta que inercia × aceleración = par, y que este valor es 0 por defecto. Ajustarlo puede mejorar la respuesta del sistema, pero depende directamente de la carga del motor. Los cuatro valores anteriores deben ser mayores o iguales que cero. Recuerde además que los límites de corriente y de velocidad mencionados antes siguen actuando de forma global: por ejemplo, si la velocidad de crucero máxima se fija por encima del <code>vel_limit</code> del sistema, el que se aplica es el <code>vel_limit</code> global.</p>
+<p>Para habilitar el modo de curva trapezoidal, primero:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 3
+odrv0.axis0.controller.config.input_mode = 5</pre>
+<p>Y después controlar la posición:</p>
+<pre>odrv0.axis0.controller.input_pos = 10   # unidad: vueltas</pre>
+
+<h4>➢ Control de posición cíclico (<em>Circular Position Control</em>)</h4>
+<p>Este modo sirve para el control de posición incremental continuo: por ejemplo, la rueda de un robot que gira en un sentido durante un rato, o una cinta transportadora en marcha permanente. Con el control de posición normal, la posición objetivo iría creciendo hasta un valor muy grande y aparecerían errores de posicionamiento por la precisión de los números en coma flotante.</p>
+<p>Habilitación:</p>
+<pre>odrv0.axis0.controller.config.circular_setpoints = 1</pre>
+<p>En este modo cada paso queda dentro de una vuelta y el rango de <code>input_pos</code> es [0, 1). Si <code>input_pos</code> supera ese rango, se convierte al valor equivalente dentro de una vuelta. Si el usuario quiere que un paso abarque más de una vuelta, puede fijar el parámetro siguiente a un número mayor que 1:</p>
+<pre>odrv0.axis0.controller.config.circular_setpoint_range = &lt;N&gt;</pre>
+
+<h4>➢ Control de velocidad directo (<em>Velocity Control</em>)</h4>
+<p>Es el control de velocidad más sencillo; se habilita así:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 2
+odrv0.axis0.controller.config.input_mode = 1</pre>
+<p>Después se introduce la velocidad objetivo:</p>
+<pre>odrv0.axis0.controller.input_vel = 10   # unidad: vueltas/s</pre>
+
+<h4>➢ Control de velocidad en rampa (<em>Ramped Velocity Control</em>)</h4>
+<p>El control de velocidad en rampa lleva la velocidad hasta el valor objetivo de forma progresiva, siguiendo una pendiente determinada; es más suave que el control de velocidad directo. Se habilita así:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 2
+odrv0.axis0.controller.config.input_mode = 2</pre>
+<p>La aceleración se controla ajustando la pendiente:</p>
+<pre>odrv0.axis0.controller.config.vel_ramp_rate = 0.5   # pendiente, en vueltas/s²</pre>
+<p>Después se introduce la velocidad objetivo:</p>
+<pre>odrv0.axis0.controller.input_vel = 10   # unidad: vueltas/s</pre>
+
+<h4>➢ Control de par directo (<em>Torque Control</em>)</h4>
+<p>Es el modo de control de par (corriente) más sencillo; se habilita así:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 1
+odrv0.axis0.controller.config.input_mode = 1</pre>
+<p>La unidad del control de par es el N·m, mientras que en el firmware del driver la unidad de corriente es el amperio, por lo que hay que fijar además la constante de par para que el driver pueda convertir N·m en corriente y entregar el par pedido.</p>
+<pre># La constante de par es aproximadamente 8,23 / Kv
+odrv0.axis0.motor.config.torque_constant = 8.23/12.3</pre>
+<p>Después se introduce el par objetivo:</p>
+<pre>odrv0.axis0.controller.input_torque = 1.2   # unidad: N·m</pre>
+<p>Tenga en cuenta también que, si desea limitar la velocidad máxima en modo par, puede activar <code>enable_torque_mode_vel_limit</code> y fijar <code>vel_limit</code>:</p>
+<pre>odrv0.axis0.controller.config.enable_torque_mode_vel_limit = 1
+odrv0.axis0.controller.config.vel_limit = 30   # unidad: vueltas/s</pre>
+
+<h4>➢ Control de par en rampa (<em>Ramped Torque Control</em>)</h4>
+<p>El control de par en rampa es muy parecido al de velocidad en rampa; se habilita así:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 1
+odrv0.axis0.controller.config.input_mode = 6</pre>
+<p>La pendiente se ajusta así:</p>
+<pre>odrv0.axis0.controller.config.torque_ramp_rate = 0.1   # pendiente, en N·m/s</pre>
+
+<h4>➢ Control de movimiento (<em>MIT Control</em>)</h4>
+<p>El modo de control de movimiento lleva el motor a la posición objetivo combinando el control de posición, velocidad y par, según las fórmulas:</p>
+<pre>T_objetivo = Kp × P_dif + Kd × V_dif + T_ff
+P_dif = P_objetivo − P_actual
+V_dif = V_objetivo − V_actual</pre>
+<p>donde <em>T<sub>objetivo</sub></em> es el par objetivo, <em>P<sub>dif</sub></em> el error de posición, <em>V<sub>dif</sub></em> el error de velocidad, <em>Kp</em> la ganancia del control de posición, <em>Kd</em> la ganancia del control de velocidad (o coeficiente de amortiguamiento) y <em>T<sub>ff</sub></em> el par de prealimentación (<em>feedforward</em>).</p>
+<p>El modo de control de movimiento se habilita así:</p>
+<pre>odrv0.axis0.controller.config.control_mode = 3
+odrv0.axis0.controller.config.input_mode = 9</pre>
+<p>Ajuste de las ganancias:</p>
+<pre>odrv0.axis0.controller.input_mit_kp = &lt;float&gt;   # ganancia de posición, en N·m/vuelta
+odrv0.axis0.controller.input_mit_kd = &lt;float&gt;   # coef. de amortiguamiento, en N·m/(vuelta/s)
+odrv0.axis0.controller.input_pos = 5             # unidad: vueltas
+odrv0.axis0.controller.input_vel = 30            # unidad: vueltas/s
+odrv0.axis0.controller.input_torque = 2          # unidad: N·m</pre>
+<p>El movimiento se controla después mediante <code>input_pos</code>, <code>input_vel</code> e <code>input_torque</code>.</p>
+<div class="nota"><strong>Importante:</strong> en el control por USB, la posición, la velocidad y el par que se introducen se refieren al <strong>lado del rotor</strong>; en cambio, en el control MIT por CAN, la posición, la velocidad y el par del protocolo se refieren al <strong>lado del eje de salida</strong>, para mantener la coherencia con el protocolo abierto del MIT.</div>
+
+<h2>3.1.8 Funciones avanzadas</h2>
+
+<h3>1) Lista de comandos habituales</h3>
+<p>Una vez establecida la conexión, el usuario puede controlar el motor y consultar sus parámetros de funcionamiento mediante comandos. La tabla siguiente recoge los comandos más habituales del proceso de ajuste, con su explicación.</p>
+<table>
+<tr><th style="width:12%">Tipo</th><th style="width:40%">Comando</th><th>Descripción</th></tr>
+<tr><td rowspan="8">Comandos básicos</td><td><code>dump_errors(odrv0)</code></td><td>Imprime toda la información de errores</td></tr>
+<tr><td><code>odrv0.clear_errors()</code></td><td>Borra toda la información de errores</td></tr>
+<tr><td><code>odrv0.save_configuration()</code></td><td>Después de modificar parámetros, o de la autoidentificación o la calibración del motor, ejecute sin falta este comando para guardar los cambios; de lo contrario se pierden al cortar la alimentación</td></tr>
+<tr><td><code>odrv0.reboot()</code></td><td>Reinicia el driver</td></tr>
+<tr><td><code>odrv0.vbus_voltage</code></td><td>Lee la tensión de alimentación (V)</td></tr>
+<tr><td><code>odrv0.ibus</code></td><td>Lee la corriente de alimentación (A)</td></tr>
+<tr><td><code>odrv0.hw_version_major</code></td><td>Versión mayor del hardware; en el 6010-8 es actualmente 3</td></tr>
+<tr><td><code>odrv0.hw_version_minor</code></td><td>Versión menor del hardware; en el 6010-8 es actualmente 8</td></tr>
+<tr><td rowspan="12">Comandos de configuración de parámetros</td><td><code>odrv0.hw_version_variant</code></td><td>Código de modelo dentro de una misma configuración de hardware; al 6010-8 le corresponde el código 1</td></tr>
+<tr><td><code>odrv0.can.config.r120_gpio_num</code></td><td>Número de GPIO que controla el conmutador de la resistencia de terminación de 120 Ω del bus CAN</td></tr>
+<tr><td><code>odrv0.can.config.enable_r120</code></td><td>Conmutador de la resistencia de terminación de 120 Ω del bus CAN</td></tr>
+<tr><td><code>odrv0.can.config.baud_rate</code></td><td>Velocidad en baudios del CAN</td></tr>
+<tr><td><code>odrv0.config.dc_bus_undervoltage_trip_level</code></td><td>Umbral de alarma por subtensión (V)</td></tr>
+<tr><td><code>odrv0.config.dc_bus_overvoltage_trip_level</code></td><td>Umbral de alarma por sobretensión (V)</td></tr>
+<tr><td><code>odrv0.config.dc_max_positive_current</code></td><td>Corriente de línea máxima (valor positivo) (A)</td></tr>
+<tr><td><code>odrv0.config.dc_max_negative_current</code></td><td>Corriente máxima de carga inversa hacia la fuente (valor negativo) (A)</td></tr>
+<tr><td><code>odrv0.axis0.motor.config.resistance_calib_max_voltage</code></td><td>Tensión máxima durante la identificación de los parámetros del motor; normalmente algo menor que la mitad de la tensión de alimentación (con 24 V, puede ponerse 10)</td></tr>
+<tr><td><code>odrv0.axis0.motor.config.calibration_current</code></td><td>Corriente máxima durante la identificación de los parámetros del motor; suele fijarse entre 2 y 5 A, ni demasiado alta ni demasiado baja</td></tr>
+<tr><td><code>odrv0.axis0.motor.config.torque_constant</code></td><td>Constante de par del motor (N·m/A)</td></tr>
+<tr><td><code>odrv0.axis0.min_endstop.config</code><br><code>odrv0.axis0.max_endstop.config</code></td><td>Configuración de los finales de carrera mínimo (LW1) y máximo (LW2):<br><code>enabled</code>: habilitado o no<br><code>gpio_num</code>: número de E/S correspondiente; ponga 1 en el final de carrera mínimo y 2 en el máximo</td></tr>
+<tr><td rowspan="4">Comandos de configuración de parámetros</td><td><code>odrv0.axis0.encoder.config.index_offset</code></td><td>Desplazamiento del cero fijado por el usuario: es el desfase del cero de usuario respecto al cero del encoder. Una vez fijado y guardado, todas las consignas de posición que introduzca el usuario se refieren a ese cero de usuario</td></tr>
+<tr><td><code>odrv0.axis0.motor.motor_thermistor.config</code><br><code>odrv0.axis0.motor.fet_thermistor.config</code></td><td>Configuración de los sensores de temperatura del motor y del driver:<br><code>enabled</code>: habilitado o no<br><code>temp_limit_lower</code>: límite inferior de temperatura<br><code>temp_limit_upper</code>: límite superior de temperatura</td></tr>
+<tr><td><code>odrv0.axis0.motor.motor_thermistor.temperature</code></td><td>Temperatura del motor</td></tr>
+<tr><td><code>odrv0.axis0.motor.fet_thermistor.temperature</code></td><td>Temperatura del driver</td></tr>
+<tr><td rowspan="4">Comandos de calibración</td><td><code>odrv0.axis0.requested_state=4</code></td><td>Identifica los parámetros del motor: resistencia e inductancia de fase y equilibrado de las corrientes de las tres fases. El proceso dura de 3 a 6 segundos y el motor emite un sonido agudo. Cuando el sonido cese —o si a los 6 segundos no ha sonado nada—, ejecute <code>dump_errors(odrv0)</code> para ver los errores y no siga hasta confirmar que no hay ninguno</td></tr>
+<tr><td><code>odrv0.axis0.requested_state=7</code></td><td>Calibra el encoder. Antes de ejecutarlo, asegúrese de que el eje de salida no tiene ninguna carga y de que el motor está sujeto con la mano o con algún dispositivo. Al ejecutarlo, el motor gira un tiempo en un sentido y en el otro para identificar y calibrar el encoder. Cuando se detenga, ejecute <code>dump_errors(odrv0)</code> y no continúe hasta confirmar que no hay errores</td></tr>
+<tr><td><code>odrv0.axis0.encoder.config.pre_calibrated=1</code></td><td>Escribe el indicador de precalibración correcta, con lo que no hace falta calibrar en cada arranque. Solo puede escribirse si la calibración anterior ha tenido éxito; en caso contrario, la escritura falla</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.load_encoder_axis=0</code></td><td>Garantiza que el motor sobre el que se opera es el número 0. Solo es necesario en las versiones BETA; en las versiones de producción no tiene efecto</td></tr>
+<tr><td rowspan="16">Comandos de control</td><td><code>odrv0.axis0.requested_state=1</code></td><td>Para el motor y lo pone en reposo</td></tr>
+<tr><td><code>odrv0.axis0.requested_state=8</code></td><td>Arranca el motor y lo pone en lazo cerrado</td></tr>
+<tr><td><code>odrv0.axis0.motor.config.current_lim</code></td><td>Corriente de línea máxima de funcionamiento (A); por encima de este valor salta la alarma de sobrecorriente. No debe superar 100</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.vel_limit</code></td><td>Velocidad máxima de funcionamiento (vueltas/s); si la velocidad del rotor la supera, salta la alarma de sobrevelocidad</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.enable_vel_limit</code></td><td>Conmutador del límite de velocidad: con <code>True</code>, el <code>vel_limit</code> anterior actúa; con <code>False</code>, no</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.control_mode</code></td><td>Modo de control:<br>0: control de tensión<br>1: control de par<br>2: control de velocidad<br>3: control de posición</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.input_mode</code></td><td>Modo de entrada: indica de qué manera el valor introducido por el usuario gobierna el motor:<br>0: inactivo<br>1: control directo<br>2: rampa de velocidad<br>3: filtro de posición<br>5: curva trapezoidal<br>6: rampa de par<br>9: control de movimiento (MIT)</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.vel_gain</code></td><td>Valor P del PID del lazo de velocidad</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.vel_integrator_gain</code></td><td>Valor I del PID del lazo de velocidad</td></tr>
+<tr><td><code>odrv0.axis0.controller.input_mit_kp</code></td><td>Ganancia de posición del control de movimiento (MIT)</td></tr>
+<tr><td><code>odrv0.axis0.controller.input_mit_kd</code></td><td>Ganancia de velocidad (coeficiente de amortiguamiento) del control de movimiento (MIT)</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.pos_gain</code></td><td>Valor P del PID del lazo de posición</td></tr>
+<tr><td><code>odrv0.axis0.controller.input_torque</code></td><td>Consigna del control de par, o par de prealimentación en los controles de velocidad y posición (N·m)</td></tr>
+<tr><td><code>odrv0.axis0.controller.input_vel</code></td><td>Consigna del control de velocidad, o velocidad de prealimentación en el control de posición (vueltas/s)</td></tr>
+<tr><td><code>odrv0.axis0.controller.input_pos</code></td><td>Consigna del control de posición (vueltas)</td></tr>
+<tr><td><code>odrv0.axis0.encoder.set_linear_count()</code></td><td>Fija la posición absoluta del encoder; entre paréntesis se indica un entero de 32 bits cuyo valor absoluto debe ser menor que <code>odrv0.axis0.encoder.config.cpr</code></td></tr>
+<tr><td rowspan="2">Comandos de control</td><td><code>odrv0.axis0.trap_traj.config</code></td><td>Contiene tres parámetros:<br>➢ <code>accel_limit</code>: aceleración máxima (rev/s²)<br>➢ <code>decel_limit</code>: deceleración máxima (rev/s²)<br>➢ <code>vel_limit</code>: velocidad máxima (rev/s)<br>Actúan cuando <code>odrv0.axis0.controller.config.input_mode</code> es la curva trapezoidal, y regulan la aceleración y deceleración del control de posición</td></tr>
+<tr><td><code>odrv0.axis0.controller.config.input_filter_bandwidth</code></td><td>Ancho de banda del filtro de posición; actúa cuando <code>odrv0.axis0.controller.config.input_mode</code> es el filtro de posición, y regula la aceleración y deceleración del control de posición</td></tr>
+</table>
+
+<h3>2) Ajuste con gráficas</h3>
+<p>Si durante el ajuste del motor se necesita vigilar en tiempo real algunos parámetros de funcionamiento, pueden aprovecharse las potentes bibliotecas de cálculo y de gráficos de Python junto con la alta velocidad de la interfaz Type-C para representarlos en directo.</p>
+<p><strong>1. Preparar el entorno.</strong> Instale las bibliotecas de cálculo y de gráficos:</p>
+<pre>pip install numpy matplotlib</pre>
+<p><strong>2. Representar los parámetros.</strong> Desde la línea de comandos de <code>odrivetool</code>, lance la biblioteca gráfica leyendo cualquier magnitud del motor, por ejemplo:</p>
+<pre>start_liveplotter(lambda:[odrv0.ibus, odrv0.axis0.encoder.pos_estimate,
+odrv0.axis0.controller.input_pos], ["ibus","pos","pos_target"])</pre>
+<p>Este comando abre una ventana gráfica que muestra en tiempo real tres magnitudes: corriente de línea, posición y posición objetivo. Si a continuación se hace control de posición, se ve la curva de posición del motor en directo:</p>
+<figure><img src="figuras/p37_1.png" style="max-height:95mm"><figcaption>Ventana de <code>start_liveplotter</code> con la corriente de línea, la posición y la posición objetivo.</figcaption></figure>
+
+<h3>3) Compatibilidad entre USB y CAN</h3>
+<p>En las primeras versiones de este producto (versión de hardware igual o anterior a la 3.7, que puede consultarse con los comandos <code>odrv0.hw_version_major</code> y <code>odrv0.hw_version_minor</code> de este mismo apartado 3.1.8), USB y CAN no son compatibles entre sí y hay que conmutar entre ambos como se indica a continuación. Con versiones de hardware posteriores a la 3.7 puede ignorarse este apartado.</p>
+<h4>➢ Pasar de USB a CAN</h4>
+<p>Con el CAN deshabilitado, el usuario puede comunicarse por el conector Type-C; para pasar a CAN se usan estos comandos:</p>
+<pre>odrv0.config.enable_can_a = True
+odrv0.axis0.requested_state = AXIS_STATE_IDLE
+odrv0.save_configuration()</pre>
+<h4>➢ Pasar de CAN a USB</h4>
+<p>Con el CAN habilitado, el usuario debe enviar primero el mensaje <code>Set_Axis_State</code> (con el parámetro 1, que indica el estado de reposo, IDLE) para llevar el motor a reposo, y después el mensaje <code>Disable_Can</code> para pasar a USB (véase el apartado 4.1.2).</p>
+<div class="nota"><strong>Nota:</strong> tanto al pasar de USB a CAN como de CAN a USB, el motor debe estar en estado de reposo (IDLE); de lo contrario el cambio falla.</div>
+
+<h3>4) Conmutador de la resistencia de terminación del CAN</h3>
+<p>El driver lleva integrada una resistencia de adaptación de impedancia de 120 Ω que el usuario puede activar o desactivar según le convenga. Ejemplo de comandos:</p>
+<pre>odrv0.can.config.r120_gpio_num = 5
+odrv0.can.config.enable_r120 = True</pre>
+
+<h3>5) Configuración del cero de usuario</h3>
+<p>Por defecto, tanto la posición que el usuario lee del motor como el valor que introduce al hacer control de posición se refieren al cero del encoder absoluto del driver. Sin embargo, en la mayoría de las aplicaciones el cero del encoder no coincide con el cero que le interesa al usuario, por lo que hay que fijar manualmente ese desplazamiento del cero.</p>
+<p>En general hay dos formas de establecerlo: mediante un final de carrera, o fijando manualmente el desfase del cero de usuario respecto al cero del encoder:</p>
+<pre># Tras llevar el motor, a mano o por control de posición, a la posición
+# que se desea como cero de usuario:
+odrv0.axis0.encoder.config.index_offset = odrv0.axis0.encoder.pos_estimate</pre>
+
+<h3>6) Finales de carrera</h3>
+<p>El driver admite dos finales de carrera (LW1 y LW2): LW1 es la posición mínima, que es también la posición de referencia (<em>home</em>), y LW2 la posición máxima. Para usar ambos, aplique esta configuración:</p>
+<pre>odrv0.axis0.min_endstop.config.enabled = True
+odrv0.axis0.min_endstop.config.gpio_num = 1
+odrv0.axis0.max_endstop.config.enabled = True
+odrv0.axis0.max_endstop.config.gpio_num = 2</pre>
+<p>Al activarse un final de carrera, el sistema notifica el error <code>MIN_ENDSTOP_PRESSED</code> o <code>MAX_ENDSTOP_PRESSED</code>, momento en el que el software de control puede actuar en consecuencia.</p>
+<div class="nota"><strong>Nota:</strong> la versión de hardware 3.7 no admite la función de finales de carrera.</div>
+
+<h3>7) Resistencia de frenado</h3>
+<p>El usuario puede conectar una resistencia de frenado (también llamada resistencia de descarga) entre los terminales EMG y GND descritos en el apartado 2.4.7; cuando la corriente del bus retorna hacia la fuente, esa resistencia deriva y disipa la corriente instantánea.</p>
+<p>Se habilita con esta configuración:</p>
+<pre>odrv0.config.enable_brake_resistor = True
+odrv0.config.brake_resistance = xxx   # valor de la resistencia de frenado conectada
+odrv0.save_configuration()</pre>
+<p>¿Cómo se consigue que el driver disipe automáticamente? Pueden combinarse las dos formas siguientes para que el controlador ajuste solo la corriente de descarga:</p>
+<h4>➢ Ajustando la corriente inversa máxima</h4>
+<pre>odrv0.config.max_regen_current = xxx   # valor máximo de la corriente inversa, positivo</pre>
+<p>Cuando la corriente inversa supera el valor configurado, el driver deriva la corriente sobrante a la resistencia de descarga.</p>
+<h4>➢ Ajustando el rango de tensión de la fuerza contraelectromotriz</h4>
+<pre>odrv0.config.enable_dc_bus_overvoltage_ramp = True
+odrv0.config.dc_bus_overvoltage_ramp_start = xxx   # tensión inferior a partir de la cual se deriva
+odrv0.config.dc_bus_overvoltage_ramp_end   = xxx   # tensión superior de derivación</pre>
+<p>Cuando la tensión generada por la fuerza contraelectromotriz supera el límite inferior, el driver empieza a derivar corriente a la resistencia de descarga; cuando alcanza o supera el límite superior, aplica toda la tensión sobre la resistencia para intentar disiparla. Entre ambos límites, el driver aplica sobre la resistencia una parte proporcional de la tensión del bus (la tensión contraelectromotriz).</p>
+<div class="nota"><strong>Nota:</strong> los dos modos anteriores pueden habilitarse a la vez; el driver combinará ambas formas de disipación.</div>
+
+</body></html>

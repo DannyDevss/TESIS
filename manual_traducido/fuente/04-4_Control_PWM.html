@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 4.4 Control por entrada PWM</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>4.4 Control por entrada PWM</h1>
+<p class="origen">Traducción de la sección 4.4 del manual GIM6010-8 rev 2.2 (págs. 81–82 del original).</p>
+
+<div class="aviso"><strong>Atención:</strong> compruebe que la versión de hardware es la 3.10 o posterior antes de usar esta función.</div>
+<p>Esta función permite controlar cualquier parámetro escribible —posición, velocidad, par, etc.— mediante una señal RC PWM estándar (anchura de pulso de 1 ms a 2 ms, 50 Hz). Configurando un pin GPIO en modo PWM y estableciendo la correspondencia, se puede gobernar el motor directamente desde una emisora de radiocontrol o desde cualquier otro controlador PWM.</p>
+
+<h2>4.4.1 Conexionado</h2>
+<p>La línea de señal PWM se conecta en la posición de CANH descrita en el apartado 2.4.1. Esta entrada admite señales PWM de 5 V o menos, y la señal PWM debe compartir masa con el driver del motor.</p>
+
+<h2>4.4.2 Configuración por software</h2>
+<h3>➢ Cambiar la interfaz de comunicación a PWM</h3>
+<pre>odrv0.config.comm_intf_mux = 3</pre>
+<p>En el Motor Wizard también puede cambiarse la interfaz física desde los parámetros de comunicación; búsquela dentro de «电机参数» (parámetros del motor).</p>
+<figure><img src="figuras/p82_1.png" style="max-height:80mm"><figcaption>Selección de la interfaz física en los parámetros de comunicación del Motor Wizard.</figcaption></figure>
+
+<h3>➢ Configurar el GPIO en modo PWM</h3>
+<pre>odrv0.config.gpio1_mode = GPIO_MODE_PWM</pre>
+
+<h3>➢ Elegir el modo de control al que se asocia el PWM</h3>
+<p>El PWM puede asociarse al modo de velocidad, de posición o de par; basta con configurar uno de los tres, según haga falta.</p>
+<h4>■ Modo velocidad</h4>
+<p>Ponga el motor en modo de rampa de velocidad (<code>control_mode = 2</code>, <code>input_mode = 2</code>):</p>
+<pre>odrv0.config.gpio1_pwm_mapping.endpoint = odrv0.axis0.controller._input_vel_property</pre>
+<h4>■ Modo posición</h4>
+<p>Ponga el motor en modo de curva trapezoidal (<code>control_mode = 3</code>, <code>input_mode = 5</code>):</p>
+<pre>odrv0.config.gpio1_pwm_mapping.endpoint = odrv0.axis0.controller._input_pos_property</pre>
+<h4>■ Modo par</h4>
+<p>Ponga el motor en modo de rampa de par (<code>control_mode = 1</code>, <code>input_mode = 6</code>):</p>
+<pre>odrv0.config.gpio1_pwm_mapping.endpoint = odrv0.axis0.controller._input_torque_property</pre>
+<div class="nota"><strong>Nota del traductor:</strong> el original escribe «modo de rampa de velocidad» también en el apartado del modo par, pero los valores <code>control_mode = 1</code> e <code>input_mode = 6</code> corresponden a la rampa de par.</div>
+
+<h3>➢ Ajustar los parámetros de la correspondencia PWM</h3>
+<pre>odrv0.config.gpio1_pwm_mapping.min = -8.0
+odrv0.config.gpio1_pwm_mapping.max = 8.0</pre>
+<p><code>min</code> y <code>max</code> definen el rango de la magnitud de control al que se asigna la anchura del pulso PWM (de 1 ms a 2 ms). El driver convierte linealmente la anchura del pulso en un valor real dentro del intervalo [min, max] y lo escribe en el <em>endpoint</em> de consigna que se haya configurado. <code>min</code> y <code>max</code> pueden tomar cualquier valor según convenga.</p>
+
+<h3>➢ Guardar la configuración (opcional)</h3>
+<pre>odrv0.save_configuration()</pre>
+<p>Terminada esta configuración, ponga el motor en lazo cerrado y ya podrá controlarlo por PWM.</p>
+
+</body></html>

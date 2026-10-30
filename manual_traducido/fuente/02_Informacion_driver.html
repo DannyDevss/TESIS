@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 2 Información del driver</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>2 Información del driver</h1>
+<p class="origen">Traducción de la sección 2 del manual GIM6010-8 rev 2.2 (págs. 8–14 del original).</p>
+
+<h2>2.1 Aspecto y dimensiones 3D</h2>
+<figure><img src="figuras/p08_1.png" style="max-height:120mm"><figcaption>Volumen envolvente del driver: 47,040 × 47,003 × 8,651 mm (X · Y · Z).</figcaption></figure>
+
+<h2>2.2 Vista general de las interfaces</h2>
+<figure><img src="figuras/p09_1.png" style="max-height:110mm"><figcaption>Situación de los conectores en la placa del driver.</figcaption></figure>
+<table>
+<tr><th style="width:18%">N.º de interfaz</th><th>Definición</th></tr>
+<tr><td>1</td><td>Terminal integrado de alimentación de 15–60 V y comunicación CAN</td></tr>
+<tr><td>2</td><td>Conector Type-C de depuración y de comunicación con el software de PC</td></tr>
+<tr><td>3</td><td>Ranura de expansión de interfaces (permite añadir RS485, EtherCAT, radiocontrol, pulso/dirección, control de acelerador, etc.)</td></tr>
+<tr><td>4</td><td>Interfaz SWD de depuración y descarga</td></tr>
+<tr><td>5</td><td>Interfaz del segundo encoder (admite I²C y UART)</td></tr>
+<tr><td>6</td><td>Interfaz de temperatura del motor (NTC)</td></tr>
+<tr><td>7</td><td>Interfaz de freno de retención / resistencia de frenado, alimentación de 12 V e interfaces de los finales de carrera mínimo y máximo</td></tr>
+<tr><td>U/V/W</td><td>Orificios de soldadura de los tres devanados de fase</td></tr>
+<tr><td>4×M2</td><td>Orificios de montaje</td></tr>
+</table>
+
+<h2>2.3 Especificaciones</h2>
+<table>
+<tr><th style="width:45%">Parámetro</th><th>Valor</th></tr>
+<tr><td>Tensión nominal</td><td>15–48 V CC</td></tr>
+<tr><td>Tensión mínima / máxima</td><td>12 / 72 V CC</td></tr>
+<tr><td>Corriente nominal</td><td>6 A</td></tr>
+<tr><td>Corriente máxima de línea</td><td>30 A</td></tr>
+<tr><td>Corriente máxima de fase</td><td>120 A</td></tr>
+<tr><td>Consumo en reposo</td><td>&lt; 10 mA</td></tr>
+<tr><td>Velocidad máxima del bus CAN</td><td>1 Mbps</td></tr>
+<tr><td>Velocidad del Type-C</td><td>10 Mbps</td></tr>
+<tr><td>Resolución del encoder</td><td>14 bits (valor absoluto de una vuelta)</td></tr>
+<tr><td>Temperatura ambiente de trabajo</td><td>−20 °C a 70 °C</td></tr>
+<tr><td>Temperatura de alarma del motor</td><td>90 °C (ajustable)</td></tr>
+<tr><td>Temperatura de alarma de la placa del driver</td><td>90 °C (ajustable)</td></tr>
+</table>
+
+<h2>2.4 Definición detallada de las interfaces</h2>
+
+<h3>2.4.1 Terminal de alimentación y comunicación CAN / RS485 / PWM</h3>
+<figure><img src="figuras/p10_1.png"><figcaption>Terminal de alimentación y CAN: VBUS, GND, CANH y CANL.</figcaption></figure>
+<p>El terminal montado en placa es el modelo XT30PB(2+2)-M y el del lado del cable el XT30(2+2)-F, ambos de la marca AMASS. En modo PWM, CANH es la entrada de la señal PWM; en modo pulso, CANH es la entrada de la señal de pulso y CANL la entrada de la señal de dirección. Tenga en cuenta que, en las versiones que admiten RS485, CANH/CANL son también RS485 A/B.</p>
+<div class="aviso"><strong>Atención:</strong> el driver no tiene protección contra inversión de polaridad; compruebe el positivo y el negativo antes de conectar la alimentación.</div>
+
+<h3>2.4.2 Conector Type-C de depuración</h3>
+<p>El Type-C sigue la especificación estándar de cable de datos: sirve cualquier cable Type-C de datos habitual de PC o de teléfono móvil.</p>
+
+<h3>2.4.3 Ranura de expansión de interfaces</h3>
+<p>Esta ranura sigue el diseño que se describe a continuación y ofrece numerosas interfaces entre placas, de modo que un tercero puede desarrollar cualquier placa de expansión. Tenga en cuenta que las versiones de hardware 3.9 y posteriores ya no incluyen esta interfaz de expansión.</p>
+<figure><img src="figuras/p11_1.png"><figcaption>Señales del conector de expansión J11 (X0812FVS-20CS-9TV01).</figcaption></figure>
+<p>Un tercero puede interactuar con el driver mediante SPI, USART, I²C, PWM, ADC, GPIO, etc., para implementar todo tipo de funciones de expansión.</p>
+<p>El conector montado en la placa es el modelo X0812FVS-20CS-9TV01 (hembra) y el de la placa de expansión el X0812WVS-20AS-9TV01 (macho), ambos de la marca Xingkun (星坤).</p>
+<table>
+<tr><th style="width:50%">Hembra X0812FVS-20CS-9TV01</th><th>Macho X0812WVS-20AS-9TV01</th></tr>
+<tr>
+<td style="text-align:center"><img src="figuras/p11_2.png" style="max-width:95%"></td>
+<td style="text-align:center"><img src="figuras/p11_3.png" style="max-width:95%"></td>
+</tr>
+</table>
+
+<h3>2.4.4 Interfaz SWD de depuración</h3>
+<p>Son orificios para pines con paso de 2 mm; el usuario puede soldar una tira de pines rectos de 2 mm, como se ve en las figuras siguientes.</p>
+<figure><img src="figuras/p11_4.png" style="max-height:70mm"><figcaption>Tiras de pines macho y hembra de 2 mm de paso.</figcaption></figure>
+<figure><img src="figuras/p11_5.png" style="max-height:45mm"><figcaption>Dimensiones de la tira de pines de 2 mm de paso.</figcaption></figure>
+<figure><img src="figuras/p12_1.png" style="max-height:70mm"><figcaption>Señales de la interfaz SWD en la placa: SWDIO, GND, SWDCLK y 3,3 V.</figcaption></figure>
+
+<h3>2.4.5 Interfaz del segundo encoder</h3>
+<p>Son orificios para pines con paso de 2 mm; el usuario puede soldar una tira de pines rectos de 2 mm (véase el apartado 2.4.4).</p>
+<p>Esta interfaz permite comunicarse con el segundo encoder mediante USART (TX/RX) o I²C (SCL/SDA).</p>
+<figure><img src="figuras/p12_2.png" style="max-height:55mm"><figcaption>Señales del segundo encoder: GND, 3,3 V, TX/SCL y RX/SDA.</figcaption></figure>
+
+<h3>2.4.6 Interfaz de temperatura del motor</h3>
+<p>El motor lleva incorporada una resistencia NTC de 10 kΩ; sus dos hilos se sueldan a MOT_TEMP y GND, sin orden concreto.</p>
+<figure><img src="figuras/p12_3.png" style="max-height:45mm"><figcaption>Señales de la interfaz de temperatura del motor: MOT_TEMP y GND.</figcaption></figure>
+
+<h3>2.4.7 Interfaz del freno de retención / resistencia de frenado</h3>
+<p>De los cinco orificios del conector que muestra la figura, los dos superiores son la interfaz del freno de retención o de la resistencia de frenado. Son orificios para pines de 2 mm de paso; el usuario puede soldar una tira de pines rectos de 2 mm (véase el apartado 2.4.4).</p>
+<p>Cuando se usa como interfaz de freno de retención, el driver entrega por ella una corriente continua mientras está alimentado, de modo que el freno permanece abierto y el motor puede girar con normalidad. Si el driver se queda sin alimentación, esa corriente cesa, el freno se cierra y el motor queda bloqueado en la posición en la que estaba.</p>
+<p>Cuando se usa como interfaz de resistencia de frenado, puede conectarse una resistencia de frenado externa (también llamada resistencia de descarga): cuando la fuerza contraelectromotriz supera la tensión umbral, la corriente se disipa por esa resistencia, lo que evita que no se pueda frenar de emergencia o que la contraelectromotriz dañe el driver.</p>
+<figure><img src="figuras/p13_1.png" style="max-height:65mm"><figcaption>Señales del freno / resistencia de frenado: EMG y GND.</figcaption></figure>
+
+<h3>2.4.8 Interfaz de los finales de carrera</h3>
+<p>El driver ofrece dos interfaces de final de carrera y suministra 12 V para alimentarlos. Son orificios para pines de 2 mm de paso; el usuario puede soldar una tira de pines rectos de 2 mm (véase el apartado 2.4.4).</p>
+<p>LW1 es el final de carrera de posición mínima y LW2 el de posición máxima. Pueden conectarse interruptores de dos hilos o interruptores NPN de tres hilos.</p>
+<figure><img src="figuras/p14_1.png" style="max-height:65mm"><figcaption>Señales de los finales de carrera: GND, 12 V, LW1 y LW2.</figcaption></figure>
+
+<h2>2.5 Componentes principales y sus especificaciones</h2>
+<table>
+<tr><th style="width:10%">N.º</th><th style="width:30%">Componente</th><th>Modelo / especificación</th><th style="width:12%">Cantidad</th></tr>
+<tr><td>1</td><td>MCU</td><td>N32G455</td><td>1</td></tr>
+<tr><td>2</td><td>Chip driver de puerta</td><td>FD6288Q</td><td>1</td></tr>
+<tr><td>3</td><td>Chip de encoder magnético</td><td>MA732, absoluto de 14 bits</td><td>1</td></tr>
+<tr><td>4</td><td>MOSFET</td><td>JMSH1004NG, 100 V / 120 A</td><td>6</td></tr>
+</table>
+
+</body></html>

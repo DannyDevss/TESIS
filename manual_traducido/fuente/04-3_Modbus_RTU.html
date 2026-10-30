@@ -1,0 +1,644 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 4.3 Protocolo RS485 (Modbus RTU)</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>4.3 Protocolo RS485 (Modbus RTU)</h1>
+<p class="origen">Traducción de la sección 4.3 del manual GIM6010-8 rev 2.2 (págs. 56–80 del original).</p>
+
+<p>Tenga en cuenta que, en las versiones de hardware 3.10 y posteriores, la interfaz de comunicación admite RS485, pulso/dirección y PWM. Con el comando siguiente se asegura de que la interfaz es RS485:</p>
+<pre>odrv0.config.comm_intf_mux = 1</pre>
+<p>En el Motor Wizard también puede cambiarse la interfaz física desde los parámetros de comunicación.</p>
+<p>El Modbus RTU sobre RS485 admite una velocidad máxima de 115 200 bps; la velocidad de fábrica es 115 200 bps.</p>
+
+<h2>4.3.1 Modbus RTU</h2>
+<p>Sobre el estándar industrial Modbus RTU, los códigos de función admitidos por ahora son:</p>
+<table>
+<tr><th style="width:20%">Código de función</th><th>Significado</th></tr>
+<tr><td>0x04</td><td>Leer uno o varios registros de entrada</td></tr>
+<tr><td>0x03</td><td>Leer varios registros de retención (<em>holding</em>)</td></tr>
+<tr><td>0x06</td><td>Escribir un registro de retención</td></tr>
+<tr><td>0x10</td><td>Escribir varios registros de retención</td></tr>
+</table>
+<div class="nota">En todas las tramas de este apartado, <code>XX</code> es un byte cuyo valor depende del caso: la dirección del esclavo, el valor escrito o el CRC (校验码, «código de verificación»). El CRC ocupa siempre los dos últimos bytes. Los valores de 32 bits se reparten entre dos registros consecutivos: el primero contiene los 16 bits altos y el segundo los 16 bits bajos; hay que leerlos o escribirlos siempre juntos, accediendo a la dirección del primero, y nunca por separado. Los números en coma flotante de 32 bits se codifican según la norma IEEE 754 (puede comprobarse la codificación en <code>https://www.h-schmidt.net/FloatConverter/IEEE754.html</code>). Cuando el texto remite a «la tabla de códigos de error del apartado 5.2», se refiere a la tabla de códigos de error del capítulo 5, que en esta revisión del manual está numerada como 5.7.</div>
+
+<h2>4.3.2 Registros de entrada</h2>
+<p>Los registros de entrada solo pueden leerse, no escribirse; reflejan estados o magnitudes dinámicas del sistema, como la información de errores, la tensión o la corriente. Los registros de entrada admitidos por ahora son los siguientes.</p>
+
+<h3>➢ 0x01: estado del motor</h3>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 01</code></td><td><code>00 01</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>02</code></td><td><code>State0 State1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>State0 es siempre 0 y State1 es el código de estado del motor:</p>
+<table>
+<tr><th style="width:28%">Código de estado</th><th>Descripción</th></tr>
+<tr><td>1</td><td>Reposo</td></tr><tr><td>3</td><td>Calibración completa</td></tr>
+<tr><td>4</td><td>Calibración del motor</td></tr><tr><td>7</td><td>Calibración del encoder</td></tr>
+<tr><td>8</td><td>Funcionamiento en lazo cerrado</td></tr><tr><td>11</td><td>Búsqueda del cero (<em>homing</em>)</td></tr>
+</table>
+<h3>➢ 0x02: indicadores de error</h3>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 02</code></td><td><code>00 01</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>02</code></td><td><code>Flag0 Flag1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>Flag0 es siempre 0 y Flag1 es el indicador de errores: cada bit a 1 significa que se ha producido el error correspondiente.</p>
+<table>
+<tr><th>bit7~bit5</th><th>bit4</th><th>bit3</th><th>bit2</th><th>bit1</th><th>bit0</th></tr>
+<tr><td>Sin significado</td><td>Error del driver</td><td>Error del sistema</td><td>Error de control</td><td>Error del encoder</td><td>Error del motor</td></tr>
+</table>
+<h3>➢ 0x03: código de error del driver 1 &nbsp;·&nbsp; 0x04: código de error del driver 2</h3>
+<p>El código de error del driver es un entero sin signo de 32 bits: el código de error 1 son sus 16 bits altos y el código de error 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x03 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 03</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>E0 E1 E2 E3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>E0 E1 E2 E3 forman el código de error del driver; consulte la tabla de códigos de error del apartado 5.2.</p>
+<h3>➢ 0x05 a 0x08: códigos de error del motor 1 a 4</h3>
+<p>El código de error del motor es un entero sin signo de 64 bits: el código 1 son sus bits 63 a 48, el código 2 los bits 47 a 32, el código 3 los bits 31 a 16 y el código 4 los bits 15 a 0. Solo puede obtenerse accediendo a la dirección de registro 0x05 y leyendo los cuatro registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 05</code></td><td><code>00 04</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>8 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>08</code></td><td><code>E0 E1 E2 E3 E4 E5 E6 E7</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>E0 … E7 forman el código de error del motor; consulte la tabla de códigos de error del apartado 5.2.</p>
+<h3>➢ 0x09: código de error del encoder 1 &nbsp;·&nbsp; 0x0A: código de error del encoder 2</h3>
+<p>El código de error encoder es un entero sin signo de 32 bits: el código de error 1 son sus 16 bits altos y el código de error 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x09 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 09</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>E0 E1 E2 E3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>E0 E1 E2 E3 forman el código de error encoder; consulte la tabla de códigos de error del apartado 5.2.</p>
+<h3>➢ 0x0B: código de error del control 1 &nbsp;·&nbsp; 0x0C: código de error del control 2</h3>
+<p>El código de error de control es un entero sin signo de 32 bits: el código de error 1 son sus 16 bits altos y el código de error 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x0B y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 0B</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>E0 E1 E2 E3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>E0 E1 E2 E3 forman el código de error de control; consulte la tabla de códigos de error del apartado 5.2.</p>
+<h3>➢ 0x0D: código de error del sistema 1 &nbsp;·&nbsp; 0x0E: código de error del sistema 2</h3>
+<p>El código de error del sistema es un entero sin signo de 32 bits: el código de error 1 son sus 16 bits altos y el código de error 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x0D y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 0D</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>E0 E1 E2 E3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>E0 E1 E2 E3 forman el código de error del sistema; consulte la tabla de códigos de error del apartado 5.2.</p>
+<h3>➢ 0x0F: realimentación de posición 1 &nbsp;·&nbsp; 0x10: realimentación de posición 2</h3>
+<p>La realimentación de posición es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x0F y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 0F</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>P0 P1 P2 P3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>P0 P1 P2 P3 forman la realimentación de posición, codificada en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x11: realimentación de velocidad 1 &nbsp;·&nbsp; 0x12: realimentación de velocidad 2</h3>
+<p>La realimentación de velocidad es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x11 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 11</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 forman la realimentación de velocidad, codificada en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x13: realimentación de la tensión del bus 1 &nbsp;·&nbsp; 0x14: realimentación de la tensión del bus 2</h3>
+<p>La realimentación de la tensión del bus es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x13 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 13</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 forman la realimentación de la tensión del bus, codificada en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x15: realimentación de la corriente del bus 1 &nbsp;·&nbsp; 0x16: realimentación de la corriente del bus 2</h3>
+<p>La realimentación de la corriente del bus es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x15 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 15</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>I0 I1 I2 I3 forman la realimentación de la corriente del bus, codificada en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x17: consigna de corriente del eje Q 1 &nbsp;·&nbsp; 0x18: consigna de corriente del eje Q 2</h3>
+<p>La consigna de corriente del eje Q es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x17 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 17</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>I0 I1 I2 I3 forman la consigna de corriente del eje Q, codificada en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x19: realimentación de corriente del eje Q 1 &nbsp;·&nbsp; 0x1A: realimentación de corriente del eje Q 2</h3>
+<p>La realimentación de corriente del eje Q es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x19 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 19</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>I0 I1 I2 I3 forman la realimentación de corriente del eje Q, codificada en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x31: valor devuelto del acceso libre a endpoints 1 &nbsp;·&nbsp; 0x32: valor devuelto 2</h3>
+<p>El acceso libre a <em>endpoints</em> permite al usuario leer o escribir cualquier parámetro admitido: un «endpoint» representa un parámetro, y cada parámetro tiene un número de endpoint único. Cuando el usuario quiere leer un parámetro, obtiene su número de endpoint del archivo de descripción de endpoints, lo escribe en el registro de retención 0xA1 y después lee el registro de entrada 0x31 para obtener el valor del parámetro. La dirección de descarga del archivo de descripción de endpoints está en la explicación del registro de retención 0xA1.</p>
+<p>El valor devuelto es un dato de 32 bits, que puede ser un entero de 16 bits, un entero de 32 bits o un número en coma flotante de 32 bits: el valor devuelto 1 son sus 16 bits altos y el valor devuelto 2 sus 16 bits bajos. Solo puede obtenerse accediendo a la dirección de registro 0x31 y leyendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>00 31</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>04</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 son los cuatro bytes del valor devuelto, del más significativo al menos significativo; si es un número en coma flotante de 32 bits, se codifica según la norma IEEE 754.</p>
+<h2>4.3.3 Registros de retención</h2>
+<p>Los registros de retención pueden leerse y escribirse. Los admitidos por ahora, con su función, son los siguientes.</p>
+<h3>➢ 0x61: parada de emergencia</h3>
+<p>Escribir cualquier valor en este registro provoca la parada de emergencia del motor.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 61</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 61</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table>
+<h3>➢ 0x62: ID de nodo</h3>
+<p>Con el código de función 06 se escribe el ID de nodo; con el código 03 se lee el ID actual.</p>
+<p><strong>Petición de escritura del ID de nodo:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 62</code></td><td><code>ID0 ID1</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 62</code></td><td><code>ID0 ID1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>ID0 e ID1 son los 8 bits altos y los 8 bits bajos del nuevo ID de nodo.</p>
+<p><strong>Petición de lectura del ID de nodo actual:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 62</code></td><td><code>00 01</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>02</code></td><td><code>ID0 ID1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<h3>➢ 0x63: control del estado</h3>
+<p>Con el código de función 06 se escribe el estado del motor (es decir, se cambia su estado).</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 63</code></td><td><code>S0 S1</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 63</code></td><td><code>S0 S1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>S0 y S1 son los 8 bits altos y bajos del estado del motor. Los estados son:</p>
+<table>
+<tr><th style="width:28%">Código de estado</th><th>Descripción</th></tr>
+<tr><td>1</td><td>Reposo</td></tr><tr><td>3</td><td>Calibración completa</td></tr>
+<tr><td>4</td><td>Calibración del motor</td></tr><tr><td>7</td><td>Calibración del encoder</td></tr>
+<tr><td>8</td><td>Funcionamiento en lazo cerrado</td></tr><tr><td>11</td><td>Búsqueda del cero (<em>homing</em>)</td></tr>
+</table>
+<p>Por ejemplo, poner el estado del motor a 8 (lazo cerrado) es lo que habitualmente se llama «arrancar el motor», y ponerlo a 1 (reposo) es «parar el motor».</p>
+<h3>➢ 0x64: modo de control</h3>
+<p>Con el código de función 06 el usuario puede cambiar el valor de este registro para pasar a control de par, de velocidad o de posición; con el código 03 puede leer el modo de control actual.</p>
+<p><strong>Petición de cambio del modo de control:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 64</code></td><td><code>M0 M1</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 64</code></td><td><code>M0 M1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura del modo de control:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 64</code></td><td><code>00 01</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>02</code></td><td><code>M0 M1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>M0 y M1 son los 8 bits altos y bajos del modo de control. Los modos son:</p>
+<table>
+<tr><th style="width:28%">Modo de control</th><th>Descripción</th></tr>
+<tr><td>1</td><td>Control de par</td></tr><tr><td>2</td><td>Control de velocidad</td></tr><tr><td>3</td><td>Control de posición</td></tr>
+</table>
+<h3>➢ 0x65: modo de entrada</h3>
+<p>Con el código de función 06 el usuario puede cambiar el valor de este registro para elegir cómo se introduce la consigna (entrada directa, entrada filtrada, etc.); con el código 03 puede leer el modo de entrada actual.</p>
+<p><strong>Petición de cambio del modo de entrada:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 65</code></td><td><code>M0 M1</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 65</code></td><td><code>M0 M1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura del modo de entrada:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 65</code></td><td><code>00 01</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>02</code></td><td><code>M0 M1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>M0 y M1 son los 8 bits altos y bajos del modo de entrada. Los modos son:</p>
+<table>
+<tr><th style="width:10%">Modo</th><th style="width:22%">Nombre</th><th>Explicación</th></tr>
+<tr><td>1</td><td>Entrada directa</td><td>La consigna introducida por el usuario se usa directamente como consigna del driver</td></tr>
+<tr><td>2</td><td>Rampa de velocidad</td><td>La consigna de velocidad del driver alcanza la velocidad indicada por el usuario en un cierto tiempo, siguiendo una pendiente determinada; solo para el control de velocidad</td></tr>
+<tr><td>3</td><td>Filtro de posición</td><td>La consigna de posición del driver es la posición indicada por el usuario después de pasar por un filtro; solo para el control de posición</td></tr>
+<tr><td>5</td><td>Curva trapezoidal</td><td>El driver mueve el motor hasta la consigna del usuario siguiendo un perfil de velocidad trapezoidal, cuya pendiente de subida (aceleración), pendiente de bajada (deceleración) y velocidad de crucero pueden configurarse; véanse los registros 0x70 a 0x75</td></tr>
+<tr><td>6</td><td>Rampa de par</td><td>La consigna de par del driver alcanza el par indicado por el usuario en un cierto tiempo, siguiendo una pendiente determinada; solo para el control de par</td></tr>
+</table>
+<h3>➢ 0x66: consigna del control de posición 1 &nbsp;·&nbsp; 0x67: consigna del control de posición 2</h3>
+<p>El valor de «consigna del control de posición» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x66 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 66</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>P0 P1 P2 P3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 66</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 66</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>P0 P1 P2 P3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>P0 P1 P2 P3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x68: consigna del control de velocidad 1 &nbsp;·&nbsp; 0x69: consigna del control de velocidad 2</h3>
+<p>El valor de «consigna del control de velocidad» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x68 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 68</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 68</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 68</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x6A: consigna del control de par 1 &nbsp;·&nbsp; 0x6B: consigna del control de par 2</h3>
+<p>El valor de «consigna del control de par» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x6A y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 6A</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>T0 T1 T2 T3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 6A</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 6A</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>T0 T1 T2 T3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>T0 T1 T2 T3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x6C: límite de velocidad 1 &nbsp;·&nbsp; 0x6D: límite de velocidad 2</h3>
+<p>El valor de «límite de velocidad» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x6C y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 6C</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 6C</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 6C</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x6E: límite de corriente 1 &nbsp;·&nbsp; 0x6F: límite de corriente 2</h3>
+<p>El valor de «límite de corriente» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x6E y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 6E</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 6E</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 6E</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>I0 I1 I2 I3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x70: límite de velocidad del control de posición trapezoidal 1 &nbsp;·&nbsp; 0x71: límite de velocidad del control de posición trapezoidal 2</h3>
+<p>El valor de «límite de velocidad del control de posición trapezoidal» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x70 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 70</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 70</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 70</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x72: límite de aceleración del control de posición trapezoidal 1 &nbsp;·&nbsp; 0x73: límite de aceleración del control de posición trapezoidal 2</h3>
+<p>El valor de «límite de aceleración del control de posición trapezoidal» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x72 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 72</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>A0 A1 A2 A3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 72</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 72</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>A0 A1 A2 A3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>A0 A1 A2 A3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x74: límite de deceleración del control de posición trapezoidal 1 &nbsp;·&nbsp; 0x75: límite de deceleración del control de posición trapezoidal 2</h3>
+<p>El valor de «límite de deceleración del control de posición trapezoidal» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x74 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 74</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>D0 D1 D2 D3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 74</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 74</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>D0 D1 D2 D3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>D0 D1 D2 D3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x76: inercia 1 &nbsp;·&nbsp; 0x77: inercia 2</h3>
+<p>El valor de «inercia» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x76 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 76</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 76</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 76</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>I0 I1 I2 I3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>I0 I1 I2 I3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x78: ganancia de posición 1 &nbsp;·&nbsp; 0x79: ganancia de posición 2</h3>
+<p>El valor de «ganancia de posición» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x78 y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 78</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>G0 G1 G2 G3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 78</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 78</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>G0 G1 G2 G3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>G0 G1 G2 G3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x7A: ganancia de velocidad 1 &nbsp;·&nbsp; 0x7B: ganancia de velocidad 2</h3>
+<p>El valor de «ganancia de velocidad» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x7A y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 7A</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>G0 G1 G2 G3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 7A</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 7A</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>G0 G1 G2 G3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>G0 G1 G2 G3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x7C: ganancia integral de velocidad 1 &nbsp;·&nbsp; 0x7D: ganancia integral de velocidad 2</h3>
+<p>El valor de «ganancia integral de velocidad» es un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede obtenerse o modificarse accediendo a la dirección de registro 0x7C y leyendo o escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura o actualización:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 7C</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>G0 G1 G2 G3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 7C</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p><strong>Petición de lectura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>00 7C</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>03</code></td><td><code>04</code></td><td><code>G0 G1 G2 G3</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>G0 G1 G2 G3 son los cuatro bytes del valor, del más significativo al menos significativo, codificado en coma flotante de 32 bits según la norma IEEE 754.</p>
+<h3>➢ 0x7E: reinicio</h3><p>Escribir cualquier valor en este registro reinicia el driver del motor.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 7E</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 7E</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table>
+<h3>➢ 0x7F: borrado de errores</h3><p>Escribir cualquier valor en este registro borra todos los errores y avisos.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 7F</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 7F</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table>
+<h3>➢ 0x80: guardar la configuración</h3><p>Escribir cualquier valor en este registro guarda de forma permanente todos los parámetros actuales en la memoria Flash del driver.</p>
+<p><strong>Petición del maestro:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 80</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 80</code></td><td><code>XX XX</code></td><td><code>XX XX</code></td></tr>
+</table>
+<h3>➢ 0xA1: número de endpoint del acceso libre a endpoints</h3>
+<p>El acceso libre a <em>endpoints</em> permite al usuario leer o escribir cualquier parámetro admitido: un «endpoint» representa un parámetro, y cada parámetro tiene un número de endpoint único. Cuando el usuario quiere leer o escribir un parámetro, obtiene su número de endpoint del archivo de descripción de endpoints y lo escribe en el registro de retención 0xA1; después lee el registro de entrada 0x31 para obtener el valor del parámetro, o escribe en el registro de retención 0xA2 para actualizarlo.</p>
+<p>El número de endpoint es un entero sin signo de 16 bits. Descargue el archivo JSON con los números de endpoint de todos los parámetros y funciones de interfaz:</p>
+<ul><li>versión 0.5.13: <code>https://bl.cyberbeast.cn/actuator/endpoints_0.5.13.json</code></li>
+<li>versión 0.5.14: <code>https://bl.cyberbeast.cn/actuator/endpoints_0.5.14.json</code></li></ul>
+<p><strong>Petición de escritura del número de endpoint:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 A1</code></td><td><code>E0 E1</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>Valor del registro</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>06</code></td><td><code>00 A1</code></td><td><code>E0 E1</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>E0 y E1 son los dos bytes del número de endpoint de 16 bits, del más significativo al menos significativo.</p>
+<h3>➢ 0xA2: valor a escribir en el endpoint 1 &nbsp;·&nbsp; 0xA3: valor a escribir 2</h3>
+<p>El valor a escribir mediante el acceso libre a endpoints es un dato de 32 bits, que puede ser un entero de 16 bits, un entero de 32 bits o un número en coma flotante de 32 bits: el valor 1 son sus 16 bits altos y el valor 2 sus 16 bits bajos. Solo puede actualizarse accediendo a la dirección de registro 0xA2 y escribiendo los dos registros a la vez; no se puede acceder a ninguno de ellos por separado.</p>
+<p><strong>Petición de escritura:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>N.º de bytes</th><th>Valor de los registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>1 byte</td><td>4 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 A2</code></td><td><code>00 02</code></td><td><code>04</code></td><td><code>V0 V1 V2 V3</code></td><td><code>XX XX</code></td></tr>
+</table><p><strong>Respuesta del motor:</strong></p><table>
+<tr><th>Dirección</th><th>Cód. función</th><th>Dirección de registro</th><th>N.º de registros</th><th>CRC</th></tr>
+<tr><td>1 byte</td><td>1 byte</td><td>2 bytes</td><td>2 bytes</td><td>2 bytes</td></tr>
+<tr><td>XX</td><td><code>10</code></td><td><code>00 A2</code></td><td><code>00 02</code></td><td><code>XX XX</code></td></tr>
+</table>
+<p>V0 V1 V2 V3 son los cuatro bytes del valor escrito, del más significativo al menos significativo; si el endpoint es un número en coma flotante de 32 bits, se codifica según la norma IEEE 754.</p>
+
+<h2>4.3.4 El protocolo Modbus en la práctica</h2>
+<p>En los ejemplos siguientes se supone que la dirección del motor es 1.</p>
+
+<h3>1) Caso práctico: control de velocidad</h3>
+<p>La secuencia de tramas que hay que enviar es:</p>
+<table>
+<tr><th style="width:40%">Datos de la trama</th><th style="width:22%">Registro</th><th>Descripción</th></tr>
+<tr><td><code>01 06 00 64 00 02 XX XX</code></td><td>Registro de retención 0x64</td><td>Fija el modo de control en 2 (control de velocidad)</td></tr>
+<tr><td><code>01 06 00 65 00 02 XX XX</code></td><td>Registro de retención 0x65</td><td>Fija el modo de entrada en 2 (rampa de velocidad)</td></tr>
+<tr><td><code>01 06 00 63 00 08 XX XX</code></td><td>Registro de retención 0x63</td><td>Cambia el estado del motor a 8 (funcionamiento en lazo cerrado)</td></tr>
+<tr><td><code>01 10 00 68 00 02 04 40 13 33 33 XX XX</code></td><td>Registro de retención 0x68</td><td>Fija la velocidad objetivo en 2,3 r/s, que en coma flotante de 32 bits es 40 13 33 33</td></tr>
+</table>
+
+<h3>2) Caso práctico: control de posición</h3>
+<p>La secuencia de tramas que hay que enviar es:</p>
+<table>
+<tr><th style="width:40%">Datos de la trama</th><th style="width:22%">Registro</th><th>Descripción</th></tr>
+<tr><td><code>01 06 00 64 00 03 XX XX</code></td><td>Registro de retención 0x64</td><td>Fija el modo de control en 3 (control de posición)</td></tr>
+<tr><td><code>01 06 00 65 00 03 XX XX</code></td><td>Registro de retención 0x65</td><td>Fija el modo de entrada en 3 (filtro de posición)</td></tr>
+<tr><td><code>01 06 00 63 00 08 XX XX</code></td><td>Registro de retención 0x63</td><td>Cambia el estado del motor a 8 (funcionamiento en lazo cerrado)</td></tr>
+<tr><td><code>01 10 00 68 00 02 04 40 49 0F F9 XX XX</code></td><td>Registro de retención 0x68</td><td>Fija el objetivo en 3,1416 vueltas, que en coma flotante de 32 bits es 40 49 0F F9</td></tr>
+</table>
+<div class="nota"><strong>Nota del traductor:</strong> la última fila reproduce el original, que escribe en el registro 0x68 y habla de «velocidad objetivo». Por coherencia con el resto del apartado, en una secuencia de control de posición la consigna se escribe en el registro 0x66 (consigna del control de posición).</div>
+
+</body></html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — Preliminares</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<div class="portada">
+<h1>Motor GIM6010-8</h1>
+<div class="sub">Manual de usuario del micromotor · rev 2.2</div>
+<div class="sub">Jiangxi Sitaiwei Automation Equipment Co., Ltd. (SteadyWin)</div>
+<div class="sub" style="margin-top:20mm; font-size:11pt; color:#666;">Traducción al español del original en chino<br>Documento 00 — Preliminares</div>
+</div>
+
+<p style="page-break-before: always;"></p>
+<h1>Índice general del manual</h1>
+<p class="origen">La traducción se reparte en varios PDF, uno por sección. Entre paréntesis, las páginas del original.</p>
+<table>
+<tr><th style="width:38%">Archivo</th><th>Contenido</th></tr>
+<tr><td>00_Preliminares</td><td>Portada, índice, registro de versiones, precauciones, aviso legal y política de postventa (págs. 1–4)</td></tr>
+<tr><td>01_Especificaciones_motor</td><td>1 Parámetros del motor: planos y dimensiones, características eléctricas y mecánicas (págs. 5–7)</td></tr>
+<tr><td>02_Informacion_driver</td><td>2 Información del driver: aspecto, interfaces, especificaciones, definición de conectores y componentes principales (págs. 8–14)</td></tr>
+<tr><td>03-1_Guia_puesta_en_marcha</td><td>3.1 Guía de puesta en marcha: preparación, software de PC, configuración, calibración, cambio de ID, guardado de parámetros, modos de control y funciones avanzadas (págs. 15–38)</td></tr>
+<tr><td>03-2_Actualizacion_firmware</td><td>3.2 Descarga y actualización de firmware (págs. 39–40)</td></tr>
+<tr><td>04-1_CAN_Simple</td><td>4.1 Protocolo CAN Simple (págs. 41–53)</td></tr>
+<tr><td>04-2_CANopen</td><td>4.2 Protocolo CANopen (págs. 54–56)</td></tr>
+<tr><td>04-3_Modbus_RTU</td><td>4.3 Protocolo RS485 (Modbus RTU) (págs. 56–80)</td></tr>
+<tr><td>04-4_Control_PWM</td><td>4.4 Control por entrada PWM (págs. 81–82)</td></tr>
+<tr><td>04-5_Pulso_Direccion</td><td>4.5 Control por pulso/dirección (págs. 83–84)</td></tr>
+<tr><td>04-6_SDK</td><td>4.6 SDK: Python, Arduino, ROS y C/C++ (págs. 85–94)</td></tr>
+<tr><td>05_FAQ_y_codigos_error</td><td>5 Preguntas frecuentes y códigos de error (págs. 95–96)</td></tr>
+</table>
+
+<h1>Registro de versiones</h1>
+<table>
+<tr><th style="width:12%">Versión</th><th style="width:18%">Fecha</th><th>Revisión / descripción</th></tr>
+<tr><td>0.1</td><td>2023-12-05</td><td>Primera versión con soporte de <code>odrivetool</code></td></tr>
+<tr><td>0.2</td><td>2023-12-15</td><td>Se añade la lista de comandos y su clasificación</td></tr>
+<tr><td>0.3</td><td>2023-12-19</td><td>Se añaden los SDK de Python, Arduino y ROS</td></tr>
+<tr><td>0.4</td><td>2023-12-23</td><td>Se añade la descripción del cambio de compatibilidad entre USB y CAN</td></tr>
+<tr><td>0.5</td><td>2023-12-29</td><td>Se añaden casos prácticos de ajuste con el software de PC</td></tr>
+<tr><td>0.6</td><td>2024-01-02</td><td>Se añaden el protocolo CAN y casos prácticos de ajuste con Python</td></tr>
+<tr><td>0.7</td><td>2024-01-08</td><td>Se añade la opción del interruptor de la resistencia de terminación de 120 Ω del bus CAN</td></tr>
+<tr><td>0.8</td><td>2024-02-15</td><td>Se añade el contenido relativo al segundo encoder y al ajuste del cero de usuario</td></tr>
+<tr><td>0.9</td><td>2024-02-23</td><td>Se añaden los comandos CAN que permiten modificar parámetros e invocar funciones de la interfaz</td></tr>
+<tr><td>0.91</td><td>2024-03-12</td><td>Se añade la dirección de descarga del driver del software de descarga de Nations (国民)</td></tr>
+<tr><td>0.92</td><td>2024-03-22</td><td>Se añade la explicación de la velocidad CAN por defecto y del rango de la posición inicial del rotor cuando actúa el segundo encoder</td></tr>
+<tr><td>1.0</td><td>2024-03-26</td><td>Se añade la explicación de la protección térmica del motor</td></tr>
+<tr><td>1.1</td><td>2024-05-20</td><td>Se añade la guía de puesta en marcha</td></tr>
+<tr><td>1.2</td><td>2024-05-24</td><td>Se corrigen errores del protocolo CAN MIT</td></tr>
+<tr><td>1.3</td><td>2024-07-02</td><td>Se añade la tabla de códigos de error</td></tr>
+<tr><td>1.4</td><td>2024-08-18</td><td>Se añaden las instrucciones para modificar el ID</td></tr>
+<tr><td>1.5</td><td>2024-08-21</td><td>Se añaden las instrucciones de uso de la resistencia de frenado</td></tr>
+<tr><td>1.6</td><td>2024-08-31</td><td>Se añaden las direcciones de descarga de los archivos <code>endpoints.json</code> de las distintas versiones</td></tr>
+<tr><td>1.7</td><td>2024-09-05</td><td>Se añade la descripción del protocolo CANopen</td></tr>
+<tr><td>1.8</td><td>2024-10-08</td><td>Se ordenan los tipos de error y se añade la lista de códigos de error del encoder</td></tr>
+<tr><td>1.9</td><td>2024-10-15</td><td>Se añaden las instrucciones del software de PC «Motor Genie» (电机精灵)</td></tr>
+<tr><td>2.0</td><td>2024-12-06</td><td>Se añaden la descripción del protocolo Modbus RTU y el SDK de C/C++</td></tr>
+<tr><td>2.1</td><td>2025-01-23</td><td>Se añade la descripción del acceso aleatorio a endpoints por Modbus</td></tr>
+<tr><td>2.2</td><td>2025-05-20</td><td>Se añade la descripción del control por PWM y por pulso/dirección</td></tr>
+</table>
+
+<h1>Precauciones</h1>
+<div class="aviso">
+<ol>
+<li>Utilice el producto respetando los parámetros de trabajo indicados en este manual; de lo contrario se le causarán daños irreversibles.</li>
+<li>Durante el funcionamiento del motor, disponga protecciones de sobrecorriente y sobretensión en la alimentación para no dañar el driver.</li>
+<li>Antes de usarlo compruebe que todas las piezas estén en buen estado; si falta alguna o está dañada, contacte cuanto antes con el soporte técnico.</li>
+<li>El driver no tiene protección contra inversión de polaridad: antes de conectar la alimentación consulte la sección 2.4.1 y asegúrese de que el positivo y el negativo son correctos.</li>
+<li>No toque con las manos las partes desnudas del driver: la electricidad estática puede dañarlo.</li>
+</ol>
+</div>
+
+<h1>Aviso legal</h1>
+<p>Antes de utilizar este producto, lea atentamente este manual y manéjelo conforme a su contenido. Si el usuario emplea el producto incumpliendo lo indicado en el manual, la empresa no asume responsabilidad alguna por los daños materiales o lesiones personales que se produzcan. Como el producto está formado por numerosas piezas, manténgalo fuera del alcance de los niños para evitar accidentes. Para prolongar su vida útil, no lo utilice en entornos de alta temperatura o alta presión. Este manual se ha redactado procurando incluir todas las funciones y las instrucciones de uso; sin embargo, debido a la mejora continua de las funciones y a los cambios de diseño, puede haber discrepancias con el producto adquirido.</p>
+<p>El manual puede diferir del producto real en color, aspecto y otros aspectos; prevalece el producto físico. La empresa puede introducir en cualquier momento las mejoras y correcciones necesarias sobre erratas o información inexacta de este manual, o mejorar los programas y equipos, sin previo aviso. Dichos cambios se incorporarán a las nuevas versiones del manual; solicítelas al soporte técnico. Todas las imágenes son solo orientativas para explicar las funciones; prevalece el producto físico.</p>
+
+<h1>Política de postventa</h1>
+<p>El servicio postventa de este producto se rige estrictamente por la «Ley de Protección de los Derechos e Intereses de los Consumidores de la República Popular China» y la «Ley de Calidad de los Productos de la República Popular China», con el contenido siguiente.</p>
+
+<h3>1. Plazo y contenido de la garantía</h3>
+<ol>
+<li>Los usuarios que compren el producto por canales en línea disponen de siete días desde el día siguiente a la recepción para devolverlo sin necesidad de justificación. Para la devolución, el usuario debe presentar un comprobante de compra válido y devolver la factura. Debe garantizar que el artículo conserva su calidad y funcionalidad originales, con el aspecto intacto y con las marcas y etiquetas del producto y de sus accesorios completas; si hubo obsequios, deben devolverse también. No se tramitará la devolución si el artículo presenta daños causados por el usuario, ha sido desmontado, o falta la caja o algún accesorio. Los gastos de transporte de la devolución corren por cuenta del usuario; si no los ha liquidado, se descontarán del importe reembolsado según el gasto real. El importe pagado se devuelve dentro de los siete días siguientes a la recepción del artículo devuelto, por el mismo medio con el que se pagó. La fecha efectiva de abono puede depender del banco o de la pasarela de pago.</li>
+<li>Dentro de los 7 días siguientes al día de recepción, si se produce un fallo de funcionamiento no imputable al usuario y así lo confirma el centro de servicio postventa de la empresa, se tramitará la devolución. El usuario debe presentar un comprobante de compra válido y devolver la factura, así como los obsequios recibidos.</li>
+<li>Entre los 7 y los 15 días desde la recepción, si se produce un fallo de funcionamiento no imputable al usuario y así lo confirma el centro de servicio postventa, se tramitará el cambio por un producto completo nuevo. Tras el cambio, el periodo de garantía del producto vuelve a contarse desde cero.</li>
+<li>Entre los 15 y los 365 días desde la recepción, si el centro de servicio postventa confirma que se trata de un fallo de calidad del propio producto, se ofrece reparación gratuita. Los productos defectuosos sustituidos pasan a ser propiedad de la empresa; los que no presenten fallo se devuelven tal cual. El producto sale de fábrica tras superar estrictos controles, por lo que ante fallos no atribuibles a su calidad la empresa puede rechazar la devolución o el cambio.</li>
+</ol>
+<p>Si esta política de postventa no coincide con la de la tienda, prevalece la de la tienda.</p>
+
+<h3>2. Exclusiones de la garantía</h3>
+<p>No quedan cubiertos por la garantía los casos siguientes:</p>
+<ol>
+<li>Que se haya superado el plazo de garantía fijado en las condiciones.</li>
+<li>Daños o destrucción del producto por un uso incorrecto, distinto del indicado en el manual.</li>
+<li>Daños o destrucción por manipulación, reparación, instalación, modificación o ensayos indebidos.</li>
+<li>Desgaste mecánico normal no derivado de un fallo de calidad.</li>
+<li>Daños producidos en condiciones de trabajo anómalas, entre otros: caídas, golpes, inmersión en líquidos o impactos violentos.</li>
+<li>Daños por catástrofes naturales (inundación, incendio, rayo, terremoto, etc.) o fuerza mayor.</li>
+<li>Daños por trabajar por encima del par de pico.</li>
+<li>Productos que no sean originales de la empresa o de los que no se pueda aportar un comprobante de compra legal.</li>
+<li>Fallos o daños debidos a causas ajenas al diseño, la tecnología, la fabricación o la calidad del producto.</li>
+<li>Daños causados por desmontar el producto por cuenta propia.</li>
+</ol>
+<p>En los casos anteriores, el usuario debe hacerse cargo de los costes.</p>
+
+</body></html>

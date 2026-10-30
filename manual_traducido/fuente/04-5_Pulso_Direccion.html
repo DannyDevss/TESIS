@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 4.5 Control por pulso/dirección</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>4.5 Control por pulso/dirección</h1>
+<p class="origen">Traducción de la sección 4.5 del manual GIM6010-8 rev 2.2 (págs. 83–84 del original).</p>
+
+<div class="aviso"><strong>Atención:</strong> compruebe que la versión de hardware es la 3.10 o posterior antes de usar esta función, que además es incompatible con la de los finales de carrera. Es la forma más sencilla de gobernar el driver, pero también la más primitiva y frágil: no la utilice salvo en situaciones especiales.</div>
+<p>Esta función permite controlar el motor sin escobillas mediante la clásica interfaz Step/Dir (pulso/dirección), de modo compatible con los drivers de motor paso a paso convencionales. En este modo:</p>
+<ul>
+<li><strong>Señal Step (pulso):</strong> cada flanco de subida hace avanzar el motor un paso predefinido (determinado por <code>steps_per_circular_range</code>). Frecuencia de Step máxima recomendada: 50 kHz.</li>
+<li><strong>Señal Dir (dirección):</strong> el nivel determina el sentido de giro (nivel alto: sentido horario; nivel bajo: sentido antihorario).</li>
+</ul>
+
+<h2>4.5.1 Conexionado</h2>
+<p>La línea de la señal Step (pulso) se conecta en la posición de CANH descrita en el apartado 2.4.1, y la de la señal Dir (dirección) en la de CANL. Esta entrada admite señales de pulso de 5 V o menos; asegúrese de que las señales Step y Dir comparten masa con el driver del motor, o podrían no reconocerse.</p>
+
+<h2>4.5.2 Configuración por software</h2>
+<h3>➢ Cambiar la interfaz de comunicación a Step/Dir</h3>
+<pre>odrv0.config.comm_intf_mux = 2</pre>
+<p>En el Motor Wizard también puede cambiarse la interfaz física desde los parámetros de comunicación; búsquela dentro de «电机参数» (parámetros del motor).</p>
+<figure><img src="figuras/p84_1.png" style="max-height:80mm"><figcaption>Selección de la interfaz física en los parámetros de comunicación del Motor Wizard.</figcaption></figure>
+
+<h3>➢ Asignar los GPIO al modo Step/Dir</h3>
+<pre>odrv0.axis0.config.step_gpio_pin = 6
+odrv0.axis0.config.dir_gpio_pin = 7</pre>
+
+<h3>➢ Configurar los pines Step/Dir</h3>
+<pre>odrv0.config.gpio6_mode = GPIO_MODE_DIGITAL_PULL_UP
+odrv0.config.gpio7_mode = GPIO_MODE_DIGITAL_PULL_UP</pre>
+
+<h3>➢ Habilitar Step/Dir</h3>
+<pre>odrv0.axis0.config.enable_step_dir = True</pre>
+<div class="nota"><strong>Nota:</strong> para salir del control por pulso/dirección hay que poner <code>enable_step_dir</code> a <code>False</code>, pasar al estado de reposo y volver después al control en lazo cerrado.</div>
+
+<h3>➢ Habilitar el <em>circular setpoint</em> (opcional)</h3>
+<p>Para evitar la pérdida de precisión cuando la posición objetivo crece mucho, ODrive ofrece el modo de consigna circular (<em>circular setpoint</em>), es decir, con envolvimiento de la posición objetivo: usar consignas cíclicas mantiene el error de coma flotante dentro de un margen controlado. Si se ordena al motor salir del rango cíclico, la consigna de posición se reajusta automáticamente para permanecer dentro de él.</p>
+<p>Habilitar el modo de consigna circular del controlador:</p>
+<pre>odrv0.axis0.controller.config.circular_setpoints = True</pre>
+<p>Fijar el rango de posición circular (en vueltas); la consigna queda acotada entre 0 y ese valor, y al superarlo vuelve al principio:</p>
+<pre># un ciclo completo cada 128 vueltas
+odrv0.axis0.controller.config.circular_setpoint_range = 128.0</pre>
+<p>Fijar cuántos pulsos STEP abarcan ese rango circular, lo que determina el desplazamiento que produce cada paso:</p>
+<pre># 1024 pasos por vuelta
+odrv0.axis0.controller.config.steps_per_circular_range = 128 * 1024</pre>
+
+<h3>➢ Guardar la configuración (opcional)</h3>
+<pre>odrv0.save_configuration()</pre>
+<p>Terminada esta configuración, ponga el motor en lazo cerrado en modo posición y ya podrá controlarlo por pulso/dirección.</p>
+<div class="nota"><strong>Nota del traductor:</strong> el original dice aquí «ya podrá controlarlo por PWM», por copia del apartado anterior; en esta sección el control es por pulso/dirección.</div>
+
+</body></html>

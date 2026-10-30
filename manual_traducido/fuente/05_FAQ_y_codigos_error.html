@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>GIM6010-8 — 5 Preguntas frecuentes y códigos de error</title><link rel="stylesheet" href="estilo.css"></head><body>
+
+<h1>5 Preguntas frecuentes y códigos de error (pendiente de actualizar)</h1>
+<p class="origen">Traducción de la sección 5 del manual GIM6010-8 rev 2.2 (págs. 95–96 del original). La numeración de los apartados (5.6 y 5.7) es la del original.</p>
+
+<h2>5.6 Preguntas frecuentes (FAQ)</h2>
+<p><em>El manual original no incluye contenido en este apartado.</em></p>
+
+<h2>5.7 Códigos de error</h2>
+<table>
+<tr><th style="width:14%">Categoría</th><th style="width:16%">Código</th><th style="width:36%">Texto en odrivetool</th><th>Descripción</th></tr>
+
+<tr><td rowspan="4">Error del sistema</td><td>0x00000002</td><td><code>DC_BUS_UNDER_VOLTAGE</code></td><td>Tensión de alimentación demasiado baja</td></tr>
+<tr><td>0x00000004</td><td><code>DC_BUS_OVER_VOLTAGE</code></td><td>Tensión de alimentación demasiado alta</td></tr>
+<tr><td>0x00000008</td><td><code>DC_BUS_OVER_REGEN_CURRENT</code></td><td>Corriente inversa (de carga) hacia la fuente demasiado alta</td></tr>
+<tr><td>0x00000010</td><td><code>DC_BUS_OVER_CURRENT</code></td><td>Corriente directa (de descarga) de la fuente demasiado alta</td></tr>
+
+<tr><td rowspan="9">Error del driver</td><td>0x00000001</td><td><code>INVALID_STATE</code></td><td>Estado del driver incorrecto</td></tr>
+<tr><td>0x00000040</td><td><code>MOTOR_FAILED</code></td><td>Error del motor</td></tr>
+<tr><td>0x00000100</td><td><code>ENCODER_FAILED</code></td><td>Error del encoder</td></tr>
+<tr><td>0x00000200</td><td><code>CONTROLLER_FAILED</code></td><td>Error del controlador</td></tr>
+<tr><td>0x00001000</td><td><code>MIN_ENDSTOP_PRESSED</code></td><td>Final de carrera inferior activado</td></tr>
+<tr><td>0x00002000</td><td><code>MAX_ENDSTOP_PRESSED</code></td><td>Final de carrera superior activado</td></tr>
+<tr><td>0x00004000</td><td><code>ESTOP_REQUESTED</code></td><td>Parada de emergencia</td></tr>
+<tr><td>0x00020000</td><td><code>HOMING_WITHOUT_ENDSTOP</code></td><td>Búsqueda del cero sin final de carrera</td></tr>
+<tr><td>0x00080000</td><td><code>UNKNOWN_POSITION</code></td><td>Sin información de posición</td></tr>
+
+<tr><td rowspan="24">Error del motor</td><td>0x00000001</td><td><code>PHASE_RESISTANCE_OUT_OF_RANGE</code></td><td>Resistencia entre fases fuera del rango normal</td></tr>
+<tr><td>0x00000002</td><td><code>PHASE_INDUCTANCE_OUT_OF_RANGE</code></td><td>Inductancia entre fases fuera del rango normal</td></tr>
+<tr><td>0x00000010</td><td><code>CONTROL_DEADLINE_MISSED</code></td><td>Frecuencia del FOC demasiado alta</td></tr>
+<tr><td>0x00000080</td><td><code>MODULATION_MAGNITUDE</code></td><td>Error en la modulación SVM</td></tr>
+<tr><td>0x00000400</td><td><code>CURRENT_SENSE_SATURATION</code></td><td>Saturación de la medida de corriente de fase</td></tr>
+<tr><td>0x00001000</td><td><code>CURRENT_LIMIT_VIOLATION</code></td><td>Corriente del motor excesiva</td></tr>
+<tr><td>0x00020000</td><td><code>MOTOR_THERMISTOR_OVER_TEMP</code></td><td>Temperatura del motor demasiado alta</td></tr>
+<tr><td>0x00040000</td><td><code>FET_THERMISTOR_OVER_TEMP</code></td><td>Temperatura del driver demasiado alta</td></tr>
+<tr><td>0x00080000</td><td><code>TIMER_UPDATE_MISSED</code></td><td>El procesamiento del FOC no llega a tiempo</td></tr>
+<tr><td>0x00100000</td><td><code>CURRENT_MEASUREMENT_UNAVAILABLE</code></td><td>Se ha perdido el muestreo de la corriente de fase</td></tr>
+<tr><td>0x00200000</td><td><code>CONTROLLER_FAILED</code></td><td>Error de control</td></tr>
+<tr><td>0x00400000</td><td><code>I_BUS_OUT_OF_RANGE</code></td><td>Corriente del bus fuera de límites</td></tr>
+<tr><td>0x00800000</td><td><code>BRAKE_RESISTOR_DISARMED</code></td><td>Error en el mando de la resistencia de frenado</td></tr>
+<tr><td>0x01000000</td><td><code>SYSTEM_LEVEL</code></td><td>Error de nivel de sistema</td></tr>
+<tr><td>0x02000000</td><td><code>BAD_TIMING</code></td><td>El muestreo de la corriente de fase no llega a tiempo</td></tr>
+<tr><td>0x04000000</td><td><code>UNKNOWN_PHASE_ESTIMATE</code></td><td>Posición del motor desconocida</td></tr>
+<tr><td>0x08000000</td><td><code>UNKNOWN_PHASE_VEL</code></td><td>Velocidad del motor desconocida</td></tr>
+<tr><td>0x10000000</td><td><code>UNKNOWN_TORQUE</code></td><td>Par desconocido</td></tr>
+<tr><td>0x20000000</td><td><code>UNKNOWN_CURRENT_COMMAND</code></td><td>Consigna de control de par desconocida</td></tr>
+<tr><td>0x40000000</td><td><code>UNKNOWN_CURRENT_MEASUREMENT</code></td><td>Valor de la medida de corriente desconocido</td></tr>
+<tr><td>0x80000000</td><td><code>UNKNOWN_VBUS_VOLTAGE</code></td><td>Valor de la medida de tensión desconocido</td></tr>
+<tr><td>0x100000000</td><td><code>UNKNOWN_VOLTAGE_COMMAND</code></td><td>Consigna de control de tensión desconocida</td></tr>
+<tr><td>0x200000000</td><td><code>UNKNOWN_GAINS</code></td><td>Ganancias del lazo de corriente desconocidas</td></tr>
+<tr><td>0x400000000</td><td><code>CONTROLLER_INITIALIZING</code></td><td>Error en la inicialización del controlador</td></tr>
+
+<tr><td>Error del motor</td><td>0x800000000</td><td><code>UNBALANCED_PHASES</code></td><td>Las tres fases están desequilibradas</td></tr>
+
+<tr><td rowspan="5">Error de control</td><td>0x00000001</td><td><code>OVERSPEED</code></td><td>Velocidad excesiva</td></tr>
+<tr><td>0x00000002</td><td><code>INVALID_INPUT_MODE</code></td><td>Modo de entrada de control incorrecto</td></tr>
+<tr><td>0x00000004</td><td><code>UNSTABLE_GAIN</code></td><td>Ganancia del PLL inestable</td></tr>
+<tr><td>0x00000020</td><td><code>INVALID_ESTIMATE</code></td><td>Posición o velocidad inestables</td></tr>
+<tr><td>0x00000080</td><td><code>SPINOUT_DETECTED</code></td><td>La potencia mecánica y la eléctrica no coinciden (calibración del encoder incorrecta o imanes inestables)</td></tr>
+
+<tr><td rowspan="4">Error del encoder</td><td>0x00000001</td><td><code>UNSTABLE_GAIN</code></td><td>Ancho de banda del encoder demasiado alto</td></tr>
+<tr><td>0x00000002</td><td><code>CPR_POLEPAIRE_MISMATCH</code></td><td>El CPR y los pares de polos no concuerdan</td></tr>
+<tr><td>0x00000004</td><td><code>NO_RESPONSE</code></td><td>El encoder no responde</td></tr>
+<tr><td>0x00000400</td><td><code>SEC_ENC_COM_FAIL</code></td><td>Error de comunicación con el segundo encoder</td></tr>
+</table>
+
+</body></html>

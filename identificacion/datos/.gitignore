@@ -1,0 +1,4 @@
+# Los ensayos simulados no son datos: se regeneran con --simular.
+*_sim_*.csv
+*_sim_*.json
+*_sim_*.png

@@ -1,0 +1,33 @@
+@page {
+  size: A4;
+  margin: 20mm 18mm 18mm 18mm;
+  @top-right { content: "GIM6010-8 · Manual de usuario (traducción)"; font-size: 8pt; color: #888; }
+  @bottom-center { content: counter(page); font-size: 9pt; color: #666; }
+}
+body { font-family: "Fira Sans", "DejaVu Sans", sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; }
+h1 { font-size: 19pt; color: #0b3d67; border-bottom: 2px solid #0b3d67; padding-bottom: 4pt; margin: 0 0 12pt; }
+h2 { font-size: 14pt; color: #0b3d67; margin: 16pt 0 6pt; border-left: 4px solid #0b3d67; padding-left: 6pt; }
+h3 { font-size: 12pt; color: #16608f; margin: 12pt 0 4pt; }
+h4 { font-size: 10.5pt; color: #16608f; margin: 10pt 0 3pt; }
+p { margin: 4pt 0; text-align: justify; }
+ul, ol { margin: 4pt 0 4pt 0; padding-left: 18pt; }
+li { margin: 2pt 0; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9pt; }
+th, td { border: 1px solid #b8c4cf; padding: 3pt 5pt; text-align: left; vertical-align: top; }
+th { background: #e8eff5; color: #0b3d67; font-weight: 600; }
+tr { page-break-inside: avoid; }
+code, kbd { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f2f4f6; padding: 0 2px; border-radius: 2px; }
+pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.5pt; background: #f6f8fa; border: 1px solid #dde3e8;
+      border-left: 3px solid #0b3d67; padding: 6pt 8pt; white-space: pre-wrap; word-wrap: break-word; margin: 6pt 0; }
+figure { margin: 8pt 0; text-align: center; page-break-inside: avoid; }
+figure img { max-width: 100%; max-height: 150mm; }
+figcaption { font-size: 8.5pt; color: #666; margin-top: 3pt; font-style: italic; }
+.nota, .aviso { border-radius: 3px; padding: 6pt 8pt; margin: 8pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+.nota { background: #eef5fb; border-left: 4px solid #16608f; }
+.aviso { background: #fdf1ec; border-left: 4px solid #c0491f; }
+.nota strong, .aviso strong { color: #0b3d67; }
+.aviso strong { color: #a83a15; }
+.origen { font-size: 8.5pt; color: #888; margin-bottom: 14pt; }
+.portada { text-align: center; margin-top: 45mm; }
+.portada h1 { border: none; font-size: 26pt; }
+.portada .sub { font-size: 13pt; color: #444; margin-top: 6pt; }
