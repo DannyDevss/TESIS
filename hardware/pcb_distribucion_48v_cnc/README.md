@@ -50,23 +50,72 @@ Además hace falta **una placa virgen FR4 de 1.6 mm, una cara, 35 µm**, de al m
 Basado en el manual de la Bungard CCD (RoutePro3000). Los números de página son los
 del manual.
 
-1. **Fijar la placa** (p. 24–25). Con una placa de una cara no hacen falta pines de
-   referencia: basta con **cinta doble faz** sobre una placa de sacrificio (MDF) más
-   grande que la virgen, y la placa de sacrificio fija a la mesa con las bridas.
-   Dejar la placa a unos 5 mm del cero de la máquina (p. 20) y comprobar que el
-   espesor de la placa virgen y el de la de sacrificio coincidan con lo cargado en
-   el software.
-2. **Cargar los archivos** en RoutePro3000/IsoCam: el `.drl` como taladros, el
-   `B_Cu.gbl` como **capa de abajo** y el `Edge_Cuts.gm1` como contorno. El gerber
-   está visto desde arriba, como todo gerber: al marcarlo como capa de abajo, el
-   software lo espeja. **Comprobar en pantalla que los rótulos `M1`…`M8` se leen al
-   derecho en la vista de abajo**: si se leen espejados, la placa sale al revés.
-3. **Orden** (p. 21): primero taladros, después aislación y al final el contorno.
-4. **Profundidad de aislación** con el limitador de profundidad (p. 21–22): apenas
-   lo justo para cortar los 35 µm de cobre. Probar primero en un borde que no se usa.
-5. **Después de fresar**, antes de soldar: con el multímetro en continuidad, medir
-   que **no** suene entre GND, VBAT, +5V y cada OUT. Una rebaba o una tira de cobre
-   que no se fresó deja un corto a 48 V.
+### 1. Poner la placa
+
+- **Cobre hacia arriba.** La fresa trabaja desde arriba. Los componentes van después
+  en la otra cara, la sin cobre.
+- Debajo, una **placa de sacrificio** (MDF o la "drill backing board" del
+  laboratorio) más grande que la virgen, fija a la mesa con las bridas. Así las
+  brocas y la fresa de contorno la atraviesan sin tocar la mesa de aluminio (p. 24).
+- La placa virgen va pegada a la de sacrificio con **cinta doble faz**, bien plana y
+  sin burbujas. Con una sola cara no hacen falta pines de referencia (p. 24–25). Si
+  la placa se curva, la aislación sale más honda en unas partes que en otras.
+- Ubicarla a unos **5 mm del cero de la máquina**, en la esquina de adelante a la
+  izquierda, con un borde alineado con el eje X o Y (p. 17 y 20).
+- En el software, cargar el **espesor real** de la placa (1.6 mm) y el de la de
+  sacrificio (p. 20).
+
+### 2. Cargar los archivos
+
+En RoutePro3000/IsoCam: el `.drl` como taladros, el `B_Cu.gbl` como **capa de abajo**
+y el `Edge_Cuts.gm1` como contorno. El gerber está visto desde arriba, como todo
+gerber: al marcarlo como capa de abajo, el software lo espeja. **Comprobar en
+pantalla que los rótulos `M1`…`M8` se leen al derecho en la vista de abajo**: si se
+leen espejados, la placa sale al revés.
+
+### 3. Fresar, y cuándo cambiar de herramienta
+
+Son **5 herramientas** y se usan en este orden (p. 21). Cada fila es un cambio: se
+termina todo lo de esa herramienta antes de pasar a la siguiente.
+
+| Cuándo | Herramienta | Qué hace |
+|---|---|---|
+| 1. Al empezar, capa de taladros | broca **0.8 mm** | los 2 agujeros del PTC (F9) |
+| 2. Cuando termina la 0.8 | broca **1.4 mm** | los 46 agujeros de clips y borneras |
+| 3. Cuando termina la 1.4 | broca **2.7 mm** | los 16 agujeros de los XT30 |
+| 4. Terminados los taladros, se cambia a la capa de aislación | fresa de aislación **0.5 mm** (o la V que tengan) | separa las redes en el cobre |
+| 5. Terminada la aislación, se cambia a la capa de contorno | fresa de contorno **2.0 mm** | XT60 (4.5 mm) y M3 (3.2 mm) como círculos, y al final el borde de la placa con puentes |
+
+Cómo se hace cada cambio depende de la máquina:
+
+- **Con cambiador automático (ATC)**, la barra de portaherramientas al frente:
+  antes de empezar se ponen las 5 herramientas en los puestos que pide el software,
+  con el **puesto 0 libre** para el pin de prueba. Al dar Start, la máquina mide
+  cada una y las cambia sola (p. 19–21).
+- **Manual (MTC o sin cambiador):** al terminar con una herramienta, el eje Z sube y
+  el software pide la siguiente. Se cambia **con el husillo detenido**: apretar el
+  botón de arriba del husillo, girar hasta que trabe, soltar la pinza (p. 19). Después
+  de poner la nueva, OK.
+
+En cualquiera de los dos casos:
+
+- **Todas las herramientas con el anillo de tope** a 21 mm de la punta (p. 11). Con
+  él la máquina sabe el largo; sin él, puede clavar la herramienta en la mesa.
+- **No tocar la herramienta con el husillo girando**; esperar a que se detenga (p. 9).
+- **Para la aislación, el limitador de profundidad** (el patín verde alrededor de la
+  fresa): corta siempre lo justo aunque la placa no esté perfecta (p. 21–22).
+  Con ATC, la abertura del patín mira hacia los portaherramientas; si no, choca en
+  el cambio (p. 22).
+- **Antes de la aislación completa, probar la profundidad** en un trazo que no
+  importe, por ejemplo el contorno exterior, como sugiere el manual: tiene que
+  cortar el cobre y apenas marcar la fibra. Si queda cobre, bajar el limitador un
+  punto (cada punto son 50 µm). Mejor que quede alto que hondo (p. 22).
+
+### 4. Después de fresar
+
+Antes de soldar, con el multímetro en continuidad, medir que **no** suene entre GND,
+VBAT, +5V y cada OUT. Una rebaba o una tira de cobre que no se fresó deja un corto a
+48 V.
 
 ### Herramientas y parámetros (FR4, tablas del manual)
 
