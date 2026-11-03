@@ -107,11 +107,125 @@ def test_comando_de_velocidad_llega_a_las_orugas():
 def test_comando_de_posicion_mueve_los_flippers():
     robot, _ = construir()
     objetivo = 0.78
-    estado = ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=60)
+    # Con la rampa (1 rad/s a 100 Hz) 0,78 rad son 78 ciclos más el asentamiento.
+    estado = ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=150)
 
     for mid in IDS_FLIPPERS:
         assert math.isclose(estado[mid]['posicion_rad'], objetivo, abs_tol=0.05), \
             f'flipper {mid} quedó en {estado[mid]["posicion_rad"]}'
+
+
+def _flippers_con_encoder_en(transporte, crudo):
+    # Al armarlo en modo posición, el emulador toma su pos como consigna, igual
+    # que ODrive: sin una consigna nueva, el motor se queda donde está.
+    for mid in IDS_FLIPPERS:
+        transporte.motores[mid].pos = crudo
+
+
+def test_la_pose_al_arrancar_es_el_cero_de_los_flippers():
+    """Encoder con vueltas acumuladas: se publica 0 y el flipper no se mueve."""
+    transporte = TransporteMemoria()
+    _flippers_con_encoder_en(transporte, 16.6)
+    robot = RMD_Hardware(modo='pi3hat', transporte=transporte)
+
+    # Sin consigna, como al arrancar flipper_node (dict vacío = quedarse).
+    estado = ciclar(robot, flippers={}, n=30)
+    for mid in IDS_FLIPPERS:
+        assert math.isclose(estado[mid]['posicion_rad'], 0.0, abs_tol=1e-6)
+        assert math.isclose(transporte.motores[mid].pos, 16.6, abs_tol=1e-6), \
+            f'flipper {mid} se movió al arrancar: {transporte.motores[mid].pos}'
+
+
+def test_el_cero_espera_a_que_el_eje_este_en_lazo_cerrado():
+    """Un flipper que no se arma no fija cero ni recibe consignas de posición.
+
+    Y lo que se publica es 0, nunca la lectura cruda: teleop_flippers toma su
+    pose inicial del primer /joint_states.
+    """
+    transporte = TransporteMemoria(sordos=(5,))
+    _flippers_con_encoder_en(transporte, 16.6)
+    robot = RMD_Hardware(modo='pi3hat', transporte=transporte)
+
+    estado = ciclar(robot, flippers={mid: 0.5 for mid in IDS_FLIPPERS}, n=40)
+    assert robot._cero_flipper[5] is None
+    assert estado[5]['posicion_rad'] == 0.0
+    assert math.isclose(transporte.motores[5].pos, 16.6, abs_tol=1e-6)
+    # Los que sí se armaron fijaron su cero y siguen la consigna relativa.
+    for mid in (6, 7, 8):
+        assert robot._cero_flipper[mid] is not None
+
+
+def test_la_consigna_de_los_flippers_es_relativa_al_cero():
+    transporte = TransporteMemoria()
+    _flippers_con_encoder_en(transporte, 16.6)
+    robot = RMD_Hardware(modo='pi3hat', transporte=transporte)
+
+    estado = ciclar(robot, flippers={mid: 0.5 for mid in IDS_FLIPPERS}, n=150)
+    for mid in IDS_FLIPPERS:
+        assert math.isclose(estado[mid]['posicion_rad'], 0.5, abs_tol=0.05)
+        assert math.isclose(transporte.motores[mid].pos, 17.1, abs_tol=0.05)
+
+
+def test_sentido_invertido_de_los_flippers():
+    """Motor montado al revés: la consigna se invierte al mandar y al leer."""
+    transporte = TransporteMemoria()
+    _flippers_con_encoder_en(transporte, 16.6)
+    robot = RMD_Hardware(modo='pi3hat', transporte=transporte,
+                         sentido_flippers={mid: -1 for mid in IDS_FLIPPERS})
+    ciclar(robot, flippers={}, n=30)            # fija el cero
+
+    velocidades = []
+    for _ in range(150):
+        estado = robot.enviar_y_leer_estado({}, {mid: 0.5 for mid in IDS_FLIPPERS})
+        velocidades.append(estado[5]['velocidad_rad_s'])
+    for mid in IDS_FLIPPERS:
+        assert math.isclose(estado[mid]['posicion_rad'], 0.5, abs_tol=0.05)
+        assert math.isclose(transporte.motores[mid].pos, 16.1, abs_tol=0.05), \
+            f'flipper {mid}: el motor debió girar al revés ({transporte.motores[mid].pos})'
+    # Subiendo hacia +0,5 en la convención del modelo, la velocidad publicada es +.
+    assert max(velocidades) > 0.5
+
+
+def test_sentido_invalido_falla_temprano():
+    import pytest
+    with pytest.raises(ValueError):
+        RMD_Hardware(modo='pi3hat', transporte=TransporteMemoria(),
+                     sentido_flippers={5: 2})
+
+
+def test_un_salto_grande_de_consigna_va_en_rampa():
+    """Un salto de 270° de golpe llega al motor en rampa.
+
+    Es el salto que dejó oscilando al flipper en la placa: el motor debe
+    recibir consignas que avanzan a lo más vel_max * periodo por ciclo.
+    """
+    robot, transporte = construir()
+    ciclar(robot, flippers={}, n=30)            # fija el cero y se queda quieto
+    inicio = transporte.motores[5].pos
+    paso_max = robot.vel_max_flippers * robot.periodo_control_s
+
+    previo = transporte.motores[5].objetivo
+    for _ in range(50):
+        robot.enviar_y_leer_estado({}, {5: -3 * math.pi / 2})
+        actual = transporte.motores[5].objetivo
+        assert abs(actual - previo) <= paso_max + 1e-6   # viaja en float32
+        previo = actual
+    assert math.isclose(previo, inicio - 50 * paso_max, abs_tol=1e-5)
+
+    # Y llega: 4,71 rad a 1 rad/s son ~471 ciclos.
+    estado = ciclar(robot, flippers={5: -3 * math.pi / 2}, n=500)
+    assert math.isclose(estado[5]['posicion_rad'], -3 * math.pi / 2, abs_tol=0.05)
+
+
+def test_la_rampa_arranca_desde_donde_quedo_tras_un_paro():
+    """Tras un paro (eje en IDLE) la rampa no salta a la consigna vieja."""
+    robot, transporte = construir()
+    ciclar(robot, flippers={5: 0.5}, n=100)
+    transporte.motores[5].poner_estado(proto.ESTADO_IDLE)
+    transporte.motores[5].pos += 1.0             # alguien lo movió a mano en IDLE
+    ciclar(robot, flippers={5: 0.5}, n=3)        # el driver ve el IDLE
+    assert math.isclose(robot._consigna_rampa[5], robot._ultimo_estado[5]['posicion_rad'],
+                        abs_tol=1e-6)
 
 
 def test_posicion_multivuelta_no_se_enrolla():
@@ -254,7 +368,7 @@ def test_el_driver_rearma_un_eje_que_se_cayo_a_idle():
     # Pasado PERIODO_REARMADO_S el driver insiste, el eje vuelve a lazo cerrado
     # y persigue la consigna que ya tenía pendiente.
     time.sleep(PERIODO_REARMADO_S)
-    estado = ciclar(robot, flippers=flippers, n=60)
+    estado = ciclar(robot, flippers=flippers, n=150)
     assert transporte.motores[5].estado_eje == proto.ESTADO_CLOSED_LOOP
     assert robot.motores_desarmados == []
     assert math.isclose(estado[5]['posicion_rad'], objetivo, abs_tol=0.05), \
@@ -291,11 +405,11 @@ def test_rearmar_no_borra_la_consigna_de_los_motores_ya_armados():
     """Al rearmar uno, a los demás no se les manda nada y no pierden su orden."""
     robot, transporte = construir()
     objetivo = 0.4
-    ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=60)
+    ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=150)
 
     transporte.motores[8].poner_estado(proto.ESTADO_IDLE)
     time.sleep(PERIODO_REARMADO_S)
-    estado = ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=60)
+    estado = ciclar(robot, flippers={mid: objetivo for mid in IDS_FLIPPERS}, n=150)
 
     for mid in IDS_FLIPPERS:
         assert math.isclose(estado[mid]['posicion_rad'], objetivo, abs_tol=0.05), \
@@ -378,7 +492,7 @@ def test_signos_de_actitud_segun_rep103():
     """
     robot, _ = construir()
     # Flippers delanteros (IDs 5 y 6) arriba, traseros en cero.
-    ciclar(robot, flippers={5: 1.0, 6: 1.0, 7: 0.0, 8: 0.0}, n=60, pausa=0.002)
+    ciclar(robot, flippers={5: 1.0, 6: 1.0, 7: 0.0, 8: 0.0}, n=150, pausa=0.002)
     imu = robot.leer_imu()
     assert imu['pitch'] < -0.05, f'pitch={imu["pitch"]}: el morro debería subir'
     # Y con morro arriba, el acelerómetro ve componente X POSITIVA.
@@ -386,7 +500,7 @@ def test_signos_de_actitud_segun_rep103():
 
     # Flippers derechos (IDs 6 y 8) arriba -> costado derecho arriba -> roll < 0.
     robot2, _ = construir()
-    ciclar(robot2, flippers={5: 0.0, 6: 1.0, 7: 0.0, 8: 1.0}, n=60, pausa=0.002)
+    ciclar(robot2, flippers={5: 0.0, 6: 1.0, 7: 0.0, 8: 1.0}, n=150, pausa=0.002)
     assert robot2.leer_imu()['roll'] < -0.05
 
 

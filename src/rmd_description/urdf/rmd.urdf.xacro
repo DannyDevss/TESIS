@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<!--
+  UGV "ROBOT_CON_4PATAS" (Autodesk Inventor, STEP del 2026-09-30) en ROS 2.
+
+  Las mallas (.dae, Z_UP) las genera scripts/step_a_mallas.py desde el STEP: una por link, ya
+  en el marco ROS (Z arriba, metros) y expresadas en el marco de su propio link,
+  así que aquí todas van con origin cero y scale 1.
+
+  Árbol:
+    base_footprint -> base_link (chasis + 4 motores GIM6010-8, fijos)
+      track_{fl,fr,rl,rr}    continuous, rueda motriz D96.77
+      flipper_{fl,fr,rl,rr}  continuous, brazo + 2 ruedas locas D66.67
+
+  Los nombres de juntas, el eje (Y) y el yaw pi de los flippers traseros siguen
+  la misma convención que ugv_bridge/urdf/ugv.urdf.xacro, para que /joint_states
+  de flipper_node mueva este modelo sin traducir nada.
+
+  El pivote de cada flipper es el eje de su rueda motriz: los cuatro brazos
+  miden lo mismo (0.2557 m) desde ese punto. En el STEP el brazo trasero derecho
+  venía 6° levantado; las mallas ya lo traen enderezado (q=0 = brazo horizontal).
+-->
+<robot name="rmd" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="mesh_dir" value="package://rmd_description/meshes"/>
+
+  <!-- Valores medidos sobre el STEP (los imprime step_a_mallas.py) -->
+  <xacro:property name="altura_suelo" value="0.05376"/>
+  <xacro:property name="eje_x_del" value="0.17096"/>
+  <xacro:property name="eje_x_tra" value="-0.17904"/>
+  <xacro:property name="eje_y" value="0.234"/>
+  <xacro:property name="eje_z" value="-0.00538"/>
+
+  <material name="aluminio"><color rgba="0.70 0.70 0.72 1.0"/></material>
+  <material name="motor"><color rgba="0.75 0.25 0.20 1.0"/></material>
+  <material name="caucho"><color rgba="0.15 0.15 0.15 1.0"/></material>
+  <material name="brazo"><color rgba="0.29 0.50 0.75 1.0"/></material>
+  <material name="nylon"><color rgba="0.85 0.75 0.38 1.0"/></material>
+
+  <xacro:macro name="malla" params="archivo material">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="${mesh_dir}/${archivo}"/></geometry>
+      <material name="${material}"/>
+    </visual>
+  </xacro:macro>
+
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <xacro:malla archivo="chasis.dae" material="aluminio"/>
+    <xacro:malla archivo="motores.dae" material="motor"/>
+  </link>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${altura_suelo}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- x: +1 delantero / -1 trasero; sl: +1 izquierdo / -1 derecho -->
+  <xacro:macro name="esquina" params="nombre sx sl">
+    <xacro:property name="ex" value="${eje_x_del if sx > 0 else eje_x_tra}"/>
+
+    <link name="track_${nombre}_link">
+      <xacro:malla archivo="rueda_${nombre}.dae" material="caucho"/>
+    </link>
+    <joint name="track_${nombre}" type="continuous">
+      <parent link="base_link"/>
+      <child link="track_${nombre}_link"/>
+      <origin xyz="${ex} ${sl * eje_y} ${eje_z}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="30.0" velocity="30.0"/>
+    </joint>
+
+    <link name="flipper_${nombre}_link">
+      <xacro:malla archivo="brazo_${nombre}.dae" material="brazo"/>
+      <xacro:malla archivo="locas_${nombre}.dae" material="nylon"/>
+    </link>
+    <joint name="flipper_${nombre}" type="continuous">
+      <parent link="base_link"/>
+      <child link="flipper_${nombre}_link"/>
+      <origin xyz="${ex} ${sl * eje_y} ${eje_z}" rpy="0 0 ${0 if sx > 0 else pi}"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="30.0" velocity="3.0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:esquina nombre="fl" sx="1"  sl="1"/>
+  <xacro:esquina nombre="fr" sx="1"  sl="-1"/>
+  <xacro:esquina nombre="rl" sx="-1" sl="1"/>
+  <xacro:esquina nombre="rr" sx="-1" sl="-1"/>
+
+</robot>

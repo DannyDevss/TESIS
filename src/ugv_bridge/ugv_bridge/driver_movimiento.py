@@ -87,6 +87,20 @@ CICLOS_WATCHDOG = 10
 # oportunidades de oírlo antes de volver a insistir.
 PERIODO_REARMADO_S = 0.5
 
+# Lecturas de encoder seguidas EN LAZO CERRADO antes de fijar el cero de un
+# flipper (a 100 Hz, 20 = 0,2 s). Ver `_cero_flipper` en el constructor.
+CICLOS_ANTES_DEL_CERO = 20
+
+# RAMPA DE LOS FLIPPERS. Una consigna de posición nueva NO se manda de golpe: la
+# que recibe el motor avanza hacia ella a lo más esta velocidad (rad/s en la
+# salida). Medido en la placa (03/11/2026): un salto de 270° desde Foxglove llevó
+# al flipper a ~25 rad/s y lo dejó oscilando ±0,29 rad sin parar, incluso con
+# la consigna ya quieta; los pasos de 45° (pico de 3 rad/s) no lo excitaban.
+# teleop_flippers ya iba a 0,6 rad/s; esto cubre a todo lo demás (Poses fijas,
+# la política, un ros2 topic pub a mano). Con 1 rad/s, 270° tardan ~4,7 s.
+VEL_MAX_FLIPPERS_RAD_S = 1.0
+PERIODO_CONTROL_S = 0.01      # bucle de flipper_node a 100 Hz
+
 # --- Modelo de actitud de la IMU sintética (gemelo/can) ---
 # La IMU real vive en el pi3hat; en 'gemelo'/'can' se sintetiza a partir del
 # estado de los motores para que roll/pitch/yaw reflejen de verdad el movimiento.
@@ -140,13 +154,25 @@ class RMD_Hardware:
         Inyección de dependencia para modo='pi3hat'. None -> se abre la placa de
         verdad. Los tests le pasan un transporte en memoria para ejercitar el
         protocolo completo sin hardware.
+    vel_max_flippers : float
+        Velocidad máxima (rad/s en la salida) con la que la consigna de cada
+        flipper avanza hacia la pedida, en modos con bus. Ver `_rampa_flipper`.
+    periodo_control_s : float
+        Periodo nominal del bucle que llama a enviar_y_leer_estado (s). La
+        rampa avanza vel_max_flippers * periodo_control_s por llamada.
+    sentido_flippers : dict[int, int] | None
+        {id_flipper: +1 | -1}. -1 = el motor gira al revés que la junta del
+        URDF (montado mirando hacia afuera). None -> +1 en los cuatro. Fuente:
+        `sentido_flippers` de config/geometria_robot.yaml.
     """
 
     def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0',
                  radio_oruga=RADIO_ORUGA_M, ancho_orugas=ANCHO_ORUGAS_M,
                  imu_fuente='sintetica', imu_montaje_rpy=(0.0, 0.0, 0.0),
                  mapa_buses=None, ciclos_watchdog=CICLOS_WATCHDOG,
-                 motores_presentes=None, transporte=None):
+                 motores_presentes=None, transporte=None,
+                 vel_max_flippers=VEL_MAX_FLIPPERS_RAD_S,
+                 periodo_control_s=PERIODO_CONTROL_S, sentido_flippers=None):
         if modo is None:
             modo = 'gemelo' if modo_simulacion else 'pi3hat'
         if modo not in MODOS_VALIDOS:
@@ -205,6 +231,51 @@ class RMD_Hardware:
         }
         self.timeouts_can = 0          # contador acumulado de respuestas perdidas
         self._t_ultimo_aviso = 0.0
+
+        # CERO DE LOS FLIPPERS: la pose en la que está cada flipper al arrancar
+        # el driver es su 0. Se guarda la lectura CRUDA del encoder de la primera
+        # trama que llega (ver _aplicar_mensajes) y desde ahí todo se expresa
+        # relativo a ella: lo que se publica es cruda - cero y lo que se manda al
+        # motor es consigna + cero. No se mueve nada para "ir a 0".
+        #
+        # Por qué: el encoder del GIM6010-8 está en el ROTOR y la salida va 8:1,
+        # así que su cero no corresponde a ninguna pose fija del flipper (tras un
+        # corte de alimentación cae en uno de 8 puntos) y además acumula vueltas
+        # mientras el motor sigue alimentado (se vio 16,6 rad tras unas pruebas).
+        # Procedimiento: dejar los flippers a mano en la pose de referencia antes
+        # de lanzar.
+        #
+        # El cero NO se toma con la primera trama: se espera a que el motor lleve
+        # CICLOS_ANTES_DEL_CERO lecturas seguidas en lazo cerrado. Con la primera
+        # trama quedó 0,06 rad (3,4°) corrido en la placa (03/11/2026): esa trama
+        # puede ser vieja (el pi3hat retiene en su buffer lo que llegó entre un
+        # launch y otro) o anterior a que el eje se asiente al armarse.
+        #
+        # None = todavía sin cero. Mientras tanto a ese flipper NO se le manda
+        # consigna de posición (la única posible sería un 0 crudo, que lo haría
+        # saltar al cero del encoder; ODrive ya retiene sola la pose en la que se
+        # armó) y se publica 0.0, nunca la lectura cruda: teleop_flippers toma su
+        # pose inicial del PRIMER /joint_states, y si viera 16,6 rad el primer
+        # toque de un botón mandaría el flipper 2,6 vueltas lejos.
+        self._cero_flipper = {mid: None for mid in self.ids_flippers}
+        self._lecturas_en_lazo = {mid: 0 for mid in self.ids_flippers}
+
+        # Consigna que REALMENTE se le manda a cada flipper (relativa al cero),
+        # la que avanza en rampa. None = sin sembrar todavía.
+        self.vel_max_flippers = abs(float(vel_max_flippers))
+        self.periodo_control_s = float(periodo_control_s)
+        self._consigna_rampa = {mid: None for mid in self.ids_flippers}
+
+        # SENTIDO DE GIRO por flipper (+1 / -1). Todo lo de arriba (cero, rampa,
+        # lo que se publica) vive en la convención del modelo; el signo se aplica
+        # sólo en la frontera con el motor: al mandar la consigna y al leer.
+        self._sentido = {mid: 1 for mid in self.ids_flippers}
+        for mid, signo in (sentido_flippers or {}).items():
+            if mid not in self._sentido or signo not in (1, -1):
+                raise ValueError(
+                    f'sentido_flippers inválido: {mid}->{signo} '
+                    f'(IDs {self.ids_flippers}, valores +1 o -1)')
+            self._sentido[mid] = int(signo)
 
         # Watchdog de seguridad: ciclos consecutivos sin respuesta, por motor.
         self._sin_respuesta = {mid: 0 for mid in self.ids_orugas + self.ids_flippers}
@@ -391,11 +462,15 @@ class RMD_Hardware:
              proto.trama_set_input_vel(float(comandos_orugas.get(mid, 0.0))))
             for mid in self.ids_orugas if mid in presentes
         ]
+        # Flippers: la consigna pasa por la rampa y es relativa al cero tomado al
+        # arrancar, así que se le suma antes de mandarla. Sin cero, no se manda.
         peticiones += [
             (mid, proto.CMD_SET_INPUT_POS,
-             proto.trama_set_input_pos(float(comandos_flippers.get(
-                 mid, self._ultimo_estado[mid]['posicion_rad']))))
-            for mid in self.ids_flippers if mid in presentes
+             proto.trama_set_input_pos(
+                 self._cero_flipper[mid]
+                 + self._sentido[mid] * self._rampa_flipper(mid, comandos_flippers)))
+            for mid in self.ids_flippers
+            if mid in presentes and self._cero_flipper[mid] is not None
         ]
 
         recibido = self._intercambiar(peticiones)
@@ -551,6 +626,43 @@ class RMD_Hardware:
         except Exception as e:
             print(f'[HARDWARE] No se pudo enviar el paro: {e}')
 
+    def _rampa_flipper(self, mid, comandos_flippers):
+        """Avanza un paso la consigna del flipper hacia la pedida y la devuelve.
+
+        Sin consigna pedida para ese flipper, la objetivo es la propia consigna
+        en rampa: se queda donde iba (y sigue sosteniendo esa pose, en vez de
+        perseguir la posición medida, que no oponía resistencia a que se cayera).
+
+        Mientras el eje NO está en lazo cerrado (antes de armarse, o en IDLE tras
+        un paro de emergencia) la rampa se vuelve a sembrar con la posición
+        medida: al rearmarse arranca desde donde quedó el flipper y va hacia la
+        consigna a velocidad limitada, en vez de saltar a una pose vieja.
+        """
+        u = self._ultimo_estado[mid]
+        if (self._consigna_rampa[mid] is None
+                or u['estado_eje'] != proto.ESTADO_CLOSED_LOOP):
+            self._consigna_rampa[mid] = u['posicion_rad']
+            return self._consigna_rampa[mid]
+        actual = self._consigna_rampa[mid]
+        objetivo = float(comandos_flippers.get(mid, actual))
+        paso = self.vel_max_flippers * self.periodo_control_s
+        self._consigna_rampa[mid] = actual + _clamp(objetivo - actual, -paso, paso)
+        return self._consigna_rampa[mid]
+
+    def _relativa_al_cero(self, id_motor, crudo, u):
+        """Posición de un flipper respecto a su cero; fija el cero si toca."""
+        if self._cero_flipper[id_motor] is None:
+            if u['estado_eje'] != proto.ESTADO_CLOSED_LOOP:
+                self._lecturas_en_lazo[id_motor] = 0
+                return 0.0
+            self._lecturas_en_lazo[id_motor] += 1
+            if self._lecturas_en_lazo[id_motor] < CICLOS_ANTES_DEL_CERO:
+                return 0.0
+            self._cero_flipper[id_motor] = crudo
+            print(f'[HARDWARE] Cero de {id_motor}({ID_A_NOMBRE[id_motor]}) '
+                  f'tomado en la pose actual (encoder en {crudo:+.3f} rad).')
+        return self._sentido[id_motor] * (crudo - self._cero_flipper[id_motor])
+
     def _aplicar_mensajes(self, id_motor, mensajes):
         """Vuelca en el último estado conocido lo que haya emitido un motor."""
         u = self._ultimo_estado.get(id_motor)
@@ -561,14 +673,19 @@ class RMD_Hardware:
         if datos is not None:
             enc = proto.parsear_encoder(datos)
             if enc is not None:
-                u['posicion_rad'] = enc['posicion_rad']
-                u['velocidad_rad_s'] = enc['velocidad_rad_s']
+                posicion = enc['posicion_rad']
+                if id_motor in self._cero_flipper:
+                    posicion = self._relativa_al_cero(id_motor, posicion, u)
+                u['posicion_rad'] = posicion
+                u['velocidad_rad_s'] = (self._sentido.get(id_motor, 1)
+                                        * enc['velocidad_rad_s'])
 
         datos = mensajes.get(proto.CMD_GET_IQ)
         if datos is not None:
             iq = proto.parsear_iq(datos)
             if iq is not None:
-                u['torque_nm'] = iq['iq_medido_a'] * proto.KT_NM_POR_A
+                u['torque_nm'] = (self._sentido.get(id_motor, 1)
+                                  * iq['iq_medido_a'] * proto.KT_NM_POR_A)
 
         datos = mensajes.get(proto.CMD_HEARTBEAT)
         if datos is not None:

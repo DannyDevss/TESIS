@@ -49,6 +49,14 @@
     offset_lateral_flipper: 0.015   # separación lateral del flipper respecto al eje del motor
     flipper_masa: 0.5           # kg
 
+    # Sentido de giro de cada MOTOR de flipper respecto a la convención del
+    # modelo (ángulo positivo = la punta del flipper baja hacia el suelo), en
+    # orden fl, fr, rl, rr. -1 = el motor gira al revés que la junta del URDF.
+    # Los cuatro están montados mirando hacia AFUERA del chasis, así que van en
+    # -1 (comprobado en el robot el 03/11/2026). Lo aplica el driver: la consigna
+    # se invierte antes de mandarla y la lectura al recibirla.
+    sentido_flippers: [-1, -1, -1, -1]
+
     # NOTA: el "alto de colisión" (0.18 en el código antiguo) NO se lista aquí a
     # propósito: es exactamente 2 * radio_rueda_flipper. Derivarlo elimina otra
     # oportunidad de desincronización. El guardián usa (2*radio)^2 como umbral,
