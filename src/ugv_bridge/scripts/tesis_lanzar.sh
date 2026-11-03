@@ -67,11 +67,11 @@ pkill -9    -f "ugv_bridge.gui_a_comandos"      2>/dev/null || true
 sleep 1
 
 # --- 2. Compilar ------------------------------------------------------------
-echo "[2/3] Compilando ugv_bridge..."
+echo "[2/3] Compilando ugv_bridge y rmd_description (modelo 3D)..."
 # shellcheck disable=SC1090
 source "$ROS_SETUP"
 cd "$WS"
-colcon build --packages-select ugv_bridge
+colcon build --packages-select ugv_bridge rmd_description
 
 # --- 3. Lanzar --------------------------------------------------------------
 # shellcheck disable=SC1091

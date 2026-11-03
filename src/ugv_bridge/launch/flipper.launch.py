@@ -41,6 +41,12 @@ Argumentos:
                              ws://<ip-de-la-maquina>:8765.
     use_teleop       (true)  nodo teleop_flippers: mueve los flippers a mano desde
                              los paneles Teleop de Foxglove (ver su docstring).
+    modelo           (rescate) modelo 3D que publica robot_state_publisher:
+                             'rescate' = CAD de Fusion (rmd_description/urdf/
+                             rescate.urdf.xacro, el del robot real);
+                             'ugv' = urdf/ugv.urdf.xacro (paramétrico, del YAML).
+                             Solo cambia lo que se ve: los nodos siguen usando
+                             config/geometria_robot.yaml.
 
 IMU FÍSICA EN OTRA MÁQUINA (imu_externa:=true)
 ----------------------------------------------
@@ -61,7 +67,7 @@ from typing import List
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, LogInfo
+from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import (
     Command, LaunchConfiguration, NotSubstitution, PythonExpression)
@@ -82,11 +88,26 @@ def generate_launch_description():
     # Geometría: única fuente de verdad, compartida por el URDF y los nodos.
     geometria_yaml = os.path.join(pkg_share, 'config', 'geometria_robot.yaml')
     xacro_path = os.path.join(pkg_share, 'urdf', 'ugv.urdf.xacro')
-    # Se procesa el xacro en caliente: el modelo nunca queda desfasado del YAML.
-    robot_description = ParameterValue(
-        Command(['xacro ', xacro_path, ' geometria:=', geometria_yaml]),
-        value_type=str,
-    )
+
+    def robot_state_publisher(context):
+        # Modelo del robot: lee /joint_states y publica el TF de cada flipper.
+        # Se procesa el xacro en caliente. Las juntas del CAD (track_*, flipper_*)
+        # y sus frames (base_link, imu_link) son los mismos que publica el driver.
+        modelo = LaunchConfiguration('modelo').perform(context)
+        if modelo == 'ugv':
+            comando = ['xacro ', xacro_path, ' geometria:=', geometria_yaml]
+        else:
+            comando = ['xacro ', os.path.join(
+                get_package_share_directory('rmd_description'), 'urdf',
+                f'{modelo}.urdf.xacro')]
+        return [Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[{'robot_description': ParameterValue(
+                Command(comando), value_type=str)}],
+        )]
 
     # Destino de la IMU que publica flipper_node. Con imu_externa:=true se aparta
     # a /imu/sintetica para dejarle /imu/data_raw a la IMU real de la Raspberry;
@@ -112,6 +133,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_rviz', default_value='false'),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('use_teleop', default_value='true'),
+        DeclareLaunchArgument('modelo', default_value='rescate'),
         # Política de flippers (percepción táctil). Apagada por defecto: mueve
         # ocho motores de 48 V y no debe arrancar por accidente.
         DeclareLaunchArgument('use_politica', default_value='false'),
@@ -163,14 +185,7 @@ def generate_launch_description():
             }],
         ),
 
-        # Modelo del robot: lee /joint_states y publica el TF de cada flipper.
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            output='screen',
-            parameters=[{'robot_description': robot_description}],
-        ),
+        OpaqueFunction(function=robot_state_publisher),
 
         # Fusión sensorial EKF (opcional). Requiere: apt install ros-jazzy-robot-localization
         Node(

@@ -27,6 +27,7 @@
                                                         de cada pieza del robot-->
   <exec_depend>robot_localization</exec_depend>        <!-- Llama EKF ayudando para conocer posición exacta ante 
                                                         patinaje y deslizamientos -->
+  <exec_depend>rmd_description</exec_depend>              <!-- Modelo 3D del robot (CAD), el que carga flipper.launch.py por defecto -->
   <exec_depend>robot_state_publisher</exec_depend>     <!-- Publica lo preprocesado por xacro para verlo en entornos 3D -->
   <exec_depend>foxglove_bridge</exec_depend>           <!-- ÚNICA visualización del proyecto (ws://<host>:8765).
                                                         rviz2 y joint_state_publisher_gui se quitaron: eran una
