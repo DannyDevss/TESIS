@@ -1,8 +1,8 @@
 # Distribución de 48 V — versión para la CNC del laboratorio
 
 El circuito es el mismo de [`../pcb_distribucion_48v`](../pcb_distribucion_48v/README.md):
-XT60 de batería, 8 salidas XT30 con fusible 5×20, bornera para el reductor de 5 V
-externo, 5 V a la Pi y al medidor, y sensado con PTC. Cambia el cobre, para poder
+XT60 de batería, 8 salidas XT30 con fusible 5×20, una salida auxiliar de 48 V con
+fusible y sensado con PTC. Cambia el cobre, para poder
 fresarla en la **Bungard CCD** del laboratorio (manual en `../CNCFABLAB/`).
 
 ![cara de componentes, con el cobre de abajo visto por transparencia](preview.png)
@@ -16,7 +16,7 @@ fresarla en la **Bungard CCD** del laboratorio (manual en `../CNCFABLAB/`).
 | Metalizado de agujeros | sí | **no**: la CCD no metaliza |
 | Serigrafía / máscara | sí | no; los rótulos `M1`…`M8` van fresados en el cobre |
 | Taladro de los clips | 1.3 mm | **1.4 mm**, el mismo de las borneras: una broca menos |
-| Tamaño, agujeros M3 | 130 × 84 mm | igual: se atornilla en el mismo lugar |
+| Tamaño, agujeros M3 | 104 × 84 mm | igual: se atornilla en el mismo lugar |
 
 **Por qué una sola cara:** sin metalizado, un pad solo conecta en la cara donde se
 suelda. Los XT60 y XT30 van verticales con el cuerpo apoyado en la cara de arriba, así
@@ -26,8 +26,8 @@ donde se sueldan todas las patas.
 **Cómo entra en una cara:** GND rellena todo lo que no es otra red. Queda un anillo
 por el borde que toca los `-` del XT60, de los ocho XT30 y de las borneras. Adentro
 van el bus de 48 V (franja central), los planos `OUT1`…`OUT8` (uno por canal, del
-fusible al `+` de su XT30), el plano de 5 V (peine a la izquierda de las borneras) y
-dos pistas (IN+ del reductor y sensado). Nada se cruza. El DRC da **0 sin conectar**.
+fusible al `+` de su XT30), el plano `AUX48V` (de F10 a J11, igual que un canal más) y
+la pista de sensado (del PTC a J10). Nada se cruza. El DRC da **0 sin conectar**.
 
 ## Archivos
 
@@ -35,15 +35,16 @@ dos pistas (IN+ del reductor y sensado). Nada se cruza. El DRC da **0 sin conect
 |---|---|
 | `fabricacion/distribucion48v_cnc-B_Cu.gbl` | Cobre (cara **de abajo**). Gerber RS-274X, sin atributos X2. |
 | `fabricacion/distribucion48v_cnc-Edge_Cuts.gm1` | Contorno de la placa. |
-| `fabricacion/distribucion48v_cnc.drl` | Taladros, Excellon en mm, un solo archivo (70 agujeros, 5 diámetros). |
+| `fabricacion/distribucion48v_cnc.drl` | Taladros, Excellon en mm, un solo archivo (64 agujeros, 5 diámetros). |
 | `montaje_1a1.pdf` | Vista de arriba a **escala 1:1**: para imprimir y comprobar los conectores. |
 | `preview.png` | Cara de arriba con el cobre de abajo visto por transparencia. |
 | `cobre_lado_soldadura.png` | El cobre visto desde abajo, como queda la placa fresada. |
 | `gen.py` | Fuente: `python3 gen.py` regenera todo. |
+| `centrar_pdf.py` | Centra la placa en `montaje_1a1.pdf` (kicad-cli la deja en la esquina). |
 
 Los componentes son los mismos de la otra placa: ver su `bom.csv` y `COMPRAS.md`.
 Además hace falta **una placa virgen FR4 de 1.6 mm, una cara, 35 µm**, de al menos
-150 × 95 mm. La Eurocard de 160 × 100 sirve.
+125 × 95 mm. La Eurocard de 160 × 100 sirve, y sobra espacio para un intento más.
 
 ## En la CCD, paso a paso
 
@@ -81,7 +82,7 @@ termina todo lo de esa herramienta antes de pasar a la siguiente.
 | Cuándo | Herramienta | Qué hace |
 |---|---|---|
 | 1. Al empezar, capa de taladros | broca **0.8 mm** | los 2 agujeros del PTC (F9) |
-| 2. Cuando termina la 0.8 | broca **1.4 mm** | los 46 agujeros de clips y borneras |
+| 2. Cuando termina la 0.8 | broca **1.4 mm** | los 40 agujeros de clips y borneras |
 | 3. Cuando termina la 1.4 | broca **2.7 mm** | los 16 agujeros de los XT30 |
 | 4. Terminados los taladros, se cambia a la capa de aislación | fresa de aislación **0.5 mm** (o la V que tengan) | separa las redes en el cobre |
 | 5. Terminada la aislación, se cambia a la capa de contorno | fresa de contorno **2.0 mm** | XT60 (4.5 mm) y M3 (3.2 mm) como círculos, y al final el borde de la placa con puentes |
@@ -114,7 +115,7 @@ En cualquiera de los dos casos:
 ### 4. Después de fresar
 
 Antes de soldar, con el multímetro en continuidad, medir que **no** suene entre GND,
-VBAT, +5V y cada OUT. Una rebaba o una tira de cobre que no se fresó deja un corto a
+VBAT, AUX48V, SENSE y cada OUT. Una rebaba o una tira de cobre que no se fresó deja un corto a
 48 V.
 
 ### Herramientas y parámetros (FR4, tablas del manual)
@@ -122,7 +123,7 @@ VBAT, +5V y cada OUT. Una rebaba o una tira de cobre que no se fresó deja un co
 | Paso | Herramienta | Diámetro | Avance XY | RPM | Avance Z | Página |
 |---|---|---|---|---|---|---|
 | Taladro (PTC, 2) | broca estándar | 0.8 mm | 2200 mm/min | 63 000 | — | 29 |
-| Taladro (clips y borneras, 46) | broca estándar | 1.4 mm | 2800 mm/min | 63 000 | — | 29 |
+| Taladro (clips y borneras, 40) | broca estándar | 1.4 mm | 2800 mm/min | 63 000 | — | 29 |
 | Taladro (XT30, 16) | broca estándar | 2.7 mm | 1800 mm/min | 45 400 | — | 29 |
 | Agujeros M3 (3.2 mm, 4) y XT60 (4.5 mm, 2) | ver abajo | | | | | 29 |
 | Aislación | fresa de un filo (micro cutter) | 0.5 mm | 100–200 mm/min | 63 000 | 200 mm/min | 31 |
@@ -158,7 +159,8 @@ margen, o si el cobre se oxida: **estañar** el bus, las franjas de GND y los pl
 
 - **No tiene máscara**: el cobre queda al aire. Estañarlo o pasarle barniz (laca
   para PCB, en spray) después de soldar. El barniz además mejora la aislación de 48 V.
-- **Rótulos**: los `M1`…`M8` en cobre se leen desde abajo. Arriba no hay
+- **Rótulos**: los `M1`…`M8`, `AUX` (salida de 48 V, J11) y `SEN` (sensado, J10) en
+  cobre se leen desde abajo. Arriba no hay
   serigrafía: marcar con plumón permanente los IDs de motor junto a cada XT30, y
   `+`/`-` en el XT60 y las borneras, usando `montaje_1a1.pdf` de guía.
 - Los pads de potencia van **sin thermal relief**, conectados de lleno al plano: se
@@ -172,7 +174,7 @@ margen, o si el cobre se oxida: **estañar** el bus, las franjas de GND y los pl
 
 - [ ] **Polaridad de los XT** (sigue pendiente, ver `../pcb_distribucion_48v/PENDIENTES.md`):
       imprimir `montaje_1a1.pdf` **al 100 %, sin "ajustar a la página"**, medir que
-      la placa mida 130 × 84 mm en el papel, y poner encima un XT60 y un XT30 reales:
+      la placa mida 104 × 84 mm en el papel, y poner encima un XT60 y un XT30 reales:
       el `-` moldeado en el cuerpo tiene que caer en el pad marcado `-`.
 - [ ] Con el mismo papel, comprobar que las patas de los **clips 445-030** caen en los
       agujeros (dos patas a 5.2 mm, clip a clip 20.5 mm).
@@ -196,6 +198,7 @@ kicad-cli pcb drc --refill-zones --severity-all distribucion48v_cnc.kicad_pcb
 kicad-cli pcb export gerbers --layers B.Cu,Edge.Cuts --no-x2 --no-netlist -o fabricacion/ distribucion48v_cnc.kicad_pcb
 kicad-cli pcb export drill --format excellon --excellon-units mm --excellon-zeros-format decimal --drill-origin absolute -o fabricacion/ distribucion48v_cnc.kicad_pcb
 kicad-cli pcb export pdf --layers F.Silkscreen,F.Fab,Edge.Cuts --mode-single --sp --black-and-white -o montaje_1a1.pdf distribucion48v_cnc.kicad_pcb
+python3 centrar_pdf.py      # mueve la placa al centro del A4, sin cambiar la escala
 ```
 
 Estado al generarla: DRC de KiCad 10.0.7 con **0 sin conectar** y 0 errores de

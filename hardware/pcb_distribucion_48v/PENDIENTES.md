@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al 2026-10-29: generada con `gen.py` y DRC de KiCad 10.0.7
+Estado al 2026-11-02 (sin la sección de 5 V, 104 × 84 mm): generada con `gen.py` y DRC de KiCad 10.0.7
 (`kicad-cli pcb drc --refill-zones --severity-all`) con 0 violaciones y 0 sin conectar.
 
 ## Bloquea la fabricación
@@ -18,9 +18,13 @@ Estado al 2026-10-29: generada con `gen.py` y DRC de KiCad 10.0.7
 
 ## Decidir
 
-- [ ] **Elegir el módulo DC-DC.** Entrada de 60 V o más y 5 V a 5 A o más (README,
-      "Reductor de 5 V"). Con el módulo en la mano, ver dónde se monta y que sus
-      cables lleguen a J11.
+- [ ] **Reductor o batería aparte para la Pi y el pi3hat.** Con reductor: entrada de
+      60 V o más, y la salida según por dónde entre la potencia (5 V / 5 A por el
+      GPIO, o lo que pida la entrada del pi3hat). Se conecta a J11 y lleva F10.
+      Con batería aparte: F10 sin soldar, y el `-` de J11 al negativo de esa
+      batería (README, "Salida auxiliar de 48 V").
+- [ ] **5 V del medidor.** Ya no sale de esta placa: su J2 va a la misma fuente de
+      5 V que la Pi.
 
 - [ ] **Fusibles con el robot andando.** Son T10A 5×20, pensados para motores al
       ~50 % (unos 3 A). Si saltan en los arranques, probar primero con fusibles

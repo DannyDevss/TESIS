@@ -1,9 +1,15 @@
 # Distribución de 48 V — XT60 a 8 motores con fusible
 
-Placa de 2 capas, 130 × 84 mm. Recibe la batería por un **XT60**, la reparte a los
-**8 drivers GIM6010-8** por **XT30** con un **fusible cerámico 5×20 por motor**,
-alimenta un **reductor de 5 V externo** (para la Raspberry Pi y el medidor) y saca una
-línea de sensado protegida hacia el medidor de batería (`../pcb_bateria_48v`).
+Placa de 2 capas, 104 × 84 mm. Recibe la batería por un **XT60** y la reparte a los
+**8 drivers GIM6010-8** por **XT30**, con un **fusible cerámico 5×20 por motor**.
+Además tiene una **salida auxiliar de 48 V con fusible** (J11), para el reductor de la
+Raspberry Pi y el pi3hat si se usa uno, y una línea de sensado protegida hacia el
+medidor de batería (`../pcb_bateria_48v`).
+
+**Esta placa ya no tiene 5 V.** Hasta el 2026-11-02 llevaba la bornera del reductor y
+las salidas de 5 V para la Pi (J12) y el medidor (J13). Se sacaron: la Pi y el pi3hat
+se alimentan desde un reductor aparte o desde una batería propia (ver "Salida
+auxiliar de 48 V"), y la placa pasó de 130 a 104 mm.
 
 ![vista superior](preview.png)
 
@@ -36,16 +42,16 @@ Bel Fuse, Phoenix): las cotas vienen del fabricante, no reconstruidas.
                     ├── F6 ── J7  M7 flipper_rl
                     ├── F7 ── J8  M8 flipper_rr
                     ├── F8 ── J9  M4 track_rr
-                    ├── F9 (PTC) ── J10 ──> J1 del medidor (sensado)
-                    └── F10 T2A ── J11 IN+ ──> módulo DC-DC ──> J11 5V ──┬── J12 5V PI
-                                                                         └── J13 ──> J2 del medidor
+                    ├── F10 T2A ── J11 48V AUX ──> reductor de la Pi y el pi3hat (opcional)
+                    └── F9 (PTC) ── J10 SENSADO ──> J1 del medidor
 ```
 
 - **Cara superior (F.Cu):** el bus `VBAT`, una franja ancha que toca el XT60 y el
   lado de entrada de los 8 fusibles. Cada canal tiene su propio plano `OUTn`,
   desde la salida del fusible hasta el `+` de su XT30.
-- **Plano `+5V` (F.Cu):** arriba a la derecha, de la salida del módulo a J12 y J13.
-  Está pensado para 5 A.
+- **Columna de la derecha:** arriba, F10 y J11 forman un canal más, igual que los de
+  los motores, con un plano `AUX48V` y una bornera en vez del XT30. Abajo, el PTC F9
+  y una pista hasta J10.
 - **Cara inferior (B.Cu):** GND entera. Por ahí vuelve la corriente de los 8 motores.
 - **1 mm** de separación entre planos de distinta red. Para 48 V basta con 0.6 mm
   según IPC-2221; es el mismo margen que usa la placa del medidor.
@@ -73,33 +79,39 @@ lleva VBUS y GND y también CANH y CANL. El cable lleva un XT30 macho de 2 pines
 lado de la placa y un XT30(2+2)-F del lado del driver; los dos hilos de CAN llegan
 a ese mismo conector, pero salen del pi3hat y no de esta placa.
 
-## Reductor de 5 V
+## Salida auxiliar de 48 V
 
-El reductor **no va soldado en la placa**: es un módulo DC-DC aparte, atornillado al
-chasis o sobre la placa con separadores, que se conecta a **J11** con cables cortos.
-Así sirve cualquier módulo, y si se quema se cambia sin tocar la placa.
+**J11** (bornera de 2 pines, arriba a la derecha) entrega 48 V de la batería después
+de **F10 (T2A 5×20)**. Es la entrada para el reductor que alimenta la Raspberry Pi y el
+pi3hat. La placa no lleva el reductor: es un módulo aparte, atornillado al chasis.
 
-| J11, de izquierda a derecha | Va a |
+| J11 | Va a |
 |---|---|
-| `IN+` | entrada + del módulo (48 V, después de F10) |
-| `-` | entrada − del módulo |
-| `5V` | salida + del módulo |
-| `-` | salida − del módulo |
+| `+` | entrada + del reductor (48 V, después de F10) |
+| `-` | entrada − del reductor (GND) |
 
-**Qué módulo comprar:** entrada de **60 V o más** (mejor 72 V), porque la batería
-llena llega a 54.6 V, y **5 V fijos a 5 A o más**. Los LM2596 y XL4015 comunes **no
-sirven**: son de 40 V o menos, o de 3 A.
+**Qué reductor comprar:** entrada de **60 V o más** (mejor 72 V), porque la batería
+llena llega a 54.6 V. Los LM2596 y XL4015 comunes **no sirven**: son de 40 V o menos.
+La salida depende de por dónde se alimente la Pi:
 
-| Salida | Para | Corriente |
-|---|---|---|
-| **J12 5V PI** | Raspberry Pi 4, por los pines del GPIO: 5V (pin 2 o 4) y GND (pin 6) | 3 A |
-| **J13 5V MEDIDOR** | el **J2** del medidor (`1` = 5 V, `2` = GND) | < 0.5 A |
+- **5 V por el GPIO** de la Pi (pines 2/4 = 5 V, pin 6 = GND): 5 V fijos, **5 A o
+  más**. Así se salta el fusible interno de la Pi, así que el cable tiene que ser
+  corto y grueso (18 AWG / 0.75 mm²); con uno delgado, la Pi avisa de bajo voltaje.
+- **Por la entrada de potencia del pi3hat**, si la placa la tiene: la tensión que
+  pida esa entrada, según la [referencia de mjbots](https://github.com/mjbots/pi3hat/blob/master/docs/reference.md).
+  Revisarla antes de comprar.
 
-**F10 (T2A 5×20)** protege la entrada del módulo: 25 W a 48 V son ~0.6 A.
+F10 de 2 A alcanza: 25 W a 48 V son ~0.6 A.
 
-Al alimentar la Pi por el GPIO se salta su fusible interno. Por eso el cable de J12
-tiene que ser corto y grueso (18 AWG / 0.75 mm²): con un cable delgado, la caída de
-tensión hace que la Pi avise de bajo voltaje.
+**Si la Pi y el pi3hat van con batería aparte**, F10 no se suelda y J11 queda sin
+48 V. Igual conviene **soldar J11** y llevar su `-` al negativo de la batería de la
+Pi. El cable de cada motor lleva CANH y CANL pero no GND, así que sin esa unión el
+lado de la Pi y el de los motores no tienen referencia común, y el CAN puede dar
+errores o, en el peor caso, dañar un transceptor.
+
+**El medidor** ya no recibe 5 V de esta placa: su J2 se conecta a la misma fuente de
+5 V que la Pi. El sensado sigue saliendo de **J10** (`+` = BAT+ por el PTC, `-` = GND)
+hacia el J1 del medidor.
 
 ## Corriente
 
@@ -157,14 +169,16 @@ Necesita KiCad 10 (la API `pcbnew` de Python):
 ```
 python3 gen.py
 kicad-cli pcb drc --refill-zones --severity-all distribucion48v.kicad_pcb
-kicad-cli pcb export gerbers --layers F.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,Edge_Cuts -o fabricacion/ distribucion48v.kicad_pcb
+kicad-cli pcb export gerbers --layers F.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,Edge.Cuts -o fabricacion/ distribucion48v.kicad_pcb
 kicad-cli pcb export drill --format excellon --excellon-separate-th -o fabricacion/ distribucion48v.kicad_pcb
 ```
 
 `gen.py` **sobrescribe** el `.kicad_pcb`: cualquier cambio hecho a mano en KiCad se
 pierde, así que los arreglos se hacen en el script.
 
-Estado al generarla: DRC de KiCad 10.0.7 con **0 violaciones y 0 sin conectar**.
+Estado al generarla (2026-11-02): DRC de KiCad 10.0.7 con **0 violaciones y 0 sin
+conectar**. Los gerbers anteriores no traían el contorno (`Edge_Cuts` mal escrito en
+el comando); estos sí lo traen, en `distribucion48v-Edge_Cuts.gm1`.
 
 ## Lo que no incluí
 

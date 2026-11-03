@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-gen.py — Genera la placa de distribución de 48 V (XT60 -> 8 x XT30 con fusible).
+gen.py — Genera la placa de distribución de 48 V (XT60 -> 8 x XT30 con fusible,
+más una salida auxiliar de 48 V con fusible y el sensado del medidor).
 
 Usa la API de KiCad (pcbnew) y las huellas de la librería oficial, así que las
 cotas de conectores y portafusibles son las del fabricante, no reconstruidas.
@@ -19,15 +20,19 @@ SALIDA = os.path.join(AQUI, 'distribucion48v.kicad_pcb')
 LIB = '/usr/share/kicad/footprints'
 
 # ---------------------------------------------------------------- geometría --
-ANCHO, ALTO = 130.0, 84.0           # placa, mm
+ANCHO, ALTO = 104.0, 84.0           # placa, mm (era 130 con el reductor de 5 V)
 PASO_SALIDAS = 16.0                 # separación entre XT30 de una misma fila
 X_PRIMERA_SALIDA = 20.0             # pad 1 del primer XT30 de cada fila
 Y_PAD_XT30 = 7.0                    # pads del XT30 a esta distancia del borde
 Y_FUSIBLE = 35.5                    # origen del portafusibles, desde el borde
 SEPARACION_48V = 1.0                # entre cobres de distinta red (planos)
 ANCHO_PISTA_SENSADO = 0.5
-ANCHO_PISTA_DCDC = 1.0              # 48 V al reductor: <1 A
-X_BUS_FIN = 103.0                   # donde termina el bus de 48 V (empieza la zona de 5 V)
+X_BUS_FIN = 94.0                    # donde termina el bus de 48 V
+# Columna derecha, después de los 8 canales: arriba la salida auxiliar de 48 V
+# (F10 -> J11), abajo el sensado (F9 -> J10).
+X_AUX = X_PRIMERA_SALIDA + 5.0 + 4 * PASO_SALIDAS
+MEDIO_ANCHO_AUX = 3.0               # plano de la salida auxiliar: <1 A
+Y_BORNERA = 10.6                    # pads de las borneras desde el borde: el cuerpo queda al ras
 
 # Salidas por fila, de izquierda a derecha. Agrupadas por esquina, igual que los
 # buses CAN (geometria_robot.yaml): oruga y flipper de una esquina van juntos.
@@ -44,10 +49,9 @@ FP_XT30 = ('Connector_AMASS', 'AMASS_XT30U-F_1x02_P5.0mm_Vertical')
 # 10 A: los 0445 0001 / 0030 0210 que se venden sueltos).
 FP_PORTAFUSIBLE = ('Fuse', 'Fuseholder_Clip-5x20mm_Littelfuse_445-030_Inline_P20.50x5.20mm_D1.30mm_Horizontal')
 VALOR_FUSIBLE = 'T10A 5x20'
-VALOR_FUSIBLE_DCDC = 'T2A 5x20'     # 25 W a 48 V son ~0.6 A
+VALOR_FUSIBLE_AUX = 'T2A 5x20'      # 25 W a 48 V son ~0.6 A
 FP_PTC = ('Fuse', 'Fuse_BelFuse_0ZRE0005FF_L8.3mm_W3.8mm')
 FP_BORNERA = ('Connector_Phoenix_MSTB', 'PhoenixContact_MSTBA_2,5_2-G-5,08_1x02_P5.08mm_Horizontal')
-FP_BORNERA_4 = ('Connector_Phoenix_MSTB', 'PhoenixContact_MSTBA_2,5_4-G-5,08_1x04_P5.08mm_Horizontal')
 FP_AGUJERO = ('MountingHole', 'MountingHole_3.2mm_M3')
 
 POS_AGUJEROS = [(5.0, 5.0), (ANCHO - 5.0, 5.0), (5.0, ALTO - 5.0), (ANCHO - 5.0, ALTO - 5.0)]
@@ -180,13 +184,17 @@ def salida(placa, n, motor_id, nombre, x_pad1, delantera):
     return fus
 
 
-def bornera_lateral(placa, ref, valor, y, red_positiva):
-    """Bornera de 2 pines en el borde derecho: pin 1 = red_positiva, pin 2 = GND."""
-    fp = placa.huella(FP_BORNERA, ref, valor, ANCHO - 10.6, y, 90,
+def bornera_borde(placa, ref, valor, x_pin1, delantera, red_positiva):
+    """Bornera de 2 pines en el borde de delante o de atrás, con la entrada del
+    cable hacia afuera. Pin 1 = red_positiva, pin 2 = GND (a 5.08 mm)."""
+    y = Y_BORNERA if delantera else ALTO - Y_BORNERA
+    fp = placa.huella(FP_BORNERA, ref, valor, x_pin1, y, 180 if delantera else 0,
                       {'1': red_positiva, '2': 'GND'})
-    for numero, marca in (('1', '+'), ('2', '-')):
-        x, yy = placa.pad(fp, numero)
-        placa.texto(marca, x - 4.4, yy, alto=1.5)
+    # "+" y "-" al costado de cada pin, hacia afuera: hacia adentro está el fusible.
+    x1, x2 = placa.pad(fp, '1')[0], placa.pad(fp, '2')[0]
+    afuera = 1.0 if x1 > x2 else -1.0
+    placa.texto('+', x1 + 2.6 * afuera, y, alto=1.5)
+    placa.texto('-', x2 - 2.6 * afuera, y, alto=1.5)
     return fp
 
 
@@ -203,7 +211,7 @@ def main():
         x, y = placa.pad(xt60, numero)
         placa.texto(marca, x + 6.3, y, alto=2.0)
     placa.texto('BATERIA 48V', 8.5, ALTO / 2 + 11.0, alto=1.5)
-    placa.texto('COBRE 2 oz', ANCHO - 16.0, ALTO - 2.0, alto=1.2)
+    placa.texto('COBRE 2 oz', ANCHO - 4.0, ALTO / 2, alto=1.2, grados=90)
 
     n = 1
     fusibles = []
@@ -217,59 +225,38 @@ def main():
     placa.texto('DELANTE', x_centro, 1.8, alto=1.2)
     placa.texto('ATRAS', x_centro, ALTO - 1.8, alto=1.2)
 
-    # Borde derecho: tres borneras de 2 pines con la entrada de cable hacia afuera.
-    # 5 V a la Raspberry, 5 V al J2 del medidor y sensado al J1 del medidor.
-    j12 = bornera_lateral(placa, 'J12', '5V PI', 24.0, '+5V')
-    j13 = bornera_lateral(placa, 'J13', '5V MEDIDOR', 42.0, '+5V')
-    j10 = bornera_lateral(placa, 'J10', 'SENSADO', 60.0, 'SENSE')
-    for fp, nombre in ((j12, '5V PI'), (j13, '5V MEDIDOR')):
-        x, y = placa.pad(fp, '1')
-        placa.texto(nombre, x - 7.0, y - 2.5, alto=1.1, grados=90)
-    x, y = placa.pad(j10, '1')
-    placa.texto('SENSADO', x, y + 6.5, alto=1.1)
+    # Salida auxiliar de 48 V: una columna más en la fila de delante, igual que
+    # los canales de los motores, con una bornera en vez del XT30. Es para el
+    # reductor de la Raspberry y el pi3hat; si se alimentan con baterías aparte,
+    # F10 y J11 no se sueldan.
+    bornera_borde(placa, 'J11', '48V AUX', X_AUX, True, 'AUX48V')
+    f10 = placa.huella(FP_PORTAFUSIBLE, 'F10', VALOR_FUSIBLE_AUX, X_AUX, Y_FUSIBLE, 90,
+                       {'1': 'VBAT', '2': 'AUX48V'})
+    placa.zona('AUX48V', pcbnew.F_Cu,
+               [(X_AUX - MEDIO_ANCHO_AUX, Y_BORNERA - 2.5), (X_AUX + MEDIO_ANCHO_AUX, Y_BORNERA - 2.5),
+                (X_AUX + MEDIO_ANCHO_AUX, max(placa.ys_pads(f10, '2')) + 2.5),
+                (X_AUX - MEDIO_ANCHO_AUX, max(placa.ys_pads(f10, '2')) + 2.5)], prioridad=2)
+    placa.texto('48V AUX', X_AUX - 6.2, Y_FUSIBLE - 11.5, alto=1.1, grados=90)
 
-    # Sensado: PTC en serie para que un corto en ese cable fino no se lleve la
-    # batería por delante.
-    ptc = placa.huella(FP_PTC, 'F9', '0ZRE0005FF', 104.5, 57.5, 0,
+    # Sensado: J10 en la fila de atrás, con el pin 1 bajo la columna de J11, y
+    # un PTC en serie para que un corto en ese cable fino no se lleve la batería
+    # por delante. Una pista recta del PTC al pin 1.
+    j10 = bornera_borde(placa, 'J10', 'SENSADO', X_AUX - 5.0, False, 'SENSE')
+    x_sen, y_sen = placa.pad(j10, '1')
+    ptc = placa.huella(FP_PTC, 'F9', '0ZRE0005FF', x_sen + 1.6, ALTO - Y_FUSIBLE + 9.0, 270,
                        {'1': 'VBAT', '2': 'SENSE'})
-    a = placa.pad(ptc, '2')
-    b = placa.pad(j10, '1')
-    placa.pista('SENSE', a, (b[0], a[1]), ANCHO_PISTA_SENSADO)
-    placa.pista('SENSE', (b[0], a[1]), b, ANCHO_PISTA_SENSADO)
-
-    # Reductor de 5 V: va FUERA de la placa (cualquier módulo de 60 V o más de
-    # entrada y 5 V / 5 A) y se conecta a J11. Rotada 180° para que el cable entre
-    # por el borde superior. De izquierda a derecha: IN+, -, 5V, -.
-    dcdc = placa.huella(FP_BORNERA_4, 'J11', 'DC-DC', 114.3, 11.04, 180,
-                        {'4': 'DCDC_IN', '3': 'GND', '2': '+5V', '1': 'GND'})
-    for numero, marca in (('3', '-'), ('2', '5V'), ('1', '-')):
-        x, y = placa.pad(dcdc, numero)
-        placa.texto(marca, x, y + 4.6, alto=1.2)
-    x_in, y_in = placa.pad(dcdc, '4')
-    placa.texto('IN+', x_in - 6.0, y_in, alto=1.2)
-    placa.texto('DC-DC', 88.0, 7.0, alto=1.2)
-
-    # Fusible del reductor: del bus de 48 V a la entrada del módulo.
-    f10 = placa.huella(FP_PORTAFUSIBLE, 'F10', VALOR_FUSIBLE_DCDC, x_in, 36.5, 90,
-                       {'1': 'VBAT', '2': 'DCDC_IN'})
-    # Una sola pista recta pasa por las dos patas del clip 2 hasta la bornera.
-    y_f10 = max(placa.ys_pads(f10, '2'))
-    placa.pista('DCDC_IN', (x_in, y_f10), (x_in, y_in), ANCHO_PISTA_DCDC)
+    placa.pista('SENSE', placa.pad(ptc, '2'), (x_sen, y_sen), ANCHO_PISTA_SENSADO)
+    placa.texto('SENSADO', X_AUX - 8.0, ALTO - 20.0, alto=1.1, grados=90)
 
     for k, (x, y) in enumerate(POS_AGUJEROS, start=1):
         placa.huella(FP_AGUJERO, f'H{k}', 'M3', x, y)
 
-    # Bus de 48 V en F.Cu: franja central que toca el XT60, los lados 1 de los ocho
+    # Bus de 48 V en F.Cu: franja central que toca el XT60, los lados 1 de los nueve
     # fusibles y el PTC. Los planos OUT tienen más prioridad y no se pisan con éste.
     y_top = max(y for f in fusibles[:4] for y in placa.ys_pads(f, '2')) + 2.5 + SEPARACION_48V
     y_bot = min(y for f in fusibles[4:] for y in placa.ys_pads(f, '2')) - 2.5 - SEPARACION_48V
     placa.zona('VBAT', pcbnew.F_Cu,
-               [(2.0, y_top), (X_BUS_FIN, y_top), (X_BUS_FIN, 50.0), (116.0, 50.0),
-                (116.0, y_bot), (2.0, y_bot)], prioridad=1)
-
-    # 5 V en F.Cu: arriba a la derecha, de la salida del módulo a J12 y J13 (5 A).
-    placa.zona('+5V', pcbnew.F_Cu, [(X_BUS_FIN + 2.5, 0.5), (ANCHO - 0.5, 0.5),
-                                    (ANCHO - 0.5, 47.5), (X_BUS_FIN + 2.5, 47.5)], prioridad=1)
+               [(2.0, y_top), (X_BUS_FIN, y_top), (X_BUS_FIN, y_bot), (2.0, y_bot)], prioridad=1)
 
     # GND: toda la cara inferior.
     placa.zona('GND', pcbnew.B_Cu, [(0.5, 0.5), (ANCHO - 0.5, 0.5),

@@ -5,7 +5,7 @@
       "Application": "Pcbnew",
       "Version": "10.0.7"
     },
-    "CreationDate": "2026-10-29T10:28:11-03:00"
+    "CreationDate": "2026-11-02T08:33:22-03:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
@@ -14,7 +14,7 @@
       "Revision": "rev?"
     },
     "Size": {
-      "X": 130.1,
+      "X": 104.1,
       "Y": 84.1
     },
     "LayerNumber": 2,
@@ -62,6 +62,11 @@
       "Path": "distribucion48v-B_Mask.gbs",
       "FileFunction": "SolderMask,Bot",
       "FilePolarity": "Negative"
+    },
+    {
+      "Path": "distribucion48v-Edge_Cuts.gm1",
+      "FileFunction": "Profile",
+      "FilePolarity": "Positive"
     }
   ],
   "MaterialStackup": [
