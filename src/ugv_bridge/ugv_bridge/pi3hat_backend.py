@@ -332,7 +332,8 @@ class TransportePi3Hat:
             cmd.bus = bus
             cmd.data = bytes(datos)
             # Las tramas entrantes se recogen con force_can_check sobre los buses
-            # en uso, no pidiendo respuesta trama a trama.
+            # en uso (y vaciando la cola interna, ver `_vaciar_cola`), no
+            # pidiendo respuesta trama a trama.
             cmd.reply_required = False
             comandos.append(cmd)
 
@@ -351,27 +352,85 @@ class TransportePi3Hat:
             # sigue vivo y publicando.
             self.timeouts += len(set(nodos))
             self.ciclos_vencidos += 1
+            # Lo que haya quedado en la cola no se tira: sale en el próximo ciclo.
             return {node_id: {} for node_id in nodos}
         except Exception as e:  # bus caído, SPI ocupado, motor desconectado...
             self.timeouts += len(set(nodos))
             raise ErrorTransportePi3Hat(f'fallo en el ciclo del pi3hat: {e}') from e
 
+        # Primero lo que devolvió cycle() (la trama MÁS VIEJA de cada bus) y
+        # después la cola, en orden de llegada: así, si un motor emitió dos
+        # tramas del mismo tipo en el ciclo, se queda la más reciente.
         recibido = {node_id: {} for node_id in nodos}
-        for r in resultados or []:
-            arb = getattr(r, 'arbitration_id', None)
-            if arb is None:
-                continue
-            nodo = proto.nodo_de_id(arb)
-            if nodo is None:
-                continue
-            recibido.setdefault(nodo, {})[proto.cmd_de_id(arb)] = \
-                bytes(getattr(r, 'data', b''))
+        volcar_tramas(recibido, list(resultados or []) + self._vaciar_cola())
 
         self.timeouts += sum(1 for n in set(nodos) if not recibido.get(n))
         return recibido
 
+    def _vaciar_cola(self):
+        """Saca las tramas que `cycle()` recibió pero NO devolvió.
+
+        POR QUÉ HACE FALTA (comprobado en la placa, 03/11/2026)
+        --------------------------------------------------------
+        `force_can_check` no pide "todo lo que haya en el bus": la librería lo
+        traduce a UNA petición comodín por bus, que se da por satisfecha con la
+        PRIMERA trama que llega. El resto de las tramas de ese ciclo se guarda
+        en la cola interna del dispositivo pi3hat (`_receive_queue`, la de
+        `receive_frame()`) y `cycle()` no las devuelve nunca.
+
+        O sea: `cycle()` entrega UNA trama por bus y por ciclo. Con dos motores
+        en el bus 1 llegan ~220 tramas/s (encoder cada 10 ms + heartbeat cada
+        100 ms, cada uno), y el bucle a 100 Hz recogía sólo 100. Cuál de los dos
+        motores salía en cada ciclo dependía del desfase entre sus relojes y el
+        del bucle, que deriva solo; cuando uno quedaba 10 ciclos seguidos detrás
+        del otro, el watchdog lo daba por mudo y paraba los dos. Medido a 100 Hz
+        durante 20 s: 8 falsos fallos por motor sólo con `cycle()`, 0 sumando la
+        cola. El síntoma en el robot: FALLO / restablecida cada ~130 ms, unas
+        veces culpando a la oruga y otras al flipper.
+
+        Subir la frecuencia de las tramas en los motores o el bitrate del bus no
+        lo arregla: el bus nunca fue el cuello de botella.
+
+        `_receive_queue` es un atributo privado (moteus_pi3hat 1.1.0, cola de
+        50 tramas que descarta las más viejas al llenarse; vaciándola en cada
+        ciclo no se llena nunca). Si una versión futura lo cambia, se avisa una
+        vez y se sigue como antes, con una trama por bus.
+        """
+        dispositivo = getattr(self.router, '_parent', None)
+        cola = getattr(dispositivo, '_receive_queue', None)
+        if not isinstance(cola, list):
+            if not getattr(self, '_aviso_sin_cola', False):
+                self._aviso_sin_cola = True
+                print('[pi3hat] AVISO: esta versión de moteus_pi3hat no expone '
+                      '_receive_queue; sólo se leerá UNA trama por bus y ciclo y '
+                      'con dos motores por bus el watchdog dará falsos fallos.')
+            return []
+        tramas = list(cola)
+        del cola[:]
+        return tramas
+
     def cerrar(self):
         cerrar_router()
+
+
+def volcar_tramas(recibido, tramas):
+    """Reparte tramas CAN crudas en {node_id: {cmd_id: datos}}, en el orden dado.
+
+    Si llegan dos tramas del mismo motor y tipo, gana la última. Se ignoran las
+    que no tienen ID de arbitraje o cuyo ID no es de un motor.
+    """
+    from ugv_bridge import protocolo_can as proto
+
+    for t in tramas:
+        arb = getattr(t, 'arbitration_id', None)
+        if arb is None:
+            continue
+        nodo = proto.nodo_de_id(arb)
+        if nodo is None:
+            continue
+        recibido.setdefault(nodo, {})[proto.cmd_de_id(arb)] = \
+            bytes(getattr(t, 'data', b''))
+    return recibido
 
 
 class ErrorTransportePi3Hat(RuntimeError):
