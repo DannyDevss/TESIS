@@ -31,6 +31,9 @@ Parámetros
                  Dos motores por bus, emparejados por esquina del robot.
   motores_presentes (int[], [])    IDs cableados de verdad; vacío = los 8. Para
                                    probar en el banco con un motor suelto.
+  vel_max_flippers_rad_s (double, 1.0) velocidad máxima de la rampa con la que la
+                                   consigna de cada flipper va hacia la pedida
+                                   (modos con bus). Ver driver_movimiento.
   radio_oruga / ancho_orugas / imu_montaje_roll|pitch|yaw
                                    -> config/geometria_robot.yaml.
 
@@ -57,6 +60,7 @@ from ugv_bridge.driver_movimiento import (
     IDS_ORUGAS,
     IDS_FLIPPERS,
     ID_A_NOMBRE,
+    VEL_MAX_FLIPPERS_RAD_S,
 )
 
 
@@ -109,6 +113,8 @@ class FlipperNode(Node):
         # deduciría BYTE_ARRAY y rechazaría los enteros que manda el launch.
         self.declare_parameter('motores_presentes',
                                rclpy.Parameter.Type.INTEGER_ARRAY)
+        # Rampa de los flippers (rad/s en la salida). Ver VEL_MAX_FLIPPERS_RAD_S.
+        self.declare_parameter('vel_max_flippers_rad_s', VEL_MAX_FLIPPERS_RAD_S)
         frecuencia = self.get_parameter('frecuencia_hz').value
         modo = self.get_parameter('modo').value
         modo_sim = self.get_parameter('modo_simulacion').value
@@ -136,6 +142,8 @@ class FlipperNode(Node):
             ),
             mapa_buses=mapa_buses,
             motores_presentes=self._motores_presentes(),
+            vel_max_flippers=self.get_parameter('vel_max_flippers_rad_s').value,
+            periodo_control_s=1.0 / frecuencia,
         )
         self._fallo_avisado = False
         # Ciclos seguidos con algún eje fuera de lazo cerrado. Al arrancar
