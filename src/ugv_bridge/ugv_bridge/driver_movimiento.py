@@ -160,6 +160,10 @@ class RMD_Hardware:
     periodo_control_s : float
         Periodo nominal del bucle que llama a enviar_y_leer_estado (s). La
         rampa avanza vel_max_flippers * periodo_control_s por llamada.
+    sentido_flippers : dict[int, int] | None
+        {id_flipper: +1 | -1}. -1 = el motor gira al revés que la junta del
+        URDF (montado mirando hacia afuera). None -> +1 en los cuatro. Fuente:
+        `sentido_flippers` de config/geometria_robot.yaml.
     """
 
     def __init__(self, modo_simulacion=True, modo=None, canal_can='vcan0',
@@ -168,7 +172,7 @@ class RMD_Hardware:
                  mapa_buses=None, ciclos_watchdog=CICLOS_WATCHDOG,
                  motores_presentes=None, transporte=None,
                  vel_max_flippers=VEL_MAX_FLIPPERS_RAD_S,
-                 periodo_control_s=PERIODO_CONTROL_S):
+                 periodo_control_s=PERIODO_CONTROL_S, sentido_flippers=None):
         if modo is None:
             modo = 'gemelo' if modo_simulacion else 'pi3hat'
         if modo not in MODOS_VALIDOS:
@@ -261,6 +265,17 @@ class RMD_Hardware:
         self.vel_max_flippers = abs(float(vel_max_flippers))
         self.periodo_control_s = float(periodo_control_s)
         self._consigna_rampa = {mid: None for mid in self.ids_flippers}
+
+        # SENTIDO DE GIRO por flipper (+1 / -1). Todo lo de arriba (cero, rampa,
+        # lo que se publica) vive en la convención del modelo; el signo se aplica
+        # sólo en la frontera con el motor: al mandar la consigna y al leer.
+        self._sentido = {mid: 1 for mid in self.ids_flippers}
+        for mid, signo in (sentido_flippers or {}).items():
+            if mid not in self._sentido or signo not in (1, -1):
+                raise ValueError(
+                    f'sentido_flippers inválido: {mid}->{signo} '
+                    f'(IDs {self.ids_flippers}, valores +1 o -1)')
+            self._sentido[mid] = int(signo)
 
         # Watchdog de seguridad: ciclos consecutivos sin respuesta, por motor.
         self._sin_respuesta = {mid: 0 for mid in self.ids_orugas + self.ids_flippers}
@@ -452,7 +467,8 @@ class RMD_Hardware:
         peticiones += [
             (mid, proto.CMD_SET_INPUT_POS,
              proto.trama_set_input_pos(
-                 self._cero_flipper[mid] + self._rampa_flipper(mid, comandos_flippers)))
+                 self._cero_flipper[mid]
+                 + self._sentido[mid] * self._rampa_flipper(mid, comandos_flippers)))
             for mid in self.ids_flippers
             if mid in presentes and self._cero_flipper[mid] is not None
         ]
@@ -645,7 +661,7 @@ class RMD_Hardware:
             self._cero_flipper[id_motor] = crudo
             print(f'[HARDWARE] Cero de {id_motor}({ID_A_NOMBRE[id_motor]}) '
                   f'tomado en la pose actual (encoder en {crudo:+.3f} rad).')
-        return crudo - self._cero_flipper[id_motor]
+        return self._sentido[id_motor] * (crudo - self._cero_flipper[id_motor])
 
     def _aplicar_mensajes(self, id_motor, mensajes):
         """Vuelca en el último estado conocido lo que haya emitido un motor."""
@@ -661,13 +677,15 @@ class RMD_Hardware:
                 if id_motor in self._cero_flipper:
                     posicion = self._relativa_al_cero(id_motor, posicion, u)
                 u['posicion_rad'] = posicion
-                u['velocidad_rad_s'] = enc['velocidad_rad_s']
+                u['velocidad_rad_s'] = (self._sentido.get(id_motor, 1)
+                                        * enc['velocidad_rad_s'])
 
         datos = mensajes.get(proto.CMD_GET_IQ)
         if datos is not None:
             iq = proto.parsear_iq(datos)
             if iq is not None:
-                u['torque_nm'] = iq['iq_medido_a'] * proto.KT_NM_POR_A
+                u['torque_nm'] = (self._sentido.get(id_motor, 1)
+                                  * iq['iq_medido_a'] * proto.KT_NM_POR_A)
 
         datos = mensajes.get(proto.CMD_HEARTBEAT)
         if datos is not None:

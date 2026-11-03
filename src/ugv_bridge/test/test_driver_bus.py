@@ -166,6 +166,33 @@ def test_la_consigna_de_los_flippers_es_relativa_al_cero():
         assert math.isclose(transporte.motores[mid].pos, 17.1, abs_tol=0.05)
 
 
+def test_sentido_invertido_de_los_flippers():
+    """Motor montado al revés: la consigna se invierte al mandar y al leer."""
+    transporte = TransporteMemoria()
+    _flippers_con_encoder_en(transporte, 16.6)
+    robot = RMD_Hardware(modo='pi3hat', transporte=transporte,
+                         sentido_flippers={mid: -1 for mid in IDS_FLIPPERS})
+    ciclar(robot, flippers={}, n=30)            # fija el cero
+
+    velocidades = []
+    for _ in range(150):
+        estado = robot.enviar_y_leer_estado({}, {mid: 0.5 for mid in IDS_FLIPPERS})
+        velocidades.append(estado[5]['velocidad_rad_s'])
+    for mid in IDS_FLIPPERS:
+        assert math.isclose(estado[mid]['posicion_rad'], 0.5, abs_tol=0.05)
+        assert math.isclose(transporte.motores[mid].pos, 16.1, abs_tol=0.05), \
+            f'flipper {mid}: el motor debió girar al revés ({transporte.motores[mid].pos})'
+    # Subiendo hacia +0,5 en la convención del modelo, la velocidad publicada es +.
+    assert max(velocidades) > 0.5
+
+
+def test_sentido_invalido_falla_temprano():
+    import pytest
+    with pytest.raises(ValueError):
+        RMD_Hardware(modo='pi3hat', transporte=TransporteMemoria(),
+                     sentido_flippers={5: 2})
+
+
 def test_un_salto_grande_de_consigna_va_en_rampa():
     """Un salto de 270° de golpe llega al motor en rampa.
 

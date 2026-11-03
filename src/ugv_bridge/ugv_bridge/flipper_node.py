@@ -31,6 +31,9 @@ Parámetros
                  Dos motores por bus, emparejados por esquina del robot.
   motores_presentes (int[], [])    IDs cableados de verdad; vacío = los 8. Para
                                    probar en el banco con un motor suelto.
+  sentido_flippers (int[], [1,1,1,1]) +1/-1 por flipper (fl, fr, rl, rr): -1 =
+                                   el motor gira al revés que el URDF.
+                                   -> config/geometria_robot.yaml.
   vel_max_flippers_rad_s (double, 1.0) velocidad máxima de la rampa con la que la
                                    consigna de cada flipper va hacia la pedida
                                    (modos con bus). Ver driver_movimiento.
@@ -115,6 +118,8 @@ class FlipperNode(Node):
                                rclpy.Parameter.Type.INTEGER_ARRAY)
         # Rampa de los flippers (rad/s en la salida). Ver VEL_MAX_FLIPPERS_RAD_S.
         self.declare_parameter('vel_max_flippers_rad_s', VEL_MAX_FLIPPERS_RAD_S)
+        # Sentido de giro de cada motor de flipper (fl, fr, rl, rr). Ver el YAML.
+        self.declare_parameter('sentido_flippers', [1, 1, 1, 1])
         frecuencia = self.get_parameter('frecuencia_hz').value
         modo = self.get_parameter('modo').value
         modo_sim = self.get_parameter('modo_simulacion').value
@@ -144,6 +149,8 @@ class FlipperNode(Node):
             motores_presentes=self._motores_presentes(),
             vel_max_flippers=self.get_parameter('vel_max_flippers_rad_s').value,
             periodo_control_s=1.0 / frecuencia,
+            sentido_flippers=dict(zip(
+                IDS_FLIPPERS, self.get_parameter('sentido_flippers').value)),
         )
         self._fallo_avisado = False
         # Ciclos seguidos con algún eje fuera de lazo cerrado. Al arrancar
